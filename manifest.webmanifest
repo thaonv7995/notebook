@@ -1,0 +1,18 @@
+{
+  "name": "Notebook Studio",
+  "short_name": "Notebook",
+  "description": "Sổ tay số có cấu trúc với mẫu Cornell, Work Notes và Ruled A4.",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#0b111e",
+  "theme_color": "#0f172a",
+  "lang": "vi",
+  "icons": [
+    {
+      "src": "public/notebook-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
