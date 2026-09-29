@@ -1936,11 +1936,11 @@ mark {
   overflow-wrap: break-word !important;
   cursor: text;
 }
-.template-writing-area > div,
-.template-writing-area > p {
-  margin: 0;
-  padding: 0;
-  line-height: inherit;
+.template-writing-area div,
+.template-writing-area p {
+  margin: 0 !important;
+  padding: 0 !important;
+  line-height: inherit !important;
 }
 .template-writing-area:focus {
   background-color: rgba(37, 99, 235, 0.015);
@@ -1961,7 +1961,7 @@ mark {
   border-left: 3px solid #2563eb;
   color: #1e3a8a;
   font-style: italic;
-  line-height: var(--notebook-line-height, 22px);
+  line-height: var(--notebook-line-height, 28px);
 }
 .template-writing-area ul,
 .template-writing-area ol {
@@ -1969,7 +1969,7 @@ mark {
   padding-left: 24px;
 }
 .template-writing-area li {
-  line-height: var(--notebook-line-height, 22px);
+  line-height: var(--notebook-line-height, 28px);
 }
 .template-writing-area h1,
 .template-writing-area h2,

@@ -1517,6 +1517,45 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
     }
   }
 
+  function isCaretAtPageBottom(editable) {
+    if (!editable) return false;
+    const lh = parseFloat(getComputedStyle(editable).lineHeight) || 28;
+    const scale = getElementScale(editable) || 1;
+    const editableRect = editable.getBoundingClientRect();
+
+    const sel = window.getSelection();
+    if (!sel || !sel.rangeCount) return false;
+    const range = sel.getRangeAt(0);
+    if (!range.collapsed) return false;
+
+    let caretBottom = null;
+    const rects = range.getClientRects();
+    if (rects && rects.length > 0 && rects[0].height > 0) {
+      caretBottom = rects[0].bottom;
+    } else {
+      const r = range.getBoundingClientRect();
+      if (r && r.height > 0) {
+        caretBottom = r.bottom;
+      } else {
+        const node = range.startContainer;
+        const el = (node && node.nodeType === Node.ELEMENT_NODE) ? node : (node ? node.parentElement : null);
+        if (el && el !== editable) {
+          const elRect = el.getBoundingClientRect();
+          if (elRect && elRect.height > 0) {
+            caretBottom = elRect.bottom;
+          }
+        }
+      }
+    }
+
+    if (caretBottom !== null) {
+      const distToBottom = (editableRect.bottom - caretBottom) / scale;
+      return distToBottom < (lh * 0.85);
+    }
+
+    return false;
+  }
+
   function getMatchingSelector(editable) {
     if (editable.classList.contains('cornell-notes-text')) return '.cornell-notes-text';
     if (editable.classList.contains('cornell-cues-text')) return '.cornell-cues-text';
@@ -1695,11 +1734,12 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
         saveCurrentSelection();
       });
 
-      // Handle Enter at the end of the page -> smoothly advance to next page
+      // Handle Enter keydown:
+      // Allow native Enter to move down to the next line (xuống dòng bình thường)
+      // Only advance to next page if cursor is on the very last line at the bottom of the page
       editable.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' && !e.shiftKey) {
-          const lh = parseFloat(getComputedStyle(editable).lineHeight) || 28;
-          if (editable.scrollHeight + lh * 0.75 > editable.clientHeight) {
+        if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) {
+          if (isCaretAtPageBottom(editable)) {
             e.preventDefault();
             advanceToNextPage(editable, sheetEl, page);
             return;
@@ -2217,6 +2257,8 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
         btn.classList.toggle('active', btn.dataset.lh === String(lh));
       });
     }
+
+    applyFontSize(appState.fontSize || 16);
   }
 
   function setLineHeight(lhValue) {
@@ -2232,9 +2274,16 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
 
   function applyFontSize(size) {
     const s = size || appState.fontSize || 16;
+    appState.fontSize = s;
     // CRITICAL: Ô kẻ ngang là CỐ ĐỊNH theo setting, không bị co giãn khi zoom chữ!
     document.documentElement.style.setProperty('--editor-font-size', `${s}px`);
-    document.documentElement.style.setProperty('--notebook-font-size', `${Math.max(10, Math.min(s, 28))}px`);
+
+    const currentLhStr = document.documentElement.style.getPropertyValue('--notebook-line-height') || '28px';
+    const nbLh = parseInt(currentLhStr, 10) || 28;
+    // Con trỏ luôn nằm gọn gàng trong ô kẻ khi font-size nhỏ hơn line-height ít nhất 4px
+    const maxNbFont = Math.max(12, nbLh - 4);
+    const nbFont = Math.max(10, Math.min(s, maxNbFont));
+    document.documentElement.style.setProperty('--notebook-font-size', `${nbFont}px`);
     if (els.fontSizeLabel) els.fontSizeLabel.textContent = s;
   }
 
