@@ -1298,14 +1298,12 @@ body {
   flex: 1;
   display: flex;
   flex-direction: column;
-  overflow-y: auto !important;
-  overflow-x: hidden !important;
+  overflow: hidden !important;
   padding: 36px 42px 24px;
   box-sizing: border-box !important;
   width: 100% !important;
   max-width: 100% !important;
   min-width: 0 !important;
-  scrollbar-width: thin;
 }
 
 /* Language Badge at top of page (Matching Screenshot: 'EN', 'VI') */
@@ -1932,12 +1930,10 @@ mark {
   background-size: 100% var(--notebook-line-height, 28px);
   background-position: 0 0;
   background-attachment: local;
-  overflow-y: auto;
-  overflow-x: hidden;
+  overflow: hidden !important;
   white-space: pre-wrap !important;
   word-break: break-word !important;
   overflow-wrap: break-word !important;
-  scrollbar-width: thin;
   cursor: text;
 }
 .template-writing-area > div,
@@ -2055,6 +2051,7 @@ mark {
   background: var(--notebook-lines-display);
   background-size: 100% var(--notebook-line-height, 28px);
   background-position: 0 0;
+  overflow: hidden !important;
 }
 
 

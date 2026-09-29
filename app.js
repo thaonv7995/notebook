@@ -1485,6 +1485,175 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
     sel.addRange(range);
   }
 
+  let isAdvancingPage = false;
+
+  function placeCaretAtStart(el) {
+    if (!el) return;
+    el.focus();
+    try {
+      const range = document.createRange();
+      const sel = window.getSelection();
+      range.selectNodeContents(el);
+      range.collapse(true);
+      sel.removeAllRanges();
+      sel.addRange(range);
+    } catch (e) {
+      console.warn('Could not place caret at start:', e);
+    }
+  }
+
+  function placeCaretAtEnd(el) {
+    if (!el) return;
+    el.focus();
+    try {
+      const range = document.createRange();
+      const sel = window.getSelection();
+      range.selectNodeContents(el);
+      range.collapse(false);
+      sel.removeAllRanges();
+      sel.addRange(range);
+    } catch (e) {
+      console.warn('Could not place caret at end:', e);
+    }
+  }
+
+  function getMatchingSelector(editable) {
+    if (editable.classList.contains('cornell-notes-text')) return '.cornell-notes-text';
+    if (editable.classList.contains('cornell-cues-text')) return '.cornell-cues-text';
+    if (editable.classList.contains('cornell-summary-text')) return '.cornell-summary-text';
+    if (editable.classList.contains('work-notes-text')) return '.work-notes-text';
+    if (editable.classList.contains('work-agenda-text')) return '.work-agenda-text';
+    return '.template-writing-area';
+  }
+
+  function advanceToNextPage(editable, sheetEl, page, overflowContent = '') {
+    if (isAdvancingPage) return;
+    isAdvancingPage = true;
+
+    try {
+      const isLeftSheet = (sheetEl === els.leftPageSheet);
+      const selector = getMatchingSelector(editable);
+
+      // Save current content first
+      extractTemplateDataFromSheet(sheetEl, page);
+      saveActivePages();
+
+      if (currentPageMode === '2-page' && isLeftSheet) {
+        // Move from Left sheet to Right sheet
+        const rightEditable = els.rightPageSheet ? els.rightPageSheet.querySelector(selector) : null;
+        if (rightEditable) {
+          if (overflowContent) {
+            rightEditable.innerHTML = overflowContent + (rightEditable.innerHTML ? '<br>' + rightEditable.innerHTML : '');
+            saveActivePages();
+            placeCaretAtEnd(rightEditable);
+          } else {
+            placeCaretAtStart(rightEditable);
+          }
+          showStatus('Đã sang trang phải', 'saved');
+          isAdvancingPage = false;
+          return;
+        }
+      }
+
+      // Need to flip to the next page / sheet
+      const nb = getActiveNotebook();
+      if (!nb) {
+        isAdvancingPage = false;
+        return;
+      }
+
+      const step = currentPageMode === '2-page' ? 2 : 1;
+      // If at the end of the notebook, automatically create next page(s)
+      if (appState.activePageIndex + step >= nb.pages.length) {
+        const inheritTemplate = page.template || 'cornell';
+        const pNum1 = nb.pages.length + 1;
+        nb.pages.push({
+          id: 'p-' + Date.now(),
+          lang: page.lang || 'VI',
+          title: `TRANG ${pNum1}`,
+          topic: `${nb.title} - Trang ${pNum1}`,
+          date: new Date().toLocaleDateString('vi-VN'),
+          no: String(pNum1).padStart(2, '0'),
+          template: inheritTemplate,
+          updatedAt: new Date().toISOString(),
+          content: ''
+        });
+
+        if (currentPageMode === '2-page') {
+          const pNum2 = nb.pages.length + 1;
+          nb.pages.push({
+            id: 'p-' + (Date.now() + 1),
+            lang: 'EN',
+            title: `TRANG ${pNum2}`,
+            topic: `${nb.title} - Trang ${pNum2}`,
+            date: new Date().toLocaleDateString('vi-VN'),
+            no: String(pNum2).padStart(2, '0'),
+            template: inheritTemplate,
+            updatedAt: new Date().toISOString(),
+            content: ''
+          });
+        }
+        persistState();
+      }
+
+      // Turn page forward
+      turnPageForward();
+
+      // Focus on the newly opened page after page flip
+      setTimeout(() => {
+        const newEditable = els.leftPageSheet ? els.leftPageSheet.querySelector(selector) : null;
+        if (newEditable) {
+          if (overflowContent) {
+            newEditable.innerHTML = overflowContent + (newEditable.innerHTML ? '<br>' + newEditable.innerHTML : '');
+            saveActivePages();
+            placeCaretAtEnd(newEditable);
+          } else {
+            placeCaretAtStart(newEditable);
+          }
+        }
+        showToast('Đã tự động chuyển sang trang mới');
+        isAdvancingPage = false;
+      }, 620);
+    } catch (err) {
+      console.warn('Error in advanceToNextPage:', err);
+      isAdvancingPage = false;
+    }
+  }
+
+  function handleContentOverflow(editable, sheetEl, page) {
+    if (editable.scrollHeight <= editable.clientHeight + 2) return;
+
+    // Pop overflowing nodes from bottom of editable
+    const nodesToMove = [];
+    while (editable.childNodes.length > 1 && editable.scrollHeight > editable.clientHeight + 2) {
+      const lastChild = editable.lastChild;
+      nodesToMove.unshift(lastChild);
+      editable.removeChild(lastChild);
+    }
+
+    if (editable.scrollHeight > editable.clientHeight + 2 && editable.childNodes.length === 1) {
+      const singleNode = editable.firstChild;
+      const text = singleNode.textContent || '';
+      const words = text.split(/\s+/);
+      if (words.length > 4) {
+        let keepCount = Math.floor(words.length * (editable.clientHeight / editable.scrollHeight));
+        keepCount = Math.max(1, Math.min(words.length - 1, keepCount));
+        const keepText = words.slice(0, keepCount).join(' ');
+        const moveText = words.slice(keepCount).join(' ');
+        singleNode.textContent = keepText;
+        const overflowDiv = document.createElement('div');
+        overflowDiv.textContent = moveText;
+        nodesToMove.unshift(overflowDiv);
+      }
+    }
+
+    const tempContainer = document.createElement('div');
+    nodesToMove.forEach(n => tempContainer.appendChild(n));
+    const overflowHtml = tempContainer.innerHTML.trim();
+
+    advanceToNextPage(editable, sheetEl, page, overflowHtml);
+  }
+
   function handleWritingAreaClick(editable, e, sheetEl, page) {
     if (!editable) return;
     lastActiveEditable = editable;
@@ -1525,9 +1694,28 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
         lastActiveEditable = editable;
         saveCurrentSelection();
       });
+
+      // Handle Enter at the end of the page -> smoothly advance to next page
+      editable.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+          const lh = parseFloat(getComputedStyle(editable).lineHeight) || 28;
+          if (editable.scrollHeight + lh * 0.75 > editable.clientHeight) {
+            e.preventDefault();
+            advanceToNextPage(editable, sheetEl, page);
+            return;
+          }
+        }
+      });
+
+      // Handle typing overflow
       editable.addEventListener('input', () => {
         lastActiveEditable = editable;
         saveCurrentSelection();
+
+        if (editable.scrollHeight > editable.clientHeight + 4) {
+          handleContentOverflow(editable, sheetEl, page);
+        }
+
         extractTemplateDataFromSheet(sheetEl, page);
         scheduleSave();
       });
