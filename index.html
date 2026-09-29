@@ -357,6 +357,43 @@
 
       <div class="toolbar-divider"></div>
 
+      <!-- Line Spacing Setting (Ô kẻ ngang) -->
+      <div class="toolbar-group" title="Cỡ ô kẻ ngang">
+        <div class="export-wrapper">
+          <button id="btnLineHeightSettings" type="button" class="tool-btn" title="Cài đặt cỡ ô kẻ ngang" aria-haspopup="true">
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="3" y1="6" x2="21" y2="6"/>
+              <line x1="3" y1="12" x2="21" y2="12"/>
+              <line x1="3" y1="18" x2="21" y2="18"/>
+            </svg>
+            <span id="line-height-label" style="font-size: 11px; font-weight: 700; margin-left: 2px;">28px</span>
+          </button>
+          <div id="line-height-menu" class="export-menu" hidden style="min-width: 175px;">
+            <div class="palette-title">Cỡ ô kẻ ngang</div>
+            <button type="button" class="menu-item line-height-option" data-lh="24">
+              <span>Dòng hẹp (24px)</span>
+            </button>
+            <button type="button" class="menu-item line-height-option active" data-lh="28">
+              <span>Tiêu chuẩn (28px)</span>
+            </button>
+            <button type="button" class="menu-item line-height-option" data-lh="32">
+              <span>Dòng vừa (32px)</span>
+            </button>
+            <button type="button" class="menu-item line-height-option" data-lh="36">
+              <span>Dòng rộng (36px - Chữ Hán)</span>
+            </button>
+            <button type="button" class="menu-item line-height-option" data-lh="42">
+              <span>Dòng đại (42px)</span>
+            </button>
+            <button type="button" class="menu-item line-height-option" data-lh="none">
+              <span>Giấy trơn (Không kẻ)</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="toolbar-divider"></div>
+
       <!-- Delete Page -->
       <div class="toolbar-group">
         <button id="btnDeleteCurrentPage" type="button" class="tool-btn btn-tool-danger" title="Xóa trang hiện tại khỏi cuốn sổ">

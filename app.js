@@ -23,6 +23,7 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
     zoomLevel: 1.0,
     fontSize: 16,
     fontFamily: 'sans',
+    lineHeight: '28',
     notebooks: [
       {
         id: 'nb-cornell-study',
@@ -267,6 +268,9 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
     fontIncreaseBtn: document.querySelector('#font-increase'),
     fontSizeLabel: document.querySelector('#font-size-label'),
     fontResetBtn: document.querySelector('#font-reset'),
+    btnLineHeightSettings: document.querySelector('#btnLineHeightSettings'),
+    lineHeightMenu: document.querySelector('#line-height-menu'),
+    lineHeightLabel: document.querySelector('#line-height-label'),
     btnDeleteCurrentPage: document.querySelector('#btnDeleteCurrentPage'),
     btnRenameBook: document.querySelector('#btnRenameBook'),
     btnCopyBookLink: document.querySelector('#btnCopyBookLink'),
@@ -303,6 +307,8 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
     state.zoomLevel = Number.isFinite(state.zoomLevel) ? Math.max(0.3, Math.min(state.zoomLevel, 3.5)) : 1;
     state.fontSize = Number.isInteger(state.fontSize) && state.fontSize >= 10 && state.fontSize <= 200 ? state.fontSize : 16;
     state.fontFamily = typeof state.fontFamily === 'string' && state.fontFamily ? state.fontFamily : 'sans';
+    const validLineHeights = ['24', '28', '32', '36', '42', 'none'];
+    state.lineHeight = validLineHeights.includes(String(state.lineHeight)) ? String(state.lineHeight) : '28';
 
     [...state.notebooks, ...state.trash].forEach((nb, nbIndex) => {
       nb.pages = Array.isArray(nb.pages) ? nb.pages : [];
@@ -311,6 +317,7 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
       nb.category = String(nb.category || 'Ghi chép');
       nb.lang = String(nb.lang || 'VI');
       nb.fontFamily = typeof nb.fontFamily === 'string' && nb.fontFamily ? nb.fontFamily : state.fontFamily;
+      nb.lineHeight = validLineHeights.includes(String(nb.lineHeight)) ? String(nb.lineHeight) : state.lineHeight;
       if (typeof nb.coverGradient !== 'string' || !/^linear-gradient\([^;{}]+\)$/.test(nb.coverGradient)) {
         nb.coverGradient = 'linear-gradient(135deg, #1e3a8a, #0f172a)';
       }
@@ -1268,16 +1275,16 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
         <div class="cornell-container">
           <div class="cornell-body-split">
             <div class="cornell-cue-col">
-              <span class="section-guide-badge">CUES & QUESTIONS</span>
+              <div class="col-guide-bar"><span class="section-guide-badge">CUES & QUESTIONS</span></div>
               <div contenteditable="true" class="template-writing-area cornell-cues-text" data-placeholder="Từ khóa, câu hỏi ôn tập, luận điểm chính...">${formatContentToHtml(page.cues || '')}</div>
             </div>
             <div class="cornell-notes-col">
-              <span class="section-guide-badge">NOTES</span>
+              <div class="col-guide-bar"><span class="section-guide-badge">NOTES</span></div>
               <div contenteditable="true" class="template-writing-area cornell-notes-text" data-placeholder="Ghi chép chi tiết, công thức, định nghĩa, sơ đồ...">${formatContentToHtml(page.notes || page.content || '')}</div>
             </div>
           </div>
           <div class="cornell-summary-area">
-            <span class="section-guide-badge">SUMMARY & SYNTHESIS</span>
+            <div class="col-guide-bar"><span class="section-guide-badge">SUMMARY & SYNTHESIS</span></div>
             <div contenteditable="true" class="template-writing-area cornell-summary-text" data-placeholder="Tóm tắt & tổng hợp kiến thức cốt lõi của trang...">${formatContentToHtml(page.summary || '')}</div>
           </div>
         </div>
@@ -1351,11 +1358,11 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
         <div class="work-container">
           <div class="work-body-split">
             <div class="work-side-col">
-              <span class="section-guide-badge">AGENDA & DECISIONS</span>
+              <div class="col-guide-bar"><span class="section-guide-badge">AGENDA & DECISIONS</span></div>
               <div contenteditable="true" class="template-writing-area work-agenda-text" data-placeholder="Chương trình họp, quyết định then chốt, mục tiêu...">${formatContentToHtml(page.agenda || '')}</div>
             </div>
             <div class="work-notes-col">
-              <span class="section-guide-badge">NOTES & DISCUSSIONS</span>
+              <div class="col-guide-bar"><span class="section-guide-badge">NOTES & DISCUSSIONS</span></div>
               <div contenteditable="true" class="template-writing-area work-notes-text" data-placeholder="Ghi chép thảo luận, ý kiến đóng góp, phân tích...">${formatContentToHtml(page.discussions || page.content || '')}</div>
             </div>
           </div>
@@ -1481,93 +1488,8 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
   function handleWritingAreaClick(editable, e, sheetEl, page) {
     if (!editable) return;
     lastActiveEditable = editable;
-
-    // If user dragged to select text, do not interfere
-    if (window.getSelection && window.getSelection().toString().length > 0) {
-      return;
-    }
-
-    // Check if the click target is an existing line that has text content
-    const clickedLine = e.target.closest ? e.target.closest('.template-writing-area > *') : null;
-    if (clickedLine && clickedLine.textContent.trim().length > 0) {
-      // The user clicked on an existing line with text (e.g. editing words or clicking inside line)
-      // Native browser selection handles this with 100% precision. Do not interfere!
-      return;
-    }
-
-    // Calculate exact CSS coordinates taking into account the zoom/transform scale
-    const rect = editable.getBoundingClientRect();
-    const scale = getElementScale(editable);
-
-    const clickCssX = (e.clientX - rect.left) / scale + editable.scrollLeft;
-    const clickCssY = (e.clientY - rect.top) / scale + editable.scrollTop;
-
-    const style = window.getComputedStyle(editable);
-    const paddingTop = parseFloat(style.paddingTop) || 22;
-    const lineHeight = parseFloat(style.lineHeight) || 22;
-    const paddingLeft = parseFloat(style.paddingLeft) || 8;
-
-    // If user clicked inside an existing EMPTY line (e.g. <div><br></div>):
-    if (clickedLine && clickedLine.parentNode === editable) {
-      const relX = clickCssX - paddingLeft;
-      if (relX > 14) {
-        const spacesCount = Math.min(80, Math.max(1, Math.round(relX / cachedSpaceWidth)));
-        clickedLine.innerHTML = '\u00A0'.repeat(spacesCount) + '<br>';
-        editable.focus();
-        placeCaretAtLine(clickedLine, spacesCount);
-        if (page && sheetEl) {
-          extractTemplateDataFromSheet(sheetEl, page);
-          scheduleSave();
-        }
-      } else {
-        editable.focus();
-        placeCaretAtLine(clickedLine, 0);
-      }
-      return;
-    }
-
-    // User clicked on empty space below the existing lines (e.target is editable or wrapper)
-    let targetLineIndex = 0;
-    if (clickCssY > paddingTop) {
-      targetLineIndex = Math.floor((clickCssY - paddingTop) / lineHeight);
-    }
-
-    // Bound by maximum lines fitting the container height
-    const maxLines = Math.max(1, Math.floor((editable.offsetHeight - paddingTop) / lineHeight));
-    targetLineIndex = Math.min(targetLineIndex, maxLines - 1);
-
-    // Ensure all direct children are block lines (<div>)
-    if (editable.children.length === 0 && editable.childNodes.length > 0) {
-      const wrapDiv = document.createElement('div');
-      while (editable.firstChild) wrapDiv.appendChild(editable.firstChild);
-      editable.appendChild(wrapDiv);
-    }
-
-    // Pad empty lines up to targetLineIndex
-    while (editable.children.length <= targetLineIndex) {
-      const emptyDiv = document.createElement('div');
-      emptyDiv.innerHTML = '<br>';
-      editable.appendChild(emptyDiv);
-    }
-
-    const targetLine = editable.children[targetLineIndex];
-    if (!targetLine) return;
-
-    editable.focus();
-
-    // Check horizontal indentation
-    const relX = clickCssX - paddingLeft;
-    if (relX > 14) {
-      const spacesCount = Math.min(80, Math.max(1, Math.round(relX / cachedSpaceWidth)));
-      targetLine.innerHTML = '\u00A0'.repeat(spacesCount) + '<br>';
-      placeCaretAtLine(targetLine, spacesCount);
-    } else {
-      placeCaretAtLine(targetLine, 0);
-    }
-
-    if (page && sheetEl) {
-      extractTemplateDataFromSheet(sheetEl, page);
-      scheduleSave();
+    if (document.activeElement !== editable) {
+      editable.focus();
     }
   }
 
@@ -1710,9 +1632,10 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
       els.readerTemplateSelect.value = leftPage.template || 'cornell';
     }
 
-    // Apply active notebook font and font size
+    // Apply active notebook font, font size, and fixed line height
     applyFontFamily(nb.fontFamily || appState.fontFamily || 'sans');
     applyFontSize(appState.fontSize || 16);
+    applyLineHeight((nb && nb.lineHeight) || appState.lineHeight || '28');
 
     // Render Left Page Sheet
     renderSheetContent(els.leftPageSheet, leftPage, curIdx + 1, true);
@@ -2003,8 +1926,8 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
     }
   }
 
-  // Stepped Font Sizes Scale (12px up to 128px)
-  const FONT_SIZES = [12, 13, 14, 15, 16, 17, 18, 20, 22, 24, 28, 32, 36, 40, 48, 56, 64, 72, 80, 96, 112, 128];
+  // Stepped Font Sizes Scale (11px to 28px for notebook ruled lines)
+  const FONT_SIZES = [11, 12, 13, 14, 15, 16, 17, 18, 20, 22, 24, 26, 28];
 
   function updateFontSize(direction, reset = false) {
     const editable = getActiveEditableArea();
@@ -2063,7 +1986,6 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
       const span = document.createElement('span');
       if (!reset) {
         span.style.fontSize = `${nextSize}px`;
-        span.style.lineHeight = '1.4';
       }
       span.appendChild(range.extractContents());
       range.insertNode(span);
@@ -2080,14 +2002,51 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
     }
   }
 
+  // Fixed Notebook Ruling Line Height System
+  const DEFAULT_LINE_HEIGHT = '28';
+
+  function applyLineHeight(lhValue) {
+    const nb = getActiveNotebook();
+    const lh = lhValue || (nb && nb.lineHeight) || appState.lineHeight || DEFAULT_LINE_HEIGHT;
+
+    if (lh === 'none') {
+      document.documentElement.style.setProperty('--notebook-line-height', '28px');
+      document.documentElement.style.setProperty('--notebook-lines-display', 'none');
+    } else {
+      const px = parseInt(lh, 10) || 28;
+      document.documentElement.style.setProperty('--notebook-line-height', `${px}px`);
+      document.documentElement.style.setProperty(
+        '--notebook-lines-display',
+        `repeating-linear-gradient(to bottom, transparent 0, transparent ${px - 1}px, #cbd5e1 ${px - 1}px, #cbd5e1 ${px}px)`
+      );
+    }
+
+    if (els.lineHeightLabel) {
+      els.lineHeightLabel.textContent = lh === 'none' ? 'Trơn' : `${lh}px`;
+    }
+    if (els.lineHeightMenu) {
+      els.lineHeightMenu.querySelectorAll('.line-height-option').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.lh === String(lh));
+      });
+    }
+  }
+
+  function setLineHeight(lhValue) {
+    const nb = getActiveNotebook();
+    if (nb) {
+      nb.lineHeight = lhValue;
+    }
+    appState.lineHeight = lhValue;
+    applyLineHeight(lhValue);
+    persistState();
+    showToast(`Đã đổi cỡ ô kẻ: ${lhValue === 'none' ? 'Giấy trơn' : lhValue + 'px'}`);
+  }
+
   function applyFontSize(size) {
     const s = size || appState.fontSize || 16;
-    const nbSize = Math.max(10, Math.round(s * 0.82 * 10) / 10);
-    const lineH = Math.max(22, Math.round(nbSize * 1.65));
-
+    // CRITICAL: Ô kẻ ngang là CỐ ĐỊNH theo setting, không bị co giãn khi zoom chữ!
     document.documentElement.style.setProperty('--editor-font-size', `${s}px`);
-    document.documentElement.style.setProperty('--notebook-font-size', `${nbSize}px`);
-    document.documentElement.style.setProperty('--notebook-line-height', `${lineH}px`);
+    document.documentElement.style.setProperty('--notebook-font-size', `${Math.max(10, Math.min(s, 28))}px`);
     if (els.fontSizeLabel) els.fontSizeLabel.textContent = s;
   }
 
@@ -2863,7 +2822,7 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
     }
 
     function closeAllPopoverMenus() {
-      [els.fmtColorPalette, els.fmtBgPalette, els.exportMenu].forEach(m => {
+      [els.fmtColorPalette, els.fmtBgPalette, els.exportMenu, els.lineHeightMenu].forEach(m => {
         if (m) {
           m.setAttribute('hidden', '');
           m.hidden = true;
@@ -2961,6 +2920,25 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
     if (els.fontIncreaseBtn) els.fontIncreaseBtn.addEventListener('click', () => updateFontSize(1));
     if (els.fontDecreaseBtn) els.fontDecreaseBtn.addEventListener('click', () => updateFontSize(-1));
     if (els.fontResetBtn) els.fontResetBtn.addEventListener('click', () => updateFontSize(0, true));
+
+    // Line height setting controls (Ô kẻ ngang cố định)
+    if (els.btnLineHeightSettings && els.lineHeightMenu) {
+      els.btnLineHeightSettings.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        openPopoverMenu(els.lineHeightMenu, [els.fmtColorPalette, els.fmtBgPalette, els.exportMenu]);
+      });
+
+      els.lineHeightMenu.querySelectorAll('.line-height-option').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          const lh = btn.dataset.lh;
+          setLineHeight(lh);
+          closeAllPopoverMenus();
+        });
+      });
+    }
 
     // Export popover
     if (els.exportBtn && els.exportMenu) {
@@ -3100,7 +3078,8 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
       const isInsideColor = (els.fmtColorPalette && els.fmtColorPalette.contains(e.target)) || (els.fmtColorBtn && els.fmtColorBtn.contains(e.target));
       const isInsideBg = (els.fmtBgPalette && els.fmtBgPalette.contains(e.target)) || (els.fmtBgBtn && els.fmtBgBtn.contains(e.target));
       const isInsideExport = (els.exportMenu && els.exportMenu.contains(e.target)) || (els.exportBtn && els.exportBtn.contains(e.target));
-      if (!isInsideColor && !isInsideBg && !isInsideExport) {
+      const isInsideLh = (els.lineHeightMenu && els.lineHeightMenu.contains(e.target)) || (els.btnLineHeightSettings && els.btnLineHeightSettings.contains(e.target));
+      if (!isInsideColor && !isInsideBg && !isInsideExport && !isInsideLh) {
         closeAllPopoverMenus();
       }
     });
@@ -3176,6 +3155,7 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
     persistState();
     applyFontSize(appState.fontSize || 16);
     applyFontFamily(appState.fontFamily || 'sans');
+    applyLineHeight(appState.lineHeight || '28');
     renderLibraryGrid();
 
     // Deep-link / route recovery on initial page load or reload
