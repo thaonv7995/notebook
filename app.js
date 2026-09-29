@@ -300,8 +300,8 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
     state.notebooks = Array.isArray(state.notebooks) ? state.notebooks : [];
     state.trash = Array.isArray(state.trash) ? state.trash : [];
     state.pageMode = state.pageMode === '1-page' ? '1-page' : '2-page';
-    state.zoomLevel = Number.isFinite(state.zoomLevel) ? state.zoomLevel : 1;
-    state.fontSize = Number.isInteger(state.fontSize) && state.fontSize >= 12 && state.fontSize <= 28 ? state.fontSize : 16;
+    state.zoomLevel = Number.isFinite(state.zoomLevel) ? Math.max(0.3, Math.min(state.zoomLevel, 3.5)) : 1;
+    state.fontSize = Number.isInteger(state.fontSize) && state.fontSize >= 10 && state.fontSize <= 200 ? state.fontSize : 16;
     state.fontFamily = typeof state.fontFamily === 'string' && state.fontFamily ? state.fontFamily : 'sans';
 
     [...state.notebooks, ...state.trash].forEach((nb, nbIndex) => {
@@ -1754,14 +1754,61 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
     renderBookPages();
   }
 
-  // Apply Zoom Scale
+  // Apply Zoom Scale (Supports 30% to 350% smoothly)
   function applyZoom(scale) {
-    appState.zoomLevel = scale;
-    els.bookDeskScaler.style.transform = `scale(${scale})`;
+    const clampedScale = Math.max(0.3, Math.min(3.5, Math.round(scale * 100) / 100));
+    appState.zoomLevel = clampedScale;
+    els.bookDeskScaler.style.transform = `scale(${clampedScale})`;
+    els.bookDeskScaler.style.transformOrigin = 'top center';
+
+    // Dynamic scroll margin allowance for high zoom levels
+    const casing = els.bookSpreadCasing;
+    if (casing) {
+      const naturalW = casing.offsetWidth || (currentPageMode === '1-page' ? 688 : 1002);
+      const naturalH = casing.offsetHeight || (currentPageMode === '1-page' ? 844 : 704);
+      const scaledW = naturalW * clampedScale;
+      const scaledH = naturalH * clampedScale;
+
+      if (clampedScale > 1) {
+        els.bookDeskScaler.style.marginBottom = `${Math.round(scaledH - naturalH + 40)}px`;
+        const extraSide = Math.max(0, Math.round((scaledW - naturalW) / 2));
+        els.bookDeskScaler.style.marginLeft = `${extraSide}px`;
+        els.bookDeskScaler.style.marginRight = `${extraSide}px`;
+      } else {
+        els.bookDeskScaler.style.marginBottom = '';
+        els.bookDeskScaler.style.marginLeft = '';
+        els.bookDeskScaler.style.marginRight = '';
+      }
+    }
+
     if (els.readerScaleValue) {
-      els.readerScaleValue.textContent = `${Math.round(scale * 100)}%`;
+      els.readerScaleValue.textContent = `${Math.round(clampedScale * 100)}%`;
     }
     persistState();
+  }
+
+  function zoomIn() {
+    const cur = Math.round((appState.zoomLevel || 1.0) * 100) / 100;
+    const step = cur < 1.0 ? 0.1 : (cur < 2.0 ? 0.15 : 0.25);
+    const next = Math.min(3.0, Math.round((cur + step) * 100) / 100);
+    if (els.btnFitPage) els.btnFitPage.classList.remove('active');
+    if (els.btnFitWidth) els.btnFitWidth.classList.remove('active');
+    applyZoom(next);
+  }
+
+  function zoomOut() {
+    const cur = Math.round((appState.zoomLevel || 1.0) * 100) / 100;
+    const step = cur <= 1.0 ? 0.1 : (cur <= 2.0 ? 0.15 : 0.25);
+    const next = Math.max(0.3, Math.round((cur - step) * 100) / 100);
+    if (els.btnFitPage) els.btnFitPage.classList.remove('active');
+    if (els.btnFitWidth) els.btnFitWidth.classList.remove('active');
+    applyZoom(next);
+  }
+
+  function resetZoom() {
+    if (els.btnFitPage) els.btnFitPage.classList.remove('active');
+    if (els.btnFitWidth) els.btnFitWidth.classList.remove('active');
+    applyZoom(1.0);
   }
 
   // 3D Page Flip Forward
@@ -1934,7 +1981,7 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
     if (desk && casing) {
       const availH = desk.clientHeight - 40;
       const casingH = casing.offsetHeight || 710;
-      const scale = Math.max(0.4, Math.min(1.4, availH / casingH));
+      const scale = Math.max(0.3, Math.min(3.0, availH / casingH));
       applyZoom(Math.round(scale * 100) / 100);
     } else {
       applyZoom(0.72);
@@ -1949,26 +1996,98 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
     if (desk && casing) {
       const availW = desk.clientWidth - 40;
       const casingW = casing.offsetWidth || (currentPageMode === '1-page' ? 510 : 1010);
-      const scale = Math.max(0.4, Math.min(1.4, availW / casingW));
+      const scale = Math.max(0.3, Math.min(3.0, availW / casingW));
       applyZoom(Math.round(scale * 100) / 100);
     } else {
       applyZoom(1.0);
     }
   }
 
-  // Dynamic Font Size & Family with State Persistence
-  function updateFontSize(delta, reset = false) {
-    let cur = appState.fontSize || parseInt(getComputedStyle(document.documentElement).getPropertyValue('--editor-font-size')) || 16;
-    let next = reset ? 16 : Math.max(12, Math.min(cur + delta, 28));
+  // Stepped Font Sizes Scale (12px up to 128px)
+  const FONT_SIZES = [12, 13, 14, 15, 16, 17, 18, 20, 22, 24, 28, 32, 36, 40, 48, 56, 64, 72, 80, 96, 112, 128];
+
+  function updateFontSize(direction, reset = false) {
+    const editable = getActiveEditableArea();
+    const sel = window.getSelection();
+    const hasSelection = editable && sel && !sel.isCollapsed && editable.contains(sel.anchorNode);
+
+    if (hasSelection) {
+      applyFontSizeToSelection(editable, direction, reset);
+      return;
+    }
+
+    if (reset) {
+      appState.fontSize = 16;
+      applyFontSize(16);
+      persistState();
+      return;
+    }
+
+    const cur = appState.fontSize || 16;
+    let idx = FONT_SIZES.findIndex(s => s >= cur);
+    if (idx === -1) idx = FONT_SIZES.length - 1;
+    if (FONT_SIZES[idx] > cur && direction < 0) {
+      idx = Math.max(0, idx - 1);
+    } else {
+      idx = Math.max(0, Math.min(FONT_SIZES.length - 1, idx + direction));
+    }
+    const next = FONT_SIZES[idx];
     appState.fontSize = next;
     applyFontSize(next);
     persistState();
   }
 
+  function applyFontSizeToSelection(editable, direction, reset = false) {
+    if (!editable) return;
+    editable.focus();
+    restoreCurrentSelection();
+    const sel = window.getSelection();
+    if (!sel || !sel.rangeCount || sel.isCollapsed) return;
+
+    try {
+      const range = sel.getRangeAt(0);
+      const parent = sel.anchorNode.parentElement;
+      let cur = parent ? parseInt(window.getComputedStyle(parent).fontSize) || 16 : 16;
+      let nextSize = 16;
+      if (!reset) {
+        let idx = FONT_SIZES.findIndex(s => s >= cur);
+        if (idx === -1) idx = FONT_SIZES.length - 1;
+        if (FONT_SIZES[idx] > cur && direction < 0) {
+          idx = Math.max(0, idx - 1);
+        } else {
+          idx = Math.max(0, Math.min(FONT_SIZES.length - 1, idx + direction));
+        }
+        nextSize = FONT_SIZES[idx];
+      }
+
+      const span = document.createElement('span');
+      if (!reset) {
+        span.style.fontSize = `${nextSize}px`;
+        span.style.lineHeight = '1.4';
+      }
+      span.appendChild(range.extractContents());
+      range.insertNode(span);
+      range.selectNodeContents(span);
+      sel.removeAllRanges();
+      sel.addRange(range);
+      saveCurrentSelection();
+
+      if (els.fontSizeLabel) els.fontSizeLabel.textContent = nextSize;
+      editable.dispatchEvent(new Event('input', { bubbles: true }));
+      scheduleSave();
+    } catch (err) {
+      console.warn('Could not apply font size to selection:', err);
+    }
+  }
+
   function applyFontSize(size) {
     const s = size || appState.fontSize || 16;
+    const nbSize = Math.max(10, Math.round(s * 0.82 * 10) / 10);
+    const lineH = Math.max(22, Math.round(nbSize * 1.65));
+
     document.documentElement.style.setProperty('--editor-font-size', `${s}px`);
-    document.documentElement.style.setProperty('--notebook-font-size', `${Math.max(10, s - 3.5)}px`);
+    document.documentElement.style.setProperty('--notebook-font-size', `${nbSize}px`);
+    document.documentElement.style.setProperty('--notebook-line-height', `${lineH}px`);
     if (els.fontSizeLabel) els.fontSizeLabel.textContent = s;
   }
 
@@ -2611,20 +2730,30 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
 
     // Zoom Controls
     if (els.btnZoomIn) {
-      els.btnZoomIn.addEventListener('click', () => {
-        applyZoom(Math.min((appState.zoomLevel || 1.0) + 0.1, 1.6));
-      });
+      els.btnZoomIn.addEventListener('click', zoomIn);
     }
     if (els.btnZoomOut) {
-      els.btnZoomOut.addEventListener('click', () => {
-        applyZoom(Math.max((appState.zoomLevel || 1.0) - 0.1, 0.45));
-      });
+      els.btnZoomOut.addEventListener('click', zoomOut);
+    }
+    if (els.readerScaleValue) {
+      els.readerScaleValue.addEventListener('click', resetZoom);
     }
     if (els.btnFitPage) {
       els.btnFitPage.addEventListener('click', handleFitPage);
     }
     if (els.btnFitWidth) {
       els.btnFitWidth.addEventListener('click', handleFitWidth);
+    }
+
+    // Ctrl/Cmd + Mouse Wheel Zoom
+    if (els.openBookWorkspace) {
+      els.openBookWorkspace.addEventListener('wheel', (e) => {
+        if (e.ctrlKey || e.metaKey) {
+          e.preventDefault();
+          if (e.deltaY < 0) zoomIn();
+          else zoomOut();
+        }
+      }, { passive: false });
     }
 
     // Window Resize -> Recalculate Fit if active
@@ -2992,6 +3121,19 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
 
       const activeEl = document.activeElement;
       const isMod = e.ctrlKey || e.metaKey;
+
+      // Ctrl/Cmd + / - / 0 Zoom shortcuts
+      if (isMod && (e.key === '=' || e.key === '+' || e.key === '-' || e.key === '_' || e.key === '0')) {
+        e.preventDefault();
+        if (e.key === '=' || e.key === '+') {
+          zoomIn();
+        } else if (e.key === '-' || e.key === '_') {
+          zoomOut();
+        } else if (e.key === '0') {
+          resetZoom();
+        }
+        return;
+      }
 
       // Handle Cmd/Ctrl shortcuts in textareas & inputs
       if (isMod && activeEl && (activeEl.tagName === 'TEXTAREA' || activeEl.tagName === 'INPUT')) {
