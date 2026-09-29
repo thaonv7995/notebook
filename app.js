@@ -21,6 +21,8 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
     activePageIndex: 0,
     pageMode: '2-page', // '1-page' or '2-page'
     zoomLevel: 1.0,
+    fontSize: 16,
+    fontFamily: 'sans',
     notebooks: [
       {
         id: 'nb-cornell-study',
@@ -260,12 +262,14 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
     fmtHr: document.querySelector('#fmt-hr'),
     fmtUndo: document.querySelector('#fmt-undo'),
     fmtRedo: document.querySelector('#fmt-redo'),
+    fmtFontFamily: document.querySelector('#fmt-font-family'),
     fontDecreaseBtn: document.querySelector('#font-decrease'),
     fontIncreaseBtn: document.querySelector('#font-increase'),
     fontSizeLabel: document.querySelector('#font-size-label'),
     fontResetBtn: document.querySelector('#font-reset'),
     btnDeleteCurrentPage: document.querySelector('#btnDeleteCurrentPage'),
     btnRenameBook: document.querySelector('#btnRenameBook'),
+    btnCopyBookLink: document.querySelector('#btnCopyBookLink'),
     exportBtn: document.querySelector('#export-btn'),
     exportMenu: document.querySelector('#export-menu'),
     exportMdBtn: document.querySelector('#export-md'),
@@ -297,6 +301,8 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
     state.trash = Array.isArray(state.trash) ? state.trash : [];
     state.pageMode = state.pageMode === '1-page' ? '1-page' : '2-page';
     state.zoomLevel = Number.isFinite(state.zoomLevel) ? state.zoomLevel : 1;
+    state.fontSize = Number.isInteger(state.fontSize) && state.fontSize >= 12 && state.fontSize <= 28 ? state.fontSize : 16;
+    state.fontFamily = typeof state.fontFamily === 'string' && state.fontFamily ? state.fontFamily : 'sans';
 
     [...state.notebooks, ...state.trash].forEach((nb, nbIndex) => {
       nb.pages = Array.isArray(nb.pages) ? nb.pages : [];
@@ -304,6 +310,7 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
       nb.author = String(nb.author || 'Cá nhân');
       nb.category = String(nb.category || 'Ghi chép');
       nb.lang = String(nb.lang || 'VI');
+      nb.fontFamily = typeof nb.fontFamily === 'string' && nb.fontFamily ? nb.fontFamily : state.fontFamily;
       if (typeof nb.coverGradient !== 'string' || !/^linear-gradient\([^;{}]+\)$/.test(nb.coverGradient)) {
         nb.coverGradient = 'linear-gradient(135deg, #1e3a8a, #0f172a)';
       }
@@ -652,6 +659,7 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
                 <button class="btn-book-restore" aria-label="Khôi phục sổ" title="Khôi phục sổ" data-id="${escapeAttr(nb.id)}">↩</button>
                 <button class="btn-book-delete-permanent" aria-label="Xóa sổ vĩnh viễn" title="Xóa vĩnh viễn" data-id="${escapeAttr(nb.id)}">×</button>
               ` : `
+                <button class="btn-book-share" aria-label="Sao chép liên kết sổ" title="Sao chép liên kết cuốn sổ (URL)" data-id="${escapeAttr(nb.id)}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="pointer-events: none;"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></button>
                 <button class="btn-book-duplicate" aria-label="Nhân bản sổ" title="Nhân bản sổ" data-id="${escapeAttr(nb.id)}">⧉</button>
                 <button class="btn-book-delete" aria-label="Chuyển sổ vào thùng rác" title="Chuyển vào thùng rác" data-id="${escapeAttr(nb.id)}">×</button>
               `}
@@ -686,6 +694,16 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
     els.booksGrid.querySelectorAll('.btn-book-pin').forEach(btn => btn.addEventListener('click', (e) => {
       e.stopPropagation();
       togglePin(btn.dataset.id);
+    }));
+    els.booksGrid.querySelectorAll('.btn-book-share').forEach(btn => btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const id = btn.dataset.id;
+      const nb = (appState.notebooks || []).find(n => n.id === id);
+      const page = nb ? (nb.lastPageIndex || 0) + 1 : 1;
+      const url = new URL(window.location.href);
+      url.searchParams.set('book', id);
+      url.searchParams.set('page', String(page));
+      copyTextToClipboard(url.toString(), `Đã sao chép liên kết cuốn “${nb ? nb.title : ''}”!`);
     }));
     els.booksGrid.querySelectorAll('.btn-book-duplicate').forEach(btn => btn.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -774,8 +792,226 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
     showToast(`Đã nhân bản “${source.title}”.`);
   }
 
+  // ==========================================
+  // URL ROUTING & DEEP-LINKING (ENDPOINT)
+  // Supports:
+  // - Query Params: ?book=nb-cornell-study&page=1
+  // - Hash Routes: #/book/nb-cornell-study/1 or #book=nb-cornell-study&page=1
+  // - Automatic state restoration on Reload
+  // - Seamless browser Back / Forward (popstate & hashchange)
+  // ==========================================
+
+  const DEFAULT_APP_TITLE = 'Notebook Studio • Sổ Tay Thông Minh & Mẫu A4';
+
+  function copyTextToClipboard(text, successMsg = 'Đã sao chép vào clipboard!') {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(() => {
+        showToast(successMsg);
+      }).catch(() => {
+        fallbackCopyText(text, successMsg);
+      });
+    } else {
+      fallbackCopyText(text, successMsg);
+    }
+  }
+
+  function fallbackCopyText(text, successMsg) {
+    const input = document.createElement('textarea');
+    input.value = text;
+    input.style.position = 'fixed';
+    input.style.opacity = '0';
+    document.body.appendChild(input);
+    input.focus();
+    input.select();
+    try {
+      document.execCommand('copy');
+      showToast(successMsg);
+    } catch (err) {
+      prompt('Sao chép liên kết:', text);
+    }
+    document.body.removeChild(input);
+  }
+
+  function copyCurrentBookUrl() {
+    const nb = getActiveNotebook();
+    const curPage = appState.activePageIndex + 1;
+    const url = new URL(window.location.href);
+    if (nb) {
+      url.searchParams.set('book', nb.id);
+      url.searchParams.set('page', String(curPage));
+    }
+    copyTextToClipboard(url.toString(), `Đã sao chép liên kết trang ${curPage} của cuốn “${nb ? nb.title : ''}”!`);
+  }
+
+  function parseRouteFromUrl() {
+    // 1. First priority: search query parameters (?book=...&page=...)
+    try {
+      if (window.location.search) {
+        const params = new URLSearchParams(window.location.search);
+        const bookId = params.get('book') || params.get('id') || params.get('notebook');
+        if (bookId) {
+          const rawPage = params.get('page') || params.get('p');
+          const parsedPage = rawPage ? parseInt(rawPage, 10) : 1;
+          const pageIndex = !isNaN(parsedPage) && parsedPage > 0 ? parsedPage - 1 : 0;
+          return { bookId: decodeURIComponent(bookId), pageIndex };
+        }
+      }
+    } catch (e) {
+      console.warn('[Router] Failed parsing search params:', e);
+    }
+
+    // 2. Second priority: hash routes (#/book/:id/:page or #book=:id&page=:page)
+    try {
+      const hash = window.location.hash || '';
+      if (hash) {
+        if (hash.startsWith('#/book/') || hash.startsWith('#/notebook/')) {
+          const cleanHash = hash.replace(/^#(?:(?:\/book\/)|(?:\/notebook\/))/, '');
+          const parts = cleanHash.split('/');
+          const bookId = decodeURIComponent(parts[0]);
+          let pageIndex = 0;
+          if (parts[1]) {
+            if (parts[1] === 'page' && parts[2]) {
+              const p = parseInt(parts[2], 10);
+              if (!isNaN(p) && p > 0) pageIndex = p - 1;
+            } else {
+              const p = parseInt(parts[1], 10);
+              if (!isNaN(p) && p > 0) pageIndex = p - 1;
+            }
+          }
+          if (bookId) return { bookId, pageIndex };
+        } else if (hash.includes('book=') || hash.includes('id=')) {
+          const hashQuery = hash.replace(/^#\??/, '');
+          const hashParams = new URLSearchParams(hashQuery);
+          const bookId = hashParams.get('book') || hashParams.get('id') || hashParams.get('notebook');
+          if (bookId) {
+            const rawPage = hashParams.get('page') || hashParams.get('p');
+            const parsedPage = rawPage ? parseInt(rawPage, 10) : 1;
+            const pageIndex = !isNaN(parsedPage) && parsedPage > 0 ? parsedPage - 1 : 0;
+            return { bookId: decodeURIComponent(bookId), pageIndex };
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('[Router] Failed parsing hash route:', e);
+    }
+
+    return null;
+  }
+
+  function updateUrl(route, replace = false) {
+    try {
+      const url = new URL(window.location.href);
+      if (route && route.bookId) {
+        url.searchParams.set('book', route.bookId);
+        url.searchParams.set('page', String(route.pageIndex + 1));
+        url.searchParams.delete('id');
+        url.searchParams.delete('notebook');
+        url.searchParams.delete('p');
+        if (url.hash && (url.hash.startsWith('#/book') || url.hash.startsWith('#book='))) {
+          url.hash = '';
+        }
+      } else {
+        url.searchParams.delete('book');
+        url.searchParams.delete('page');
+        url.searchParams.delete('id');
+        url.searchParams.delete('notebook');
+        url.searchParams.delete('p');
+        if (url.hash && (url.hash.startsWith('#/book') || url.hash.startsWith('#book='))) {
+          url.hash = '';
+        }
+      }
+
+      const newUrlString = url.pathname + (url.searchParams.toString() ? '?' + url.searchParams.toString() : '') + url.hash;
+      const currentRelative = window.location.pathname + window.location.search + window.location.hash;
+
+      if (newUrlString !== currentRelative) {
+        if (replace) {
+          window.history.replaceState({ route }, '', newUrlString);
+        } else {
+          window.history.pushState({ route }, '', newUrlString);
+        }
+      }
+    } catch (e) {
+      try {
+        if (route && route.bookId) {
+          window.location.hash = `#/book/${encodeURIComponent(route.bookId)}/${route.pageIndex + 1}`;
+        } else {
+          if (window.location.hash && (window.location.hash.startsWith('#/book') || window.location.hash.startsWith('#book='))) {
+            window.location.hash = '';
+          }
+        }
+      } catch (err) {
+        console.warn('[Router] Failed to sync URL hash:', err);
+      }
+    }
+
+    // Dynamic document.title update
+    if (route && route.bookId) {
+      const nb = (appState.notebooks || []).find(n => n.id === route.bookId);
+      if (nb) {
+        document.title = `${nb.title} (Trang ${route.pageIndex + 1}) • Notebook Studio`;
+      }
+    } else {
+      document.title = DEFAULT_APP_TITLE;
+    }
+  }
+
+  let isHandlingPopState = false;
+
+  function handleRouteFromUrl(skipHistory = true) {
+    const route = parseRouteFromUrl();
+    if (route && route.bookId) {
+      const targetBook = (appState.notebooks || []).find(n => n.id === route.bookId && !n.deletedAt);
+      if (targetBook) {
+        openNotebook(route.bookId, route.pageIndex, skipHistory);
+        return true;
+      } else {
+        showToast('Không tìm thấy cuốn sổ hoặc sổ đã bị chuyển vào thùng rác.');
+        updateUrl(null, true);
+        return false;
+      }
+    }
+    return false;
+  }
+
+  function setupRouting() {
+    window.addEventListener('popstate', () => {
+      isHandlingPopState = true;
+      try {
+        const route = parseRouteFromUrl();
+        if (route && route.bookId) {
+          const targetBook = (appState.notebooks || []).find(n => n.id === route.bookId && !n.deletedAt);
+          if (targetBook) {
+            openNotebook(route.bookId, route.pageIndex, true);
+          } else {
+            returnToLibrary(true);
+          }
+        } else {
+          returnToLibrary(true);
+        }
+      } finally {
+        isHandlingPopState = false;
+      }
+    });
+
+    window.addEventListener('hashchange', () => {
+      if (isHandlingPopState) return;
+      const route = parseRouteFromUrl();
+      if (route && route.bookId) {
+        const targetBook = (appState.notebooks || []).find(n => n.id === route.bookId && !n.deletedAt);
+        if (targetBook) {
+          openNotebook(route.bookId, route.pageIndex, true);
+        } else {
+          returnToLibrary(true);
+        }
+      } else if (!window.location.search.includes('book=')) {
+        returnToLibrary(true);
+      }
+    });
+  }
+
   // Open Notebook (Switch to Reader/Writer View)
-  function openNotebook(notebookId) {
+  function openNotebook(notebookId, targetPageIndex = null, skipUrlUpdate = false) {
     if (!notebookId) {
       if (!appState.notebooks || appState.notebooks.length === 0) {
         openNewNotebookModal();
@@ -787,7 +1023,18 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
 
     appState.activeNotebookId = notebookId;
     const notebook = getActiveNotebook();
-    appState.activePageIndex = notebook ? notebook.lastPageIndex || 0 : 0;
+    if (!notebook) {
+      returnToLibrary(skipUrlUpdate);
+      return;
+    }
+
+    if (typeof targetPageIndex === 'number' && !isNaN(targetPageIndex)) {
+      const maxIdx = Math.max(0, (notebook.pages ? notebook.pages.length : 1) - 1);
+      appState.activePageIndex = Math.max(0, Math.min(targetPageIndex, maxIdx));
+    } else {
+      appState.activePageIndex = notebook.lastPageIndex || 0;
+    }
+    notebook.lastPageIndex = appState.activePageIndex;
     persistState();
 
     els.libraryView.classList.add('hidden');
@@ -801,15 +1048,24 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
     } else {
       applyZoom(appState.zoomLevel || 1.0);
     }
+
+    if (!skipUrlUpdate) {
+      updateUrl({ bookId: notebookId, pageIndex: appState.activePageIndex }, false);
+    }
+
     renderBookPages();
   }
 
-  function returnToLibrary() {
+  function returnToLibrary(skipUrlUpdate = false) {
     saveActivePages();
 
     els.notebookView.classList.add('hidden');
     els.libraryView.classList.remove('hidden');
     renderLibraryGrid();
+
+    if (!skipUrlUpdate) {
+      updateUrl(null, false);
+    }
   }
 
   // SVG Templates & Ornaments matching A4 Study Templates (100% Vector PDF Match)
@@ -850,17 +1106,72 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
   function sanitizeRichHtml(html) {
     const container = document.createElement('div');
     container.innerHTML = html;
-    const allowedTags = new Set(['DIV', 'P', 'BR', 'STRONG', 'B', 'EM', 'I', 'U', 'S', 'STRIKE', 'CODE', 'BLOCKQUOTE', 'UL', 'OL', 'LI', 'H1', 'H2', 'H3', 'HR', 'SPAN', 'MARK']);
+    const allowedTags = new Set([
+      'DIV', 'P', 'BR', 'STRONG', 'B', 'EM', 'I', 'U', 'S', 'STRIKE',
+      'CODE', 'BLOCKQUOTE', 'UL', 'OL', 'LI', 'H1', 'H2', 'H3', 'HR',
+      'SPAN', 'MARK', 'FONT'
+    ]);
+
+    const safeStyleProps = new Set([
+      'color', 'background', 'background-color',
+      'font-size', 'font-family', 'font-weight', 'font-style',
+      'text-decoration', 'line-height'
+    ]);
+
     container.querySelectorAll('*').forEach(el => {
       if (!allowedTags.has(el.tagName)) {
         if (['SCRIPT', 'STYLE', 'IFRAME', 'OBJECT', 'EMBED', 'SVG', 'MATH'].includes(el.tagName)) el.remove();
         else el.replaceWith(...el.childNodes);
         return;
       }
+
+      // Convert legacy FONT tags to modern SPAN elements with equivalent styles
+      if (el.tagName === 'FONT') {
+        const span = document.createElement('span');
+        const color = el.getAttribute('color');
+        const face = el.getAttribute('face');
+        const size = el.getAttribute('size');
+        const fontStyles = [];
+        if (color) fontStyles.push(`color: ${color}`);
+        if (face) fontStyles.push(`font-family: ${face}`);
+        if (size) {
+          const sMap = { '1': '10px', '2': '12px', '3': '14px', '4': '16px', '5': '18px', '6': '24px', '7': '32px' };
+          fontStyles.push(`font-size: ${sMap[size] || '16px'}`);
+        }
+        if (fontStyles.length > 0) span.setAttribute('style', fontStyles.join('; '));
+        while (el.firstChild) span.appendChild(el.firstChild);
+        el.replaceWith(span);
+        el = span;
+      }
+
       [...el.attributes].forEach(attr => {
-        const isSafeClass = attr.name === 'class' && /^(pill-badge|badge-pill)$/.test(attr.value);
-        const isSafeStyle = attr.name === 'style' && /^(color|background(?:-color)?):\s*#[0-9a-f]{3,8}\s*;?$/i.test(attr.value.trim());
-        if (!isSafeClass && !isSafeStyle) el.removeAttribute(attr.name);
+        const name = attr.name.toLowerCase();
+        if (name === 'class') {
+          const classes = attr.value.split(/\s+/).filter(c => /^(pill-badge|badge-pill|done-line|action-line-input|topic-input|date-input|no-input)$/.test(c));
+          if (classes.length > 0) el.className = classes.join(' ');
+          else el.removeAttribute('class');
+        } else if (name === 'style') {
+          const rawStyles = attr.value.split(';');
+          const safeDeclarations = [];
+          for (const raw of rawStyles) {
+            const colonIdx = raw.indexOf(':');
+            if (colonIdx === -1) continue;
+            const prop = raw.slice(0, colonIdx).trim().toLowerCase();
+            const val = raw.slice(colonIdx + 1).trim();
+            if (safeStyleProps.has(prop)) {
+              if (!/url\(|expression\(|javascript:|behavior:/i.test(val)) {
+                safeDeclarations.push(`${prop}: ${val}`);
+              }
+            }
+          }
+          if (safeDeclarations.length > 0) {
+            el.setAttribute('style', safeDeclarations.join('; '));
+          } else {
+            el.removeAttribute('style');
+          }
+        } else {
+          el.removeAttribute(attr.name);
+        }
       });
     });
     return container.innerHTML;
@@ -1367,6 +1678,12 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
     if (curIdx >= totalPages) curIdx = Math.max(0, totalPages - 1);
     if (curIdx < 0) curIdx = 0;
     appState.activePageIndex = curIdx;
+    nb.lastPageIndex = curIdx;
+
+    // Keep URL in sync with active notebook and page
+    if (els.notebookView && !els.notebookView.classList.contains('hidden')) {
+      updateUrl({ bookId: nb.id, pageIndex: curIdx }, true);
+    }
 
     const leftPage = nb.pages[curIdx] || { title: 'Trang mới', lang: 'VI', content: '', template: 'cornell' };
     const rightPage = nb.pages[curIdx + 1] || null;
@@ -1392,6 +1709,10 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
     if (els.readerTemplateSelect) {
       els.readerTemplateSelect.value = leftPage.template || 'cornell';
     }
+
+    // Apply active notebook font and font size
+    applyFontFamily(nb.fontFamily || appState.fontFamily || 'sans');
+    applyFontSize(appState.fontSize || 16);
 
     // Render Left Page Sheet
     renderSheetContent(els.leftPageSheet, leftPage, curIdx + 1, true);
@@ -1576,7 +1897,7 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
       nb.title = newTitle.trim();
       nb.updatedAt = new Date().toISOString();
       if (els.openBookTitle) els.openBookTitle.textContent = nb.title;
-      document.title = `${nb.title} • Notebook Studio`;
+      updateUrl({ bookId: nb.id, pageIndex: appState.activePageIndex }, true);
       persistState();
       showStatus('Đã đổi tên sổ', 'saved');
     }
@@ -1635,13 +1956,73 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
     }
   }
 
-  // Dynamic Font Size update
+  // Dynamic Font Size & Family with State Persistence
   function updateFontSize(delta, reset = false) {
-    let cur = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--editor-font-size')) || 16;
+    let cur = appState.fontSize || parseInt(getComputedStyle(document.documentElement).getPropertyValue('--editor-font-size')) || 16;
     let next = reset ? 16 : Math.max(12, Math.min(cur + delta, 28));
-    document.documentElement.style.setProperty('--editor-font-size', `${next}px`);
-    document.documentElement.style.setProperty('--notebook-font-size', `${Math.max(10, next - 3.5)}px`);
-    if (els.fontSizeLabel) els.fontSizeLabel.textContent = next;
+    appState.fontSize = next;
+    applyFontSize(next);
+    persistState();
+  }
+
+  function applyFontSize(size) {
+    const s = size || appState.fontSize || 16;
+    document.documentElement.style.setProperty('--editor-font-size', `${s}px`);
+    document.documentElement.style.setProperty('--notebook-font-size', `${Math.max(10, s - 3.5)}px`);
+    if (els.fontSizeLabel) els.fontSizeLabel.textContent = s;
+  }
+
+  const CJK_CALLIGRAPHIC_STACK = '"Kaiti SC", "STKaiti", "KaiTi", "SimKai", "KaiTi_GB2312", "BiauKai", "Noto Serif SC", "Songti SC", "STSong", "SimSun", "Source Han Serif SC", serif';
+
+  const FONT_MAP = {
+    'sans': `'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, ${CJK_CALLIGRAPHIC_STACK}`,
+    'vietnam': `'Be Vietnam Pro', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, ${CJK_CALLIGRAPHIC_STACK}`,
+    'serif': `'Cormorant Garamond', Georgia, "Noto Serif SC", ${CJK_CALLIGRAPHIC_STACK}`,
+    'kaiti': `${CJK_CALLIGRAPHIC_STACK}`,
+    'mono': `'JetBrains Mono', monospace, ${CJK_CALLIGRAPHIC_STACK}`
+  };
+
+  function applyFontFamily(fontKey) {
+    const key = fontKey || (getActiveNotebook() && getActiveNotebook().fontFamily) || appState.fontFamily || 'sans';
+    const cssFont = FONT_MAP[key] || FONT_MAP['sans'];
+    document.documentElement.style.setProperty('--notebook-font-family', cssFont);
+    if (els.fmtFontFamily) els.fmtFontFamily.value = key;
+  }
+
+  function applyFontFamilyToSelection(editable, fontValue) {
+    if (!editable) return;
+    editable.focus();
+    restoreCurrentSelection();
+    const sel = window.getSelection();
+    if (!sel || !sel.rangeCount) return;
+
+    const cssFont = FONT_MAP[fontValue] || fontValue;
+
+    if (!sel.isCollapsed) {
+      try {
+        const range = sel.getRangeAt(0);
+        const span = document.createElement('span');
+        span.style.fontFamily = cssFont;
+        span.appendChild(range.extractContents());
+        range.insertNode(span);
+        range.selectNodeContents(span);
+        sel.removeAllRanges();
+        sel.addRange(range);
+      } catch (e) {
+        document.execCommand('fontName', false, cssFont);
+      }
+    } else {
+      const nb = getActiveNotebook();
+      if (nb) {
+        nb.fontFamily = fontValue;
+      }
+      appState.fontFamily = fontValue;
+      applyFontFamily(fontValue);
+      persistState();
+      showToast(`Đã đổi phông chữ cho sổ.`);
+    }
+    editable.dispatchEvent(new Event('input', { bubbles: true }));
+    scheduleSave();
   }
 
   function getActiveEditableArea() {
@@ -2283,9 +2664,12 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
       els.btnDeleteCurrentPage.addEventListener('click', deleteCurrentPage);
     }
 
-    // Rename Notebook
+    // Rename & Copy Link Notebook
     if (els.btnRenameBook) {
       els.btnRenameBook.addEventListener('click', renameCurrentNotebook);
+    }
+    if (els.btnCopyBookLink) {
+      els.btnCopyBookLink.addEventListener('click', copyCurrentBookUrl);
     }
     if (els.openBookTitle) {
       els.openBookTitle.addEventListener('click', renameCurrentNotebook);
@@ -2422,6 +2806,25 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
           applyFormattingToActiveTarget('bg', bg);
           closeAllPopoverMenus();
         });
+      });
+    }
+
+    // Font family control
+    if (els.fmtFontFamily) {
+      els.fmtFontFamily.addEventListener('change', (e) => {
+        const chosen = e.target.value;
+        const editable = getActiveEditableArea();
+        const sel = window.getSelection();
+        if (editable && sel && !sel.isCollapsed && editable.contains(sel.anchorNode)) {
+          applyFontFamilyToSelection(editable, chosen);
+        } else {
+          const nb = getActiveNotebook();
+          if (nb) nb.fontFamily = chosen;
+          appState.fontFamily = chosen;
+          applyFontFamily(chosen);
+          persistState();
+          showToast('Đã đổi phông chữ cho sổ.');
+        }
       });
     }
 
@@ -2627,8 +3030,14 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
   // Initialize
   function init() {
     setupEventListeners();
+    setupRouting();
     persistState();
+    applyFontSize(appState.fontSize || 16);
+    applyFontFamily(appState.fontFamily || 'sans');
     renderLibraryGrid();
+
+    // Deep-link / route recovery on initial page load or reload
+    handleRouteFromUrl(true);
   }
 
   if (document.readyState === 'loading') {
