@@ -12,10 +12,10 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
 
   const STORAGE_KEY = 'thao_digital_notebooks_v7';
   const BACKUP_STORAGE_KEY = 'thao_digital_notebooks_v7_previous';
-  const STATE_VERSION = 2;
+  const STATE_VERSION = 3;
   const SAVE_DEBOUNCE_MS = 600;
 
-  // Initial Library Data (Featuring the 3 authentic A4 templates + reading books)
+  // Initial library data featuring the three built-in notebook templates.
   const INITIAL_LIBRARY_DATA = {
     activeNotebookId: 'nb-cornell-study',
     activePageIndex: 0,
@@ -79,13 +79,13 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
             status: 'WIP',
             template: 'work',
             agenda: '1. Đánh giá giao diện và format trang A4\n2. Tích hợp mẫu Cornell, Work, Ruled\n3. Sửa lỗi ngắt dòng và tràn lề tự động\n4. Phê duyệt bản phát hành v5',
-            discussions: '• Đã phân tích source HTML của 3 file PDF: Cornell_Notes_A4.pdf, Work_Notes_A4.pdf, Ruled_Notebook_A4.pdf.\n• Tất cả đường kẻ hairline vector 7.5mm được giữ nguyên độ nét tuyệt đối.\n• Tích hợp tương tác checkbox thời gian thực cho danh sách Action items.\n• Sửa triệt để lỗi tràn chữ theo chiều ngang bằng thuộc tính CSS word-break và auto-wrap.',
+            discussions: '• Đã hoàn thiện ba mẫu trang Cornell, Work Notes và Ruled Notebook.\n• Tất cả đường kẻ hairline vector 7.5mm được giữ nguyên độ nét tuyệt đối.\n• Tích hợp tương tác checkbox thời gian thực cho danh sách Action items.\n• Sửa triệt để lỗi tràn chữ theo chiều ngang bằng thuộc tính CSS word-break và auto-wrap.',
             actions: [
-              { checked: true, text: 'Phân tích cấu trúc vector từ a4-study-templates.html' },
+              { checked: true, text: 'Hoàn thiện cấu trúc vector cho ba mẫu trang' },
               { checked: true, text: 'Tích hợp 3 template vào hệ thống chuyển đổi trang' },
               { checked: false, text: 'Kiểm tra chế độ 1 trang & 2 trang song song' },
               { checked: false, text: 'Xác thực tính năng lưu trữ dữ liệu template vào localStorage' },
-              { checked: false, text: 'Phát hành bản demo cho khách hàng nghiệm thu' }
+              { checked: false, text: 'Kiểm tra bản dùng cá nhân trên các thiết bị' }
             ]
           },
           {
@@ -300,11 +300,13 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
   // State Persistence
   function normalizeState(rawState) {
     const state = rawState && typeof rawState === 'object' ? rawState : {};
+    const previousVersion = Number(state.version) || 0;
     state.version = STATE_VERSION;
     state.notebooks = Array.isArray(state.notebooks) ? state.notebooks : [];
     state.trash = Array.isArray(state.trash) ? state.trash : [];
     state.pageMode = state.pageMode === '1-page' ? '1-page' : '2-page';
     state.zoomLevel = Number.isFinite(state.zoomLevel) ? Math.max(0.3, Math.min(state.zoomLevel, 3.5)) : 1;
+    if (previousVersion < 3 && state.zoomLevel <= 0.3) state.zoomLevel = 1;
     state.fontSize = Number.isInteger(state.fontSize) && state.fontSize >= 10 && state.fontSize <= 200 ? state.fontSize : 16;
     state.fontFamily = typeof state.fontFamily === 'string' && state.fontFamily ? state.fontFamily : 'sans';
     const validLineHeights = ['24', '28', '32', '36', '42', 'none'];
@@ -1049,11 +1051,13 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
 
     const compact = window.innerWidth <= 900;
     wasCompactViewport = compact;
+    if (els.btnFitPage) els.btnFitPage.classList.remove('active');
+    if (els.btnFitWidth) els.btnFitWidth.classList.remove('active');
     applyPageMode(compact ? '1-page' : (appState.pageMode || '2-page'), !compact);
     if (compact) {
-      applyZoom(1);
+      applyZoom(1, false);
     } else {
-      applyZoom(appState.zoomLevel || 1.0);
+      applyZoom(appState.zoomLevel || 1.0, false);
     }
 
     if (!skipUrlUpdate) {
@@ -1906,9 +1910,9 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
   }
 
   // Apply Zoom Scale (Supports 30% to 350% smoothly)
-  function applyZoom(scale) {
+  function applyZoom(scale, persistPreference = true) {
     const clampedScale = Math.max(0.3, Math.min(3.5, Math.round(scale * 100) / 100));
-    appState.zoomLevel = clampedScale;
+    if (persistPreference) appState.zoomLevel = clampedScale;
     els.bookDeskScaler.style.transform = `scale(${clampedScale})`;
     els.bookDeskScaler.style.transformOrigin = 'top center';
 
@@ -1935,7 +1939,7 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
     if (els.readerScaleValue) {
       els.readerScaleValue.textContent = `${Math.round(clampedScale * 100)}%`;
     }
-    persistState();
+    if (persistPreference) persistState();
   }
 
   function zoomIn() {
@@ -2957,8 +2961,12 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
       const isCompactViewport = window.innerWidth <= 900;
       if (!els.notebookView.classList.contains('hidden') && isCompactViewport !== wasCompactViewport) {
         applyPageMode(isCompactViewport ? '1-page' : appState.pageMode, false);
+        applyZoom(isCompactViewport ? 1 : (appState.zoomLevel || 1), false);
+        wasCompactViewport = isCompactViewport;
+        return;
       }
       wasCompactViewport = isCompactViewport;
+      if (isCompactViewport) return;
       if (els.btnFitPage && els.btnFitPage.classList.contains('active')) {
         handleFitPage();
       } else if (els.btnFitWidth && els.btnFitWidth.classList.contains('active')) {
@@ -3397,6 +3405,12 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
 
     // Deep-link / route recovery on initial page load or reload
     handleRouteFromUrl(true);
+
+    if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {
+      navigator.serviceWorker.register('./sw.js').catch(error => {
+        console.warn('Không thể bật chế độ offline:', error);
+      });
+    }
   }
 
   if (document.readyState === 'loading') {

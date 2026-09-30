@@ -1,5 +1,5 @@
 // Notebook Studio - offline application shell
-const CACHE_NAME = 'notebook-studio-v2';
+const CACHE_NAME = 'notebook-studio-v3';
 const APP_SHELL = [
   './',
   './index.html',
@@ -25,15 +25,12 @@ self.addEventListener('activate', (e) => {
 self.addEventListener('fetch', (e) => {
   if (e.request.method !== 'GET' || new URL(e.request.url).origin !== self.location.origin) return;
   e.respondWith(
-    caches.match(e.request).then(cached => {
-      const network = fetch(e.request).then(response => {
+    fetch(e.request).then(response => {
         if (response && response.ok) {
           const copy = response.clone();
           caches.open(CACHE_NAME).then(cache => cache.put(e.request, copy));
         }
         return response;
-      }).catch(() => cached || caches.match('./index.html'));
-      return cached || network;
-    })
+      }).catch(() => caches.match(e.request).then(cached => cached || caches.match('./index.html')))
   );
 });
