@@ -1103,6 +1103,47 @@ body {
 }
 .export-menu[hidden]:not(.is-open) { display: none !important; }
 .export-menu.is-open { display: block !important; }
+.pdf-export-menu {
+  left: auto;
+  right: 0;
+  min-width: 230px;
+}
+.pdf-export-menu__item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 10px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #f8fafc;
+  cursor: pointer;
+  text-align: left;
+}
+.pdf-export-menu__item:hover,
+.pdf-export-menu__item:focus-visible {
+  background: rgba(255, 255, 255, 0.1);
+  outline: none;
+}
+.pdf-export-menu__item > span:last-child {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.pdf-export-menu__item strong { font-size: 12px; }
+.pdf-export-menu__item small { color: #94a3b8; font-size: 10px; }
+.pdf-export-menu__icon {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  flex: 0 0 26px;
+  border-radius: 6px;
+  background: rgba(56, 189, 248, 0.12);
+  color: #7dd3fc;
+  font-size: 15px;
+}
 @keyframes popoverFadeIn {
   from { opacity: 0; transform: translateY(-4px); }
   to { opacity: 1; transform: translateY(0); }
@@ -2292,6 +2333,10 @@ mark {
   display: none;
 }
 
+.print-cover-sheet {
+  display: none;
+}
+
 @media print {
   @page {
     size: A4 portrait;
@@ -2350,6 +2395,83 @@ mark {
   .print-all-pages .book-page-sheet {
     display: block !important;
     position: relative !important;
+  }
+
+  .print-all-pages .print-cover-sheet {
+    display: flex !important;
+    position: relative !important;
+    align-items: stretch;
+    width: 210mm !important;
+    height: 297mm !important;
+    min-height: 297mm !important;
+    max-height: 297mm !important;
+    box-sizing: border-box;
+    margin: 0 auto !important;
+    padding: 18mm;
+    overflow: hidden !important;
+    color: var(--print-cover-color, #ffffff) !important;
+    background: var(--print-cover-background, linear-gradient(135deg, #1e3a8a, #0f172a)) !important;
+    page-break-after: always !important;
+    page-break-inside: avoid !important;
+  }
+
+  .print-cover-sheet::before {
+    content: '';
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 15mm;
+    background: linear-gradient(to right, rgba(0, 0, 0, 0.42), rgba(255, 255, 255, 0.16) 28%, rgba(0, 0, 0, 0.18) 70%, transparent);
+  }
+
+  .print-cover-frame {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 13mm;
+    border: 0.6mm solid currentColor;
+    color: inherit;
+  }
+
+  .print-cover-category {
+    font-size: 11pt;
+    font-weight: 800;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    opacity: 0.82;
+  }
+
+  .print-cover-title {
+    max-width: 155mm;
+    margin: auto 0 8mm;
+    color: inherit !important;
+    font-size: 38pt;
+    line-height: 1.08;
+    letter-spacing: -0.02em;
+    text-transform: uppercase;
+    overflow-wrap: anywhere;
+  }
+
+  .print-cover-rule {
+    width: 24mm;
+    height: 1mm;
+    margin-bottom: auto;
+    background: currentColor;
+    opacity: 0.8;
+  }
+
+  .print-cover-footer {
+    display: flex;
+    justify-content: space-between;
+    gap: 10mm;
+    padding-top: 8mm;
+    border-top: 0.3mm solid currentColor;
+    font-size: 10pt;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
   }
 
   .book-desk {

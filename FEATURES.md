@@ -47,7 +47,7 @@ analytics hoặc các chức năng bán hàng.
 - [x] Hỗ trợ browser Back/Forward và sao chép deep-link local có nhãn rõ ràng.
 - [x] Schema dữ liệu có version và migration dữ liệu cũ.
 - [x] Kiểm tra lỗi lưu trữ và chuẩn hóa dữ liệu khi tải.
-- [x] In/lưu PDF toàn bộ cuốn sổ.
+- [x] In/lưu PDF toàn bộ cuốn sổ, có lựa chọn thêm bìa A4.
 - [x] PWA manifest, icon và application shell dùng offline.
 - [x] Service Worker network-first để tránh giữ bản mã nguồn cũ.
 

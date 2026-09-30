@@ -405,9 +405,21 @@
 
       <!-- PDF export -->
       <div class="toolbar-group">
-        <button id="export-print" type="button" class="tool-btn" title="In / Lưu toàn bộ PDF" aria-label="In hoặc lưu toàn bộ cuốn sổ thành PDF">
-          <svg viewBox="0 0 24 24"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
-        </button>
+        <div class="export-wrapper">
+          <button id="export-print" type="button" class="tool-btn" title="In / Lưu PDF" aria-label="Chọn cách in hoặc lưu cuốn sổ thành PDF" aria-haspopup="menu" aria-expanded="false">
+            <svg viewBox="0 0 24 24"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+          </button>
+          <div id="pdf-export-menu" class="export-menu pdf-export-menu" role="menu" hidden>
+            <button id="export-pdf-with-cover" type="button" class="pdf-export-menu__item" role="menuitem">
+              <span class="pdf-export-menu__icon">▣</span>
+              <span><strong>PDF kèm bìa</strong><small>Bìa A4 + toàn bộ nội dung</small></span>
+            </button>
+            <button id="export-pdf-content-only" type="button" class="pdf-export-menu__item" role="menuitem">
+              <span class="pdf-export-menu__icon">≡</span>
+              <span><strong>Chỉ nội dung</strong><small>Toàn bộ trang ghi chép</small></span>
+            </button>
+          </div>
+        </div>
       </div>
     </nav>
 

@@ -276,6 +276,9 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
     btnRenameBook: document.querySelector('#btnRenameBook'),
     btnCopyBookLink: document.querySelector('#btnCopyBookLink'),
     exportPrintBtn: document.querySelector('#export-print'),
+    pdfExportMenu: document.querySelector('#pdf-export-menu'),
+    exportPdfWithCoverBtn: document.querySelector('#export-pdf-with-cover'),
+    exportPdfContentOnlyBtn: document.querySelector('#export-pdf-content-only'),
 
     // Modal
     newNotebookModal: document.querySelector('#newNotebookModal'),
@@ -2806,7 +2809,35 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
     return null;
   }
 
-  function printFullNotebook() {
+  function createPrintCover(notebook) {
+    const sheet = document.createElement('article');
+    sheet.className = 'print-page-sheet print-cover-sheet';
+    sheet.style.setProperty('--print-cover-background', notebook.coverGradient || 'linear-gradient(135deg, #1e3a8a, #0f172a)');
+    sheet.style.setProperty('--print-cover-color', notebook.coverTextColor || '#ffffff');
+
+    const frame = document.createElement('div');
+    frame.className = 'print-cover-frame';
+    const category = document.createElement('div');
+    category.className = 'print-cover-category';
+    category.textContent = notebook.category || 'Ghi chép';
+    const title = document.createElement('h1');
+    title.className = 'print-cover-title';
+    title.textContent = notebook.title || 'Sổ tay';
+    const rule = document.createElement('div');
+    rule.className = 'print-cover-rule';
+    const footer = document.createElement('div');
+    footer.className = 'print-cover-footer';
+    const author = document.createElement('span');
+    author.textContent = notebook.author || 'Cá nhân';
+    const pageCount = document.createElement('span');
+    pageCount.textContent = `${notebook.pages.length} trang`;
+    footer.append(author, pageCount);
+    frame.append(category, title, rule, footer);
+    sheet.appendChild(frame);
+    return sheet;
+  }
+
+  function printFullNotebook(includeCover = false) {
     if (!saveActivePages()) return;
     const notebook = getActiveNotebook();
     if (!notebook || !Array.isArray(notebook.pages) || notebook.pages.length === 0) {
@@ -2818,6 +2849,8 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
     const printRoot = document.createElement('main');
     printRoot.className = 'print-all-pages';
     printRoot.setAttribute('aria-hidden', 'true');
+
+    if (includeCover) printRoot.appendChild(createPrintCover(notebook));
 
     notebook.pages.forEach((page, pageIndex) => {
       const sheet = document.createElement('article');
@@ -3078,13 +3111,14 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
     }
 
     function closeAllPopoverMenus() {
-      [els.fmtColorPalette, els.fmtBgPalette, els.lineHeightMenu].forEach(m => {
+      [els.fmtColorPalette, els.fmtBgPalette, els.lineHeightMenu, els.pdfExportMenu].forEach(m => {
         if (m) {
           m.setAttribute('hidden', '');
           m.hidden = true;
           m.classList.remove('is-open');
         }
       });
+      if (els.exportPrintBtn) els.exportPrintBtn.setAttribute('aria-expanded', 'false');
     }
 
     // Color popover
@@ -3096,7 +3130,7 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
       els.fmtColorBtn.addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();
-        openPopoverMenu(els.fmtColorPalette, [els.fmtBgPalette]);
+        openPopoverMenu(els.fmtColorPalette, [els.fmtBgPalette, els.pdfExportMenu]);
       });
 
       els.fmtColorPalette.addEventListener('mousedown', (e) => {
@@ -3129,7 +3163,7 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
       els.fmtBgBtn.addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();
-        openPopoverMenu(els.fmtBgPalette, [els.fmtColorPalette]);
+        openPopoverMenu(els.fmtBgPalette, [els.fmtColorPalette, els.pdfExportMenu]);
       });
 
       els.fmtBgPalette.addEventListener('mousedown', (e) => {
@@ -3182,7 +3216,7 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
       els.btnLineHeightSettings.addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();
-        openPopoverMenu(els.lineHeightMenu, [els.fmtColorPalette, els.fmtBgPalette]);
+        openPopoverMenu(els.lineHeightMenu, [els.fmtColorPalette, els.fmtBgPalette, els.pdfExportMenu]);
       });
 
       els.lineHeightMenu.querySelectorAll('.line-height-option').forEach(btn => {
@@ -3196,7 +3230,26 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
       });
     }
 
-    if (els.exportPrintBtn) els.exportPrintBtn.addEventListener('click', printFullNotebook);
+    if (els.exportPrintBtn && els.pdfExportMenu) {
+      els.exportPrintBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        openPopoverMenu(els.pdfExportMenu, [els.fmtColorPalette, els.fmtBgPalette, els.lineHeightMenu]);
+        els.exportPrintBtn.setAttribute('aria-expanded', String(!els.pdfExportMenu.hidden));
+      });
+      if (els.exportPdfWithCoverBtn) {
+        els.exportPdfWithCoverBtn.addEventListener('click', () => {
+          closeAllPopoverMenus();
+          printFullNotebook(true);
+        });
+      }
+      if (els.exportPdfContentOnlyBtn) {
+        els.exportPdfContentOnlyBtn.addEventListener('click', () => {
+          closeAllPopoverMenus();
+          printFullNotebook(false);
+        });
+      }
+    }
 
     if (els.btnResetLibrary) {
       els.btnResetLibrary.addEventListener('click', () => {
@@ -3296,8 +3349,9 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
     document.addEventListener('click', (e) => {
       const isInsideColor = (els.fmtColorPalette && els.fmtColorPalette.contains(e.target)) || (els.fmtColorBtn && els.fmtColorBtn.contains(e.target));
       const isInsideBg = (els.fmtBgPalette && els.fmtBgPalette.contains(e.target)) || (els.fmtBgBtn && els.fmtBgBtn.contains(e.target));
+      const isInsidePdfExport = (els.pdfExportMenu && els.pdfExportMenu.contains(e.target)) || (els.exportPrintBtn && els.exportPrintBtn.contains(e.target));
       const isInsideLh = (els.lineHeightMenu && els.lineHeightMenu.contains(e.target)) || (els.btnLineHeightSettings && els.btnLineHeightSettings.contains(e.target));
-      if (!isInsideColor && !isInsideBg && !isInsideLh) {
+      if (!isInsideColor && !isInsideBg && !isInsidePdfExport && !isInsideLh) {
         closeAllPopoverMenus();
       }
     });
