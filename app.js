@@ -310,6 +310,9 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
     fullscreenSaveStatus: document.querySelector('#fullscreenSaveStatus'),
     fullscreenToolsPanel: document.querySelector('#fullscreenToolsPanel'),
     btnCloseFsPanel: document.querySelector('#btnCloseFsPanel'),
+    btnFsTplCornell: document.querySelector('#btnFsTplCornell'),
+    btnFsTplWork: document.querySelector('#btnFsTplWork'),
+    btnFsTplNormal: document.querySelector('#btnFsTplNormal'),
 
     // Modal
     newNotebookModal: document.querySelector('#newNotebookModal'),
@@ -1832,6 +1835,17 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
       );
     }
 
+    const nb = getActiveNotebook();
+    if (nb && els.readerTemplateSelect) {
+      const curIdx = appState.activePageIndex;
+      const activeSheet = (focusedPageSide === 'right' && currentPageMode === '2-page' && nb.pages[curIdx + 1])
+        ? nb.pages[curIdx + 1]
+        : nb.pages[curIdx];
+      if (activeSheet) {
+        els.readerTemplateSelect.value = activeSheet.template || 'cornell';
+      }
+    }
+
     if (isFullscreenActive()) {
       updateFullscreenRailControls();
     }
@@ -2029,9 +2043,12 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
     }
     updateFullscreenRailControls();
 
-    // Set Template Selector value to active left page's template
+    // Set Template Selector value to active focused page's template
+    const activePageForTemplate = (currentPageMode === '2-page' && focusedPageSide === 'right' && rightPage)
+      ? rightPage
+      : leftPage;
     if (els.readerTemplateSelect) {
-      els.readerTemplateSelect.value = leftPage.template || 'cornell';
+      els.readerTemplateSelect.value = (activePageForTemplate && activePageForTemplate.template) || 'cornell';
     }
 
     // Apply active notebook font, font size, and fixed line height
@@ -2234,14 +2251,19 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
   function changePageTemplate(templateKey) {
     const nb = getActiveNotebook();
     if (!nb) return;
-    const curPage = nb.pages[appState.activePageIndex];
+    const isRightTarget = currentPageMode === '2-page' && focusedPageSide === 'right' && nb.pages[appState.activePageIndex + 1];
+    const targetIdx = isRightTarget ? appState.activePageIndex + 1 : appState.activePageIndex;
+    const targetSheet = isRightTarget ? els.rightPageSheet : els.leftPageSheet;
+    const curPage = nb.pages[targetIdx];
     if (!curPage) return;
 
     const oldTemplate = curPage.template;
     if (oldTemplate === templateKey) return;
 
     // Extract current values before changing
-    extractTemplateDataFromSheet(els.leftPageSheet, curPage);
+    if (targetSheet) {
+      extractTemplateDataFromSheet(targetSheet, curPage);
+    }
 
     // Always convert from the currently visible template. Hidden fields from an
     // older template must never win over the user's latest edit.
@@ -2285,6 +2307,10 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
     nb.updatedAt = curPage.updatedAt;
     persistState();
     renderBookPages();
+    if (els.readerTemplateSelect) {
+      els.readerTemplateSelect.value = templateKey;
+    }
+    updateFullscreenRailControls();
   }
 
   // Rename Current Notebook
@@ -3144,6 +3170,26 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
     if (els.btnFullscreenFitWidth) {
       els.btnFullscreenFitWidth.classList.toggle('is-active', isFitWidthActive);
     }
+
+    // Template buttons state in fullscreen rail and tools drawer
+    const activeSheetPage = (currentPageMode === '2-page' && focusedPageSide === 'right' && nb.pages[curIdx + 1])
+      ? nb.pages[curIdx + 1]
+      : nb.pages[curIdx];
+    const curTemplate = (activeSheetPage && activeSheetPage.template) || 'cornell';
+
+    if (els.btnFsTplCornell) {
+      els.btnFsTplCornell.classList.toggle('is-active', curTemplate === 'cornell');
+    }
+    if (els.btnFsTplWork) {
+      els.btnFsTplWork.classList.toggle('is-active', curTemplate === 'work');
+    }
+    if (els.btnFsTplNormal) {
+      els.btnFsTplNormal.classList.toggle('is-active', curTemplate === 'ruled');
+    }
+
+    document.querySelectorAll('.fs-tpl-pill').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.template === curTemplate);
+    });
   }
 
   function updateFullscreenUI(isFs) {
@@ -3702,6 +3748,22 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
         updateFullscreenRailControls();
       });
     }
+
+    // Fullscreen Template Selection Controls
+    if (els.btnFsTplCornell) {
+      els.btnFsTplCornell.addEventListener('click', () => changePageTemplate('cornell'));
+    }
+    if (els.btnFsTplWork) {
+      els.btnFsTplWork.addEventListener('click', () => changePageTemplate('work'));
+    }
+    if (els.btnFsTplNormal) {
+      els.btnFsTplNormal.addEventListener('click', () => changePageTemplate('ruled'));
+    }
+    document.querySelectorAll('.fs-tpl-pill').forEach(btn => {
+      btn.addEventListener('click', () => {
+        changePageTemplate(btn.dataset.template);
+      });
+    });
 
     // Fullscreen Zoom & Fit Controls
     if (els.btnFullscreenZoomIn) {

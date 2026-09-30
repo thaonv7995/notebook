@@ -1,7 +1,7 @@
 {
   "name": "Notebook Studio",
   "short_name": "Notebook",
-  "description": "Sổ tay số có cấu trúc với mẫu Cornell, Work Notes và Ruled A4.",
+  "description": "Sổ tay số có cấu trúc với mẫu Cornell, Work và Normal A4.",
   "start_url": "./",
   "display": "standalone",
   "background_color": "#0b111e",

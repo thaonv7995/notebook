@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Notebook Studio • Sổ Tay Thông Minh & Mẫu A4</title>
-  <meta name="description" content="Sổ tay ghi chép số cá nhân cao cấp, quản lý các cuốn sổ A4 Cornell, Work Notes, Ruled, lật trang 3D chân thực, hỗ trợ chế độ 1 trang và 2 trang song song.">
+  <meta name="description" content="Sổ tay ghi chép số cá nhân cao cấp, quản lý các cuốn sổ A4 Cornell, Work, Normal, lật trang 3D chân thực, hỗ trợ chế độ 1 trang và 2 trang song song.">
   <meta name="theme-color" content="#0f172a">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect x='10' y='6' width='44' height='52' rx='7' fill='%232563eb'/%3E%3Cpath d='M20 6v52M26 18h20M26 28h20M26 38h16' stroke='white' stroke-width='4'/%3E%3C/svg%3E">
   <link rel="manifest" href="manifest.webmanifest">
@@ -166,10 +166,10 @@
         </div>
 
         <!-- Template Chooser -->
-        <select id="readerTemplateSelect" class="reader-template-select" title="Định dạng bố cục sổ tay">
+        <select id="readerTemplateSelect" class="reader-template-select" title="Định dạng bố cục trang sổ">
           <option value="cornell">✨ Cornell</option>
-          <option value="work">💼 Work Notes</option>
-          <option value="ruled">📏 Kẻ ngang</option>
+          <option value="work">💼 Work</option>
+          <option value="ruled">📄 Normal</option>
         </select>
       </div>
 
@@ -504,6 +504,21 @@
 
       <span class="fullscreen-rail-divider"></span>
 
+      <!-- Template Selector (Cornell / Work / Normal) -->
+      <div class="rail-group rail-group--template" title="Mẫu trang sổ">
+        <button id="btnFsTplCornell" class="rail-btn" type="button" title="Mẫu Cornell (✨)" aria-label="Mẫu Cornell">
+          <span class="rail-emoji-icon">✨</span>
+        </button>
+        <button id="btnFsTplWork" class="rail-btn" type="button" title="Mẫu Work (💼)" aria-label="Mẫu Work">
+          <span class="rail-emoji-icon">💼</span>
+        </button>
+        <button id="btnFsTplNormal" class="rail-btn" type="button" title="Mẫu Normal (📄)" aria-label="Mẫu Normal">
+          <span class="rail-emoji-icon">📄</span>
+        </button>
+      </div>
+
+      <span class="fullscreen-rail-divider"></span>
+
       <!-- Zoom & Fit Controls (Matching User Image) -->
       <div class="rail-group rail-group--zoom" title="Thu phóng & canh trang">
         <button id="btnFullscreenZoomIn" class="rail-btn" type="button" title="Phóng to (+)" aria-label="Phóng to">
@@ -624,6 +639,14 @@
           <button type="button" class="fs-pill-btn fs-lh-btn" data-lh="36">36px</button>
           <button type="button" class="fs-pill-btn fs-lh-btn" data-lh="none">Trơn</button>
         </div>
+
+        <!-- Template quick options in Fullscreen Drawer -->
+        <div class="fs-section-label">Mẫu trang sổ</div>
+        <div class="fs-pill-row fs-template-pill-row">
+          <button type="button" class="fs-pill-btn fs-tpl-pill" data-template="cornell">✨ Cornell</button>
+          <button type="button" class="fs-pill-btn fs-tpl-pill" data-template="work">💼 Work</button>
+          <button type="button" class="fs-pill-btn fs-tpl-pill" data-template="ruled">📄 Normal</button>
+        </div>
       </div>
     </div>
 
@@ -690,9 +713,9 @@
         <div class="form-group">
           <label for="newNotebookTemplate" class="form-label">Mẫu định dạng trang:</label>
           <select id="newNotebookTemplate" class="form-input">
-            <option value="cornell">✨ Cornell Notes (A4 Study Journal - 30/70 Cues & Summary)</option>
-            <option value="work">💼 Work & Project (A4 Planner - Agenda, Notes & Action Checklists)</option>
-            <option value="ruled">📏 Ruled Notebook (A4 32 Dòng kẻ)</option>
+            <option value="cornell">✨ Cornell</option>
+            <option value="work">💼 Work</option>
+            <option value="ruled">📄 Normal</option>
           </select>
         </div>
 
