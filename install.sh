@@ -25,6 +25,7 @@ ACTION="${2:-install}"
 INSTALL_DIR="${INSTALL_DIR:-$HOME/notebook-studio}"
 PORT="${PORT:-27972}"
 ADMIN_EMAIL="admin@notebook.com"
+SERVICE_NAME="notebook-studio"
 
 # ─── Colors ───
 RED='\033[0;31m'
@@ -48,13 +49,13 @@ preflight() {
     echo ""
     echo -e "  ${BOLD}Usage:${NC}"
     echo -e "    ${DIM}# Install${NC}"
-    echo -e "    curl -fsSL \"https://github.com/${CYAN}OWNER/REPO${NC}/releases/latest/download/install.sh\" | sh -s -- \"${CYAN}OWNER/REPO${NC}\""
+    echo -e "    curl -fsSL \"https://github.com/${CYAN}OWNER/REPO${NC}/releases/latest/download/install.sh\" | bash -s -- \"${CYAN}OWNER/REPO${NC}\""
     echo ""
     echo -e "    ${DIM}# Update${NC}"
-    echo -e "    curl -fsSL \"...\" | sh -s -- \"OWNER/REPO\" ${CYAN}update${NC}"
+    echo -e "    curl -fsSL \"...\" | bash -s -- \"OWNER/REPO\" ${CYAN}update${NC}"
     echo ""
     echo -e "    ${DIM}# Uninstall${NC}"
-    echo -e "    curl -fsSL \"...\" | sh -s -- \"OWNER/REPO\" ${CYAN}uninstall${NC}"
+    echo -e "    curl -fsSL \"...\" | bash -s -- \"OWNER/REPO\" ${CYAN}uninstall${NC}"
     echo ""
     exit 1
   fi
@@ -71,6 +72,16 @@ preflight() {
     err "Node.js v18+ is required (found $(node -v))."
     exit 1
   fi
+}
+
+# ─── Detect systemd ───
+has_systemd() {
+  command -v systemctl >/dev/null 2>&1 && [ -d /run/systemd/system ]
+}
+
+# ─── Get node path for systemd ───
+get_node_path() {
+  command -v node
 }
 
 # ─── Get latest release info ───
@@ -116,14 +127,201 @@ download_and_extract() {
   ok "Files extracted."
 }
 
-# ─── Stop running server ───
-stop_server() {
+# ═══════════════════════════════════════════════════════════════
+#  SERVICE MANAGEMENT (systemd with fallback to nohup)
+# ═══════════════════════════════════════════════════════════════
+
+# ─── Create systemd service ───
+setup_systemd_service() {
+  local node_bin
+  node_bin="$(get_node_path)"
+  local service_file="/etc/systemd/system/${SERVICE_NAME}.service"
+  local run_user
+  run_user="$(whoami)"
+
+  info "Creating systemd service: ${BOLD}${SERVICE_NAME}${NC}..."
+
+  # Create log directory
+  mkdir -p "$INSTALL_DIR/logs"
+
+  local service_content="[Unit]
+Description=Notebook Studio — Digital Notebook Server
+After=network.target
+StartLimitIntervalSec=60
+StartLimitBurst=5
+
+[Service]
+Type=simple
+User=${run_user}
+WorkingDirectory=${INSTALL_DIR}
+ExecStart=${node_bin} server/index.js
+Restart=always
+RestartSec=5
+Environment=NODE_ENV=production
+EnvironmentFile=${INSTALL_DIR}/.env
+
+# Logging
+StandardOutput=append:${INSTALL_DIR}/logs/stdout.log
+StandardError=append:${INSTALL_DIR}/logs/stderr.log
+
+# Security hardening
+NoNewPrivileges=true
+ProtectSystem=strict
+ReadWritePaths=${INSTALL_DIR}
+
+[Install]
+WantedBy=multi-user.target"
+
+  # Need sudo for systemd
+  if [ "$(id -u)" -eq 0 ]; then
+    echo "$service_content" > "$service_file"
+    systemctl daemon-reload
+    systemctl enable "${SERVICE_NAME}" >/dev/null 2>&1
+  else
+    echo "$service_content" | sudo tee "$service_file" >/dev/null
+    sudo systemctl daemon-reload
+    sudo systemctl enable "${SERVICE_NAME}" >/dev/null 2>&1
+  fi
+
+  ok "Systemd service created and enabled."
+
+  # Create logrotate config
+  setup_logrotate
+}
+
+# ─── Log rotation ───
+setup_logrotate() {
+  local logrotate_conf="/etc/logrotate.d/${SERVICE_NAME}"
+  local rotate_content="${INSTALL_DIR}/logs/*.log {
+    daily
+    rotate 7
+    compress
+    delaycompress
+    missingok
+    notifempty
+    copytruncate
+    size 10M
+}"
+
+  if [ "$(id -u)" -eq 0 ]; then
+    echo "$rotate_content" > "$logrotate_conf"
+  elif command -v sudo >/dev/null 2>&1; then
+    echo "$rotate_content" | sudo tee "$logrotate_conf" >/dev/null
+  fi
+  ok "Log rotation configured (7 days, max 10MB per file)."
+}
+
+# ─── Start service ───
+start_service() {
+  if has_systemd; then
+    info "Starting ${BOLD}${SERVICE_NAME}${NC} service..."
+    if [ "$(id -u)" -eq 0 ]; then
+      systemctl start "${SERVICE_NAME}"
+    else
+      sudo systemctl start "${SERVICE_NAME}"
+    fi
+    sleep 2
+
+    if systemctl is-active --quiet "${SERVICE_NAME}"; then
+      ok "Service is running ✓"
+      echo ""
+      echo -e "  ${DIM}Useful commands:${NC}"
+      echo -e "    Status:   ${BOLD}sudo systemctl status ${SERVICE_NAME}${NC}"
+      echo -e "    Logs:     ${BOLD}sudo journalctl -u ${SERVICE_NAME} -f${NC}"
+      echo -e "    Restart:  ${BOLD}sudo systemctl restart ${SERVICE_NAME}${NC}"
+      echo -e "    Stop:     ${BOLD}sudo systemctl stop ${SERVICE_NAME}${NC}"
+      return 0
+    else
+      err "Service failed to start."
+      echo -e "  ${DIM}Check logs: sudo journalctl -u ${SERVICE_NAME} -n 30${NC}"
+      return 1
+    fi
+  else
+    # Fallback: nohup
+    start_server_nohup
+  fi
+}
+
+# ─── Stop service ───
+stop_service() {
+  if has_systemd && systemctl list-unit-files "${SERVICE_NAME}.service" >/dev/null 2>&1; then
+    info "Stopping ${BOLD}${SERVICE_NAME}${NC} service..."
+    if [ "$(id -u)" -eq 0 ]; then
+      systemctl stop "${SERVICE_NAME}" 2>/dev/null || true
+    else
+      sudo systemctl stop "${SERVICE_NAME}" 2>/dev/null || true
+    fi
+    ok "Service stopped."
+  else
+    # Fallback: PID file / port kill
+    stop_server_nohup
+  fi
+}
+
+# ─── Remove systemd service ───
+remove_systemd_service() {
+  if has_systemd; then
+    local service_file="/etc/systemd/system/${SERVICE_NAME}.service"
+    if [ -f "$service_file" ]; then
+      info "Removing systemd service..."
+      if [ "$(id -u)" -eq 0 ]; then
+        systemctl stop "${SERVICE_NAME}" 2>/dev/null || true
+        systemctl disable "${SERVICE_NAME}" 2>/dev/null || true
+        rm -f "$service_file"
+        systemctl daemon-reload
+      else
+        sudo systemctl stop "${SERVICE_NAME}" 2>/dev/null || true
+        sudo systemctl disable "${SERVICE_NAME}" 2>/dev/null || true
+        sudo rm -f "$service_file"
+        sudo systemctl daemon-reload
+      fi
+      ok "Systemd service removed."
+    fi
+
+    # Remove logrotate config
+    local logrotate_conf="/etc/logrotate.d/${SERVICE_NAME}"
+    if [ -f "$logrotate_conf" ]; then
+      if [ "$(id -u)" -eq 0 ]; then
+        rm -f "$logrotate_conf"
+      else
+        sudo rm -f "$logrotate_conf"
+      fi
+    fi
+  fi
+}
+
+# ─── Fallback: nohup start ───
+start_server_nohup() {
+  info "Starting Notebook Studio (nohup fallback)..."
+  mkdir -p "$INSTALL_DIR/logs"
+  cd "$INSTALL_DIR"
+  NODE_ENV=production nohup node server/index.js \
+    >> "$INSTALL_DIR/logs/stdout.log" \
+    2>> "$INSTALL_DIR/logs/stderr.log" &
+  local server_pid=$!
+  echo "$server_pid" > "$INSTALL_DIR/.server.pid"
+
+  sleep 2
+  if kill -0 "$server_pid" 2>/dev/null; then
+    ok "Server is running (PID: ${server_pid})."
+    echo ""
+    echo -e "  ${DIM}Note: No systemd detected. Using nohup (no auto-restart on crash/reboot).${NC}"
+    echo -e "  ${DIM}Logs: tail -f ${INSTALL_DIR}/logs/stdout.log${NC}"
+    return 0
+  else
+    err "Server failed to start. Check ${INSTALL_DIR}/logs/stderr.log"
+    return 1
+  fi
+}
+
+# ─── Fallback: nohup stop ───
+stop_server_nohup() {
   local pid_file="$INSTALL_DIR/.server.pid"
   if [ -f "$pid_file" ]; then
     local pid
     pid="$(cat "$pid_file")"
     if kill -0 "$pid" 2>/dev/null; then
-      info "Stopping running server (PID: $pid)..."
+      info "Stopping server (PID: $pid)..."
       kill "$pid" 2>/dev/null || true
       sleep 1
       ok "Server stopped."
@@ -132,30 +330,14 @@ stop_server() {
   fi
 
   # Also try to kill by port
-  local port_pid
-  port_pid=$(lsof -ti :"$PORT" 2>/dev/null || true)
-  if [ -n "$port_pid" ]; then
-    info "Stopping process on port ${PORT}..."
-    kill "$port_pid" 2>/dev/null || true
-    sleep 1
-  fi
-}
-
-# ─── Start server ───
-start_server() {
-  info "Starting Notebook Studio on port ${PORT}..."
-  cd "$INSTALL_DIR"
-  NODE_ENV=production nohup node server/index.js > "$INSTALL_DIR/server.log" 2>&1 &
-  local server_pid=$!
-  echo "$server_pid" > "$INSTALL_DIR/.server.pid"
-
-  sleep 2
-  if kill -0 "$server_pid" 2>/dev/null; then
-    ok "Server is running (PID: ${server_pid})."
-    return 0
-  else
-    err "Server failed to start. Check ${INSTALL_DIR}/server.log"
-    return 1
+  if command -v lsof >/dev/null 2>&1; then
+    local port_pid
+    port_pid=$(lsof -ti :"$PORT" 2>/dev/null || true)
+    if [ -n "$port_pid" ]; then
+      info "Stopping process on port ${PORT}..."
+      kill "$port_pid" 2>/dev/null || true
+      sleep 1
+    fi
   fi
 }
 
@@ -181,8 +363,6 @@ do_install() {
   if [ -d "$INSTALL_DIR/server" ]; then
     warn "Existing installation detected at ${BOLD}${INSTALL_DIR}${NC}"
     warn "Use '${BOLD}update${NC}' to upgrade or '${BOLD}uninstall${NC}' first."
-    echo ""
-    echo -e "  ${DIM}curl -fsSL \"...\" | sh -s -- \"${REPO}\" update${NC}"
     echo ""
     exit 1
   fi
@@ -213,11 +393,19 @@ EOF
   chmod 600 "$INSTALL_DIR/.env"
   ok "Credentials generated."
 
+  # Create logs directory
+  mkdir -p "$INSTALL_DIR/logs"
+
   # Save version marker
   echo "$TAG" > "$INSTALL_DIR/.version"
 
-  # Start server
-  start_server
+  # Setup service
+  if has_systemd; then
+    setup_systemd_service
+    start_service
+  else
+    start_server_nohup
+  fi
 
   echo ""
   echo -e "${GREEN}${BOLD}  ┌───────────────────────────────────────────────────┐${NC}"
@@ -229,14 +417,13 @@ EOF
   echo -e "  ${BOLD}Password:${NC}  ${CYAN}${ADMIN_PASS}${NC}"
   echo -e "  ${BOLD}Install:${NC}   ${INSTALL_DIR}"
   echo -e "  ${BOLD}Version:${NC}   ${TAG}"
+  echo -e "  ${BOLD}Logs:${NC}      ${INSTALL_DIR}/logs/"
+  if has_systemd; then
+    echo -e "  ${BOLD}Service:${NC}   ${SERVICE_NAME} (systemd)"
+    echo -e "             auto-restart ✓  boot-start ✓  log-rotate ✓"
+  fi
   echo ""
   echo -e "  ${YELLOW}⚠ Save the password above — it will not be shown again.${NC}"
-  echo ""
-  echo -e "  ${DIM}Commands:${NC}"
-  echo -e "    Stop:      ${BOLD}kill \$(cat ${INSTALL_DIR}/.server.pid)${NC}"
-  echo -e "    Start:     ${BOLD}cd ${INSTALL_DIR} && NODE_ENV=production node server/index.js${NC}"
-  echo -e "    Update:    ${BOLD}curl -fsSL \"...\" | sh -s -- \"${REPO}\" update${NC}"
-  echo -e "    Uninstall: ${BOLD}curl -fsSL \"...\" | sh -s -- \"${REPO}\" uninstall${NC}"
   echo ""
 }
 
@@ -271,14 +458,15 @@ do_update() {
 
   info "Updating ${BOLD}${current_version}${NC} → ${BOLD}${TAG}${NC}..."
 
-  # Stop server
-  stop_server
+  # Stop service
+  stop_service
 
   # Backup data & config
   info "Backing up data and credentials..."
   TMPBACKUP=$(mktemp -d)
   [ -f "$INSTALL_DIR/.env" ]     && cp "$INSTALL_DIR/.env" "$TMPBACKUP/"
   [ -d "$INSTALL_DIR/data" ]     && cp -r "$INSTALL_DIR/data" "$TMPBACKUP/"
+  [ -d "$INSTALL_DIR/logs" ]     && cp -r "$INSTALL_DIR/logs" "$TMPBACKUP/"
   [ -f "$INSTALL_DIR/.version" ] && cp "$INSTALL_DIR/.version" "$TMPBACKUP/"
   ok "Backup created."
 
@@ -292,10 +480,11 @@ do_update() {
   # Download & extract new version
   download_and_extract "$INSTALL_DIR"
 
-  # Restore data & config
+  # Restore data, config & logs
   info "Restoring data and credentials..."
-  [ -f "$TMPBACKUP/.env" ] && cp "$TMPBACKUP/.env" "$INSTALL_DIR/.env"
-  [ -d "$TMPBACKUP/data" ] && cp -r "$TMPBACKUP/data" "$INSTALL_DIR/"
+  [ -f "$TMPBACKUP/.env" ]  && cp "$TMPBACKUP/.env" "$INSTALL_DIR/.env"
+  [ -d "$TMPBACKUP/data" ]  && cp -r "$TMPBACKUP/data" "$INSTALL_DIR/"
+  [ -d "$TMPBACKUP/logs" ]  && cp -r "$TMPBACKUP/logs" "$INSTALL_DIR/"
   rm -rf "$TMPBACKUP"
   ok "Data restored."
 
@@ -308,8 +497,11 @@ do_update() {
   # Save new version
   echo "$TAG" > "$INSTALL_DIR/.version"
 
-  # Restart server
-  start_server
+  # Re-setup and restart service (in case node path changed)
+  if has_systemd; then
+    setup_systemd_service
+  fi
+  start_service
 
   echo ""
   echo -e "${GREEN}${BOLD}  ┌───────────────────────────────────────────────────┐${NC}"
@@ -320,6 +512,7 @@ do_update() {
   echo -e "  ${BOLD}URL:${NC}       http://localhost:${PORT}"
   echo -e "  ${BOLD}Data:${NC}      Preserved ✓"
   echo -e "  ${BOLD}Creds:${NC}     Preserved ✓"
+  echo -e "  ${BOLD}Logs:${NC}      Preserved ✓"
   echo ""
 }
 
@@ -345,15 +538,19 @@ do_uninstall() {
   # Confirm
   echo ""
   echo -e "  ${YELLOW}This will:${NC}"
-  echo -e "    • Stop the running server"
+  echo -e "    • Stop the running server / service"
+  echo -e "    • Remove systemd service (if exists)"
   echo -e "    • Remove all application files"
   echo -e "    • Back up your data to ${BOLD}~/notebook-studio-backup-$(date +%Y%m%d)${NC}"
   echo ""
   echo -en "  ${BOLD}Type 'yes' to confirm: ${NC}"
 
-  # If running non-interactively (piped), check for CONFIRM env var
+  # When running via pipe (curl | bash), stdin is the pipe, not the terminal.
+  # Read from /dev/tty to get actual user input.
   if [ -t 0 ]; then
     read -r confirm
+  elif [ -e /dev/tty ]; then
+    read -r confirm < /dev/tty
   else
     confirm="${CONFIRM:-}"
     echo "$confirm"
@@ -361,11 +558,17 @@ do_uninstall() {
 
   if [ "$confirm" != "yes" ]; then
     warn "Uninstall cancelled."
+    if [ ! -t 0 ] && [ -z "${CONFIRM:-}" ]; then
+      echo ""
+      echo -e "  ${DIM}Tip: Use CONFIRM=yes to auto-confirm when piped:${NC}"
+      echo -e "  ${DIM}curl ... | CONFIRM=yes bash -s -- \"${REPO}\" uninstall${NC}"
+    fi
     exit 0
   fi
 
-  # Stop server
-  stop_server
+  # Stop & remove service
+  stop_service
+  remove_systemd_service
 
   # Backup data
   BACKUP_DIR="$HOME/notebook-studio-backup-$(date +%Y%m%d-%H%M%S)"
@@ -374,6 +577,7 @@ do_uninstall() {
     mkdir -p "$BACKUP_DIR"
     [ -d "$INSTALL_DIR/data" ] && cp -r "$INSTALL_DIR/data" "$BACKUP_DIR/"
     [ -f "$INSTALL_DIR/.env" ] && cp "$INSTALL_DIR/.env" "$BACKUP_DIR/"
+    [ -d "$INSTALL_DIR/logs" ] && cp -r "$INSTALL_DIR/logs" "$BACKUP_DIR/"
     ok "Data backed up."
   fi
 
