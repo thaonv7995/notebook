@@ -141,8 +141,14 @@ setup_systemd_service() {
 
   info "Creating systemd service: ${BOLD}${SERVICE_NAME}${NC}..."
 
-  # Create log directory
+  # Create log directory and files with proper permissions
   mkdir -p "$INSTALL_DIR/logs"
+  touch "$INSTALL_DIR/logs/stdout.log" "$INSTALL_DIR/logs/stderr.log" 2>/dev/null || true
+  if [ "$(id -u)" -eq 0 ] && [ "$run_user" != "root" ]; then
+    chown -R "${run_user}:${run_user}" "$INSTALL_DIR/logs" 2>/dev/null || true
+  elif command -v sudo >/dev/null 2>&1 && [ "$run_user" != "root" ]; then
+    sudo chown -R "${run_user}:${run_user}" "$INSTALL_DIR/logs" 2>/dev/null || true
+  fi
 
   local service_content="[Unit]
 Description=Notebook Studio — Digital Notebook Server
@@ -466,11 +472,10 @@ do_update() {
   TMPBACKUP=$(mktemp -d)
   [ -f "$INSTALL_DIR/.env" ]     && cp "$INSTALL_DIR/.env" "$TMPBACKUP/"
   [ -d "$INSTALL_DIR/data" ]     && cp -r "$INSTALL_DIR/data" "$TMPBACKUP/"
-  [ -d "$INSTALL_DIR/logs" ]     && cp -r "$INSTALL_DIR/logs" "$TMPBACKUP/"
   [ -f "$INSTALL_DIR/.version" ] && cp "$INSTALL_DIR/.version" "$TMPBACKUP/"
   ok "Backup created."
 
-  # Remove old app files (keep node_modules for speed)
+  # Remove old app files (keep node_modules, data, logs for speed & stability)
   info "Removing old application files..."
   rm -rf "$INSTALL_DIR/server" "$INSTALL_DIR/dist" "$INSTALL_DIR/public"
   rm -f "$INSTALL_DIR/package.json" "$INSTALL_DIR/package-lock.json"
@@ -480,11 +485,15 @@ do_update() {
   # Download & extract new version
   download_and_extract "$INSTALL_DIR"
 
-  # Restore data, config & logs
-  info "Restoring data and credentials..."
-  [ -f "$TMPBACKUP/.env" ]  && cp "$TMPBACKUP/.env" "$INSTALL_DIR/.env"
-  [ -d "$TMPBACKUP/data" ]  && cp -r "$TMPBACKUP/data" "$INSTALL_DIR/"
-  [ -d "$TMPBACKUP/logs" ]  && cp -r "$TMPBACKUP/logs" "$INSTALL_DIR/"
+  # Restore data and config if needed
+  info "Verifying data and credentials..."
+  [ -f "$TMPBACKUP/.env" ] && [ ! -f "$INSTALL_DIR/.env" ] && cp "$TMPBACKUP/.env" "$INSTALL_DIR/.env"
+  [ -d "$TMPBACKUP/data" ] && [ ! -d "$INSTALL_DIR/data" ] && cp -r "$TMPBACKUP/data" "$INSTALL_DIR/"
+  
+  # Ensure proper log ownership if sudo is available
+  if command -v sudo >/dev/null 2>&1 && [ -d "$INSTALL_DIR/logs" ]; then
+    sudo chown -R "$(whoami):$(whoami)" "$INSTALL_DIR/logs" 2>/dev/null || true
+  fi
   rm -rf "$TMPBACKUP"
   ok "Data restored."
 
@@ -577,13 +586,13 @@ do_uninstall() {
     mkdir -p "$BACKUP_DIR"
     [ -d "$INSTALL_DIR/data" ] && cp -r "$INSTALL_DIR/data" "$BACKUP_DIR/"
     [ -f "$INSTALL_DIR/.env" ] && cp "$INSTALL_DIR/.env" "$BACKUP_DIR/"
-    [ -d "$INSTALL_DIR/logs" ] && cp -r "$INSTALL_DIR/logs" "$BACKUP_DIR/"
+    [ -d "$INSTALL_DIR/logs" ] && cp -r "$INSTALL_DIR/logs" "$BACKUP_DIR/" 2>/dev/null || true
     ok "Data backed up."
   fi
 
   # Remove installation
   info "Removing ${BOLD}${INSTALL_DIR}${NC}..."
-  rm -rf "$INSTALL_DIR"
+  rm -rf "$INSTALL_DIR" 2>/dev/null || (command -v sudo >/dev/null 2>&1 && sudo rm -rf "$INSTALL_DIR") 2>/dev/null || true
   ok "Installation removed."
 
   echo ""
