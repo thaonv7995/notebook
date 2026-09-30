@@ -403,37 +403,11 @@
 
       <div style="flex: 1;"></div>
 
-      <!-- Export Popover -->
+      <!-- PDF export -->
       <div class="toolbar-group">
-        <div class="export-wrapper">
-          <button id="export-btn" type="button" class="tool-btn" title="Xuất file / In ấn / Sao lưu">
-            <svg viewBox="0 0 24 24">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-              <polyline points="7 10 12 15 17 10" />
-              <line x1="12" y1="15" x2="12" y2="3" />
-            </svg>
-          </button>
-          <div id="export-menu" class="export-menu" hidden>
-            <button id="export-md" type="button" class="export-menu__item">
-              <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M8 14v-4l2 2.5 2-2.5v4"/><path d="M16 11.5l1.5 2.5h-3z"/></svg>
-              <span>Xuất Markdown (.md)</span>
-            </button>
-            <button id="export-print" type="button" class="export-menu__item">
-              <svg viewBox="0 0 24 24"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
-              <span>In / Lưu toàn bộ PDF (.pdf)</span>
-            </button>
-            <div style="height: 1px; background: rgba(255, 255, 255, 0.1); margin: 4px 0;"></div>
-            <button id="export-json" type="button" class="export-menu__item">
-              <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
-              <span>Sao lưu toàn bộ (.json)</span>
-            </button>
-            <button id="import-json" type="button" class="export-menu__item">
-              <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
-              <span>Khôi phục dữ liệu</span>
-            </button>
-          </div>
-        </div>
-        <input type="file" id="fileInputJson" accept=".json" style="display: none;" />
+        <button id="export-print" type="button" class="tool-btn" title="In / Lưu toàn bộ PDF" aria-label="In hoặc lưu toàn bộ cuốn sổ thành PDF">
+          <svg viewBox="0 0 24 24"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+        </button>
       </div>
     </nav>
 

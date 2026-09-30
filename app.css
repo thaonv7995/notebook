@@ -1103,10 +1103,6 @@ body {
 }
 .export-menu[hidden]:not(.is-open) { display: none !important; }
 .export-menu.is-open { display: block !important; }
-#export-menu {
-  left: auto;
-  right: 0;
-}
 @keyframes popoverFadeIn {
   from { opacity: 0; transform: translateY(-4px); }
   to { opacity: 1; transform: translateY(0); }
@@ -1143,24 +1139,6 @@ body {
   color: #94a3b8;
 }
 .color-swatch--reset svg { width: 12px; height: 12px; stroke: currentColor; }
-
-.export-menu__item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-  padding: 7px 10px;
-  border: none;
-  border-radius: 5px;
-  background: transparent;
-  color: #e2e8f0;
-  font-size: 12px;
-  font-weight: 500;
-  cursor: pointer;
-  text-align: left;
-}
-.export-menu__item:hover { background: rgba(255, 255, 255, 0.08); color: #ffffff; }
-.export-menu__item svg { width: 14px; height: 14px; stroke: currentColor; stroke-width: 1.8; color: #94a3b8; }
 
 /* ========================================================
    THE BOOK READING & WRITING WORKSPACE

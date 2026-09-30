@@ -275,13 +275,7 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
     btnDeleteCurrentPage: document.querySelector('#btnDeleteCurrentPage'),
     btnRenameBook: document.querySelector('#btnRenameBook'),
     btnCopyBookLink: document.querySelector('#btnCopyBookLink'),
-    exportBtn: document.querySelector('#export-btn'),
-    exportMenu: document.querySelector('#export-menu'),
-    exportMdBtn: document.querySelector('#export-md'),
     exportPrintBtn: document.querySelector('#export-print'),
-    exportJsonBtn: document.querySelector('#export-json'),
-    importJsonBtn: document.querySelector('#import-json'),
-    fileInputJson: document.querySelector('#fileInputJson'),
 
     // Modal
     newNotebookModal: document.querySelector('#newNotebookModal'),
@@ -2812,93 +2806,6 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
     return null;
   }
 
-  function htmlToMarkdown(html) {
-    if (!html) return '';
-    const temp = document.createElement('div');
-    temp.innerHTML = html;
-
-    const convertChildren = (node, depth = 0) => Array.from(node.childNodes)
-      .map(child => convertNode(child, depth))
-      .join('');
-
-    const convertList = (list, depth) => {
-      const ordered = list.tagName === 'OL';
-      let itemNumber = Number(list.getAttribute('start')) || 1;
-      const lines = [];
-      Array.from(list.children).filter(child => child.tagName === 'LI').forEach(item => {
-        const nestedLists = Array.from(item.children).filter(child => child.tagName === 'UL' || child.tagName === 'OL');
-        const body = Array.from(item.childNodes)
-          .filter(child => !(child.nodeType === Node.ELEMENT_NODE && (child.tagName === 'UL' || child.tagName === 'OL')))
-          .map(child => convertNode(child, depth))
-          .join('')
-          .replace(/\s*\n+\s*/g, ' ')
-          .trim();
-        const prefix = ordered ? `${itemNumber}. ` : '- ';
-        lines.push(`${'  '.repeat(depth)}${prefix}${body}`);
-        nestedLists.forEach(nested => lines.push(convertList(nested, depth + 1).trimEnd()));
-        itemNumber += 1;
-      });
-      return `${lines.join('\n')}\n\n`;
-    };
-
-    const convertNode = (node, depth = 0) => {
-      if (node.nodeType === Node.TEXT_NODE) return node.nodeValue || '';
-      if (node.nodeType !== Node.ELEMENT_NODE) return '';
-      const tag = node.tagName;
-      const inner = () => convertChildren(node, depth);
-      if (tag === 'BR') return '\n';
-      if (tag === 'STRONG' || tag === 'B') return `**${inner()}**`;
-      if (tag === 'EM' || tag === 'I') return `*${inner()}*`;
-      if (tag === 'U') return `<u>${inner()}</u>`;
-      if (tag === 'S' || tag === 'STRIKE') return `~~${inner()}~~`;
-      if (tag === 'CODE' && node.parentElement && node.parentElement.tagName !== 'PRE') return `\`${inner()}\``;
-      if (tag === 'PRE') return `\n\`\`\`\n${node.textContent || ''}\n\`\`\`\n\n`;
-      if (tag === 'BLOCKQUOTE') {
-        const quoted = inner().trim().split('\n').map(line => `> ${line}`).join('\n');
-        return `${quoted}\n\n`;
-      }
-      if (/^H[1-6]$/.test(tag)) return `${'#'.repeat(Number(tag.slice(1)))} ${inner().trim()}\n\n`;
-      if (tag === 'UL' || tag === 'OL') return convertList(node, depth);
-      if (tag === 'LI') return inner();
-      if (tag === 'HR') return '\n---\n\n';
-      if (tag === 'P' || tag === 'DIV') return `${inner().trimEnd()}\n\n`;
-      return inner();
-    };
-
-    return convertChildren(temp)
-      .replace(/[ \t]+\n/g, '\n')
-      .replace(/\n{3,}/g, '\n\n')
-      .trim();
-  }
-
-  // Export Markdown
-  function exportMarkdown() {
-    saveActivePages();
-    const nb = getActiveNotebook();
-    const markdown = nb.pages.map(p => {
-      let pageText = '';
-      if (p.template === 'cornell') {
-        pageText = `# ${p.topic || p.title || 'Cornell Notes'}\n**Date:** ${p.date || ''} | **No:** ${p.no || ''}\n\n## Cues & Questions\n${htmlToMarkdown(p.cues || '')}\n\n## Notes\n${htmlToMarkdown(p.notes || p.content || '')}\n\n## Summary & Synthesis\n${htmlToMarkdown(p.summary || '')}`;
-      } else if (p.template === 'work') {
-        const actionLines = (p.actions || []).map(a => `- [${a.checked ? 'x' : ' '}] ${a.text || ''}`).join('\n');
-        pageText = `# ${p.project || p.title || 'Work & Project Log'}\n**Date:** ${p.date || ''} | **Deadline:** ${p.deadline || ''} | **Status:** ${p.status || 'WIP'}\n\n## Agenda & Decisions\n${htmlToMarkdown(p.agenda || '')}\n\n## Notes & Discussions\n${htmlToMarkdown(p.discussions || p.content || '')}\n\n## Action Items\n${actionLines}`;
-      } else {
-        pageText = `# ${p.topic || p.title || 'Ruled Notebook'}\n**Date:** ${p.date || ''} | **No:** ${p.no || ''}\n\n${htmlToMarkdown(p.content || '')}`;
-      }
-      return pageText;
-    }).join('\n\n---\n\n');
-
-    const blob = new Blob([markdown], { type: 'text/markdown;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${nb.title.replace(/[^a-zA-Z0-9_\u00C0-\u024F\u1E00-\u1EFF]/g, '_')}.md`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
-  }
-
   function printFullNotebook() {
     if (!saveActivePages()) return;
     const notebook = getActiveNotebook();
@@ -2936,52 +2843,6 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
     });
   }
 
-  // JSON Backup / Restore
-  function exportJSONBackup() {
-    saveActivePages();
-    const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(appState, null, 2));
-    const a = document.createElement('a');
-    a.href = dataStr;
-    a.download = `notebook_studio_backup_${new Date().toISOString().slice(0, 10)}.json`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-  }
-
-  function validateImportedState(imported) {
-    if (!imported || typeof imported !== 'object' || !Array.isArray(imported.notebooks)) {
-      throw new Error('File không có cấu trúc thư viện Notebook Studio hợp lệ.');
-    }
-    if (imported.notebooks.length > 500) throw new Error('File có quá nhiều cuốn sổ.');
-    const trash = imported.trash == null ? [] : imported.trash;
-    if (!Array.isArray(trash)) throw new Error('Dữ liệu thùng rác không hợp lệ.');
-    if (imported.notebooks.length + trash.length > 500) throw new Error('File có quá nhiều cuốn sổ, kể cả trong thùng rác.');
-    const notebookIds = new Set();
-    const pageIds = new Set();
-    let totalPages = 0;
-    [...imported.notebooks, ...trash].forEach((nb, nbIndex) => {
-      if (!nb || typeof nb !== 'object' || typeof nb.title !== 'string' || !Array.isArray(nb.pages)) {
-        throw new Error(`Cuốn sổ thứ ${nbIndex + 1} không hợp lệ.`);
-      }
-      if (typeof nb.id !== 'string' || !nb.id.trim()) throw new Error(`Cuốn sổ “${nb.title}” thiếu ID.`);
-      if (notebookIds.has(nb.id.trim())) throw new Error(`ID cuốn sổ bị trùng: ${nb.id.trim()}.`);
-      notebookIds.add(nb.id.trim());
-      if (nb.pages.length > 5000) throw new Error(`Cuốn sổ “${nb.title}” có quá nhiều trang.`);
-      nb.pages.forEach((page, pageIndex) => {
-        if (!page || typeof page !== 'object') throw new Error(`Trang ${pageIndex + 1} trong “${nb.title}” không hợp lệ.`);
-        if (typeof page.id !== 'string' || !page.id.trim()) throw new Error(`Trang ${pageIndex + 1} trong “${nb.title}” thiếu ID.`);
-        if (pageIds.has(page.id.trim())) throw new Error(`ID trang bị trùng: ${page.id.trim()}.`);
-        pageIds.add(page.id.trim());
-        if (page.actions != null && (!Array.isArray(page.actions) || page.actions.length > 5)) {
-          throw new Error(`Trang ${pageIndex + 1} trong “${nb.title}” có danh sách công việc không hợp lệ (tối đa 5 mục).`);
-        }
-      });
-      totalPages += nb.pages.length;
-    });
-    if (totalPages > 10000) throw new Error('File có quá nhiều trang để dùng an toàn trên thiết bị này.');
-    return normalizeState(imported);
-  }
-
   function replaceApplicationState(nextState) {
     const previousSerialized = JSON.stringify(appState);
     const nextSerialized = JSON.stringify(nextState);
@@ -3006,33 +2867,6 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
     currentPageMode = appState.pageMode;
     isTrashView = false;
     showLibraryAfterStateReplacement();
-  }
-
-  function importJSONBackup(file) {
-    const maxImportBytes = 4 * 1024 * 1024;
-    if (!file || file.size > maxImportBytes) {
-      showToast('File sao lưu không hợp lệ hoặc lớn hơn 4 MB.');
-      return;
-    }
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      try {
-        const imported = validateImportedState(JSON.parse(e.target.result));
-        if (!confirm(`Khôi phục ${imported.notebooks.length} cuốn sổ từ file này? Thư viện hiện tại sẽ được lưu thành bản sao an toàn.`)) return;
-        if (!saveActivePages()) throw new Error('Không thể lưu thay đổi hiện tại trước khi khôi phục.');
-        replaceApplicationState(imported);
-        showToast(`Đã khôi phục ${appState.notebooks.length} cuốn sổ.`, 'Hoàn tác', () => {
-          const previous = localStorage.getItem(BACKUP_STORAGE_KEY);
-          if (!previous) return;
-          replaceApplicationState(normalizeState(JSON.parse(previous)));
-          showToast('Đã hoàn tác khôi phục dữ liệu.');
-        });
-      } catch (err) {
-        showToast('Không thể khôi phục: ' + err.message);
-      }
-    };
-    reader.onerror = () => showToast('Không thể đọc file sao lưu.');
-    reader.readAsText(file);
   }
 
   // Helpers
@@ -3244,7 +3078,7 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
     }
 
     function closeAllPopoverMenus() {
-      [els.fmtColorPalette, els.fmtBgPalette, els.exportMenu, els.lineHeightMenu].forEach(m => {
+      [els.fmtColorPalette, els.fmtBgPalette, els.lineHeightMenu].forEach(m => {
         if (m) {
           m.setAttribute('hidden', '');
           m.hidden = true;
@@ -3262,7 +3096,7 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
       els.fmtColorBtn.addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();
-        openPopoverMenu(els.fmtColorPalette, [els.fmtBgPalette, els.exportMenu]);
+        openPopoverMenu(els.fmtColorPalette, [els.fmtBgPalette]);
       });
 
       els.fmtColorPalette.addEventListener('mousedown', (e) => {
@@ -3295,7 +3129,7 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
       els.fmtBgBtn.addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();
-        openPopoverMenu(els.fmtBgPalette, [els.fmtColorPalette, els.exportMenu]);
+        openPopoverMenu(els.fmtBgPalette, [els.fmtColorPalette]);
       });
 
       els.fmtBgPalette.addEventListener('mousedown', (e) => {
@@ -3348,7 +3182,7 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
       els.btnLineHeightSettings.addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();
-        openPopoverMenu(els.lineHeightMenu, [els.fmtColorPalette, els.fmtBgPalette, els.exportMenu]);
+        openPopoverMenu(els.lineHeightMenu, [els.fmtColorPalette, els.fmtBgPalette]);
       });
 
       els.lineHeightMenu.querySelectorAll('.line-height-option').forEach(btn => {
@@ -3362,44 +3196,7 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
       });
     }
 
-    // Export popover
-    if (els.exportBtn && els.exportMenu) {
-      els.exportBtn.addEventListener('click', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        openPopoverMenu(els.exportMenu, [els.fmtColorPalette, els.fmtBgPalette]);
-      });
-
-      if (els.exportMdBtn) {
-        els.exportMdBtn.addEventListener('click', () => {
-          closeAllPopoverMenus();
-          exportMarkdown();
-        });
-      }
-      if (els.exportPrintBtn) {
-        els.exportPrintBtn.addEventListener('click', () => {
-          els.exportMenu.hidden = true;
-          printFullNotebook();
-        });
-      }
-      if (els.exportJsonBtn) {
-        els.exportJsonBtn.addEventListener('click', () => {
-          els.exportMenu.hidden = true;
-          exportJSONBackup();
-        });
-      }
-      if (els.importJsonBtn && els.fileInputJson) {
-        els.importJsonBtn.addEventListener('click', () => {
-          els.exportMenu.hidden = true;
-          els.fileInputJson.click();
-        });
-        els.fileInputJson.addEventListener('change', (e) => {
-          if (e.target.files && e.target.files[0]) {
-            importJSONBackup(e.target.files[0]);
-          }
-        });
-      }
-    }
+    if (els.exportPrintBtn) els.exportPrintBtn.addEventListener('click', printFullNotebook);
 
     if (els.btnResetLibrary) {
       els.btnResetLibrary.addEventListener('click', () => {
@@ -3499,9 +3296,8 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
     document.addEventListener('click', (e) => {
       const isInsideColor = (els.fmtColorPalette && els.fmtColorPalette.contains(e.target)) || (els.fmtColorBtn && els.fmtColorBtn.contains(e.target));
       const isInsideBg = (els.fmtBgPalette && els.fmtBgPalette.contains(e.target)) || (els.fmtBgBtn && els.fmtBgBtn.contains(e.target));
-      const isInsideExport = (els.exportMenu && els.exportMenu.contains(e.target)) || (els.exportBtn && els.exportBtn.contains(e.target));
       const isInsideLh = (els.lineHeightMenu && els.lineHeightMenu.contains(e.target)) || (els.btnLineHeightSettings && els.btnLineHeightSettings.contains(e.target));
-      if (!isInsideColor && !isInsideBg && !isInsideExport && !isInsideLh) {
+      if (!isInsideColor && !isInsideBg && !isInsideLh) {
         closeAllPopoverMenus();
       }
     });
