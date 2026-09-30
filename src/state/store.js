@@ -69,8 +69,8 @@ export function normalizeState(rawState) {
     if (nb.pages.length === 0) {
       nb.pages.push({
         id: `p-${Date.now()}-${nbIndex}-1`,
-        title: 'TRANG 1',
-        topic: nb.title,
+        title: '',
+        topic: '',
         date: new Date().toLocaleDateString('vi-VN'),
         no: '01',
         lang: 'VI',

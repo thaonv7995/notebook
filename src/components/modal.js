@@ -140,30 +140,30 @@ export function setupModalListeners({ onNotebookCreated } = {}) {
           {
             id: 'p-' + Date.now() + '-1',
             lang: 'VI',
-            title: 'TRANG 1',
-            topic: finalTitle,
-            project: finalTitle,
+            title: '',
+            topic: '',
+            project: '',
             date: new Date().toLocaleDateString('vi-VN'),
             no: '01',
             deadline: '',
-            status: 'WIP',
+            status: '',
             template: template,
             updatedAt: createdAt,
-            content: `# ${finalTitle.toUpperCase()}\n\nBắt đầu ghi chép...\n`
+            content: ''
           },
           {
             id: 'p-' + Date.now() + '-2',
-            lang: 'EN',
-            title: 'TRANG 2',
-            topic: finalTitle,
-            project: finalTitle,
+            lang: 'VI',
+            title: '',
+            topic: '',
+            project: '',
             date: new Date().toLocaleDateString('vi-VN'),
             no: '02',
             deadline: '',
-            status: 'TODO',
+            status: '',
             template: template,
             updatedAt: createdAt,
-            content: `# TRANG 2\n\nTiếp tục ghi chép...\n`
+            content: ''
           }
         ]
       };

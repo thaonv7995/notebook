@@ -27,8 +27,8 @@ export function createNotebookPage(notebook, template = 'cornell', lang = 'VI') 
   return {
     id: createUniqueId('p'),
     lang,
-    title: `TRANG ${pageNumber}`,
-    topic: `${notebook.title} - Trang ${pageNumber}`,
+    title: '',
+    topic: '',
     date: new Date().toLocaleDateString('vi-VN'),
     no: String(pageNumber).padStart(2, '0'),
     template: ['cornell', 'work', 'ruled'].includes(template) ? template : 'cornell',

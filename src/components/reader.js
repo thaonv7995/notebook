@@ -212,7 +212,7 @@ export function renderBookPages() {
     onUrlUpdateCallback({ bookId: nb.id, pageIndex: curIdx }, true);
   }
 
-  const leftPage = nb.pages[curIdx] || { title: 'Trang mới', lang: 'VI', content: '', template: 'cornell' };
+  const leftPage = nb.pages[curIdx] || { title: '', lang: 'VI', content: '', template: 'cornell' };
   const rightPage = nb.pages[curIdx + 1] || null;
 
   if (els.openBookTitle) {
