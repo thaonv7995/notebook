@@ -2518,14 +2518,14 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
     if (els.fontSizeLabel) els.fontSizeLabel.textContent = s;
   }
 
-  const CJK_CALLIGRAPHIC_STACK = '"Kaiti SC", "STKaiti", "KaiTi", "SimKai", "KaiTi_GB2312", "BiauKai", "Noto Serif SC", "Songti SC", "STSong", "SimSun", "Source Han Serif SC", serif';
+  const CJK_CALLIGRAPHIC_STACK = '"CJK-Smart-Enlarged", "Songti SC", "STSong", "Kaiti SC", "STKaiti", "KaiTi", "SimKai", "Noto Serif SC", "SimSun", serif';
 
   const FONT_MAP = {
-    'sans': `'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, ${CJK_CALLIGRAPHIC_STACK}`,
-    'vietnam': `'Be Vietnam Pro', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, ${CJK_CALLIGRAPHIC_STACK}`,
-    'serif': `'Cormorant Garamond', Georgia, "Noto Serif SC", ${CJK_CALLIGRAPHIC_STACK}`,
-    'kaiti': `${CJK_CALLIGRAPHIC_STACK}`,
-    'mono': `'JetBrains Mono', monospace, ${CJK_CALLIGRAPHIC_STACK}`
+    'sans': `'CJK-Smart-Enlarged', 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`,
+    'vietnam': `'CJK-Smart-Enlarged', 'Be Vietnam Pro', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`,
+    'serif': `'CJK-Smart-Enlarged', 'Cormorant Garamond', Georgia, "Noto Serif SC", serif`,
+    'kaiti': `'CJK-Smart-Enlarged', ${CJK_CALLIGRAPHIC_STACK}`,
+    'mono': `'CJK-Smart-Enlarged', 'JetBrains Mono', monospace`
   };
 
   function applyFontFamily(fontKey) {
