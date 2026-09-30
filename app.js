@@ -183,6 +183,7 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
   let lastActiveTextarea = null;
   let lastActiveEditable = null;
   let toastTimer = null;
+  let generatedIdCounter = 0;
   let selectedCoverGradient = 'linear-gradient(135deg, #dc2626, #991b1b)';
 
   // DOM Elements
@@ -298,6 +299,19 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
   };
 
   // State Persistence
+  function createUniqueId(prefix, usedIds = new Set()) {
+    let id = '';
+    do {
+      generatedIdCounter += 1;
+      const randomPart = (typeof crypto !== 'undefined' && crypto.randomUUID)
+        ? crypto.randomUUID()
+        : `${Date.now()}-${generatedIdCounter}-${Math.random().toString(16).slice(2)}`;
+      id = `${prefix}-${randomPart}`;
+    } while (usedIds.has(id));
+    usedIds.add(id);
+    return id;
+  }
+
   function normalizeState(rawState) {
     const state = rawState && typeof rawState === 'object' ? rawState : {};
     const previousVersion = Number(state.version) || 0;
@@ -312,7 +326,14 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
     const validLineHeights = ['24', '28', '32', '36', '42', 'none'];
     state.lineHeight = validLineHeights.includes(String(state.lineHeight)) ? String(state.lineHeight) : '28';
 
+    const notebookIds = new Set();
+    const pageIds = new Set();
     [...state.notebooks, ...state.trash].forEach((nb, nbIndex) => {
+      const requestedNotebookId = typeof nb.id === 'string' ? nb.id.trim() : '';
+      nb.id = requestedNotebookId && !notebookIds.has(requestedNotebookId)
+        ? requestedNotebookId
+        : createUniqueId('nb', notebookIds);
+      notebookIds.add(nb.id);
       nb.pages = Array.isArray(nb.pages) ? nb.pages : [];
       nb.title = String(nb.title || 'Cuốn sổ chưa đặt tên');
       nb.author = String(nb.author || 'Cá nhân');
@@ -346,7 +367,11 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
       delete nb.currentProgress;
       delete nb.progressPct;
       nb.pages.forEach((page, pageIndex) => {
-        page.id = page.id || `p-${Date.now()}-${nbIndex}-${pageIndex}`;
+        const requestedPageId = typeof page.id === 'string' ? page.id.trim() : '';
+        page.id = requestedPageId && !pageIds.has(requestedPageId)
+          ? requestedPageId
+          : createUniqueId('p', pageIds);
+        pageIds.add(page.id);
         if (page.template === 'book') page.template = 'ruled';
         if (!['cornell', 'work', 'ruled'].includes(page.template)) page.template = 'ruled';
         ['title', 'topic', 'project', 'date', 'no', 'deadline', 'status', 'lang', 'cues', 'notes', 'summary', 'agenda', 'discussions', 'content']
@@ -644,8 +669,7 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
     els.booksGrid.innerHTML = filtered.map(nb => {
       const totalPages = Math.max(1, nb.pages.length);
       const currentPage = Math.min(totalPages, (nb.lastPageIndex || 0) + 1);
-      const progressPct = Math.round((currentPage / totalPages) * 100);
-      const pagesCountText = `${currentPage} / ${nb.pages.length} trang`;
+      const pagesCountText = `${nb.pages.length} trang · mở gần nhất trang ${currentPage}`;
       const textColor = nb.coverTextColor || '#ffffff';
 
       return `
@@ -660,15 +684,12 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
               <span>${escapeHTML(nb.author || 'ARCHIVE')}</span>
               <span>●</span>
             </div>
-            <div class="book-cover-progress-bar">
-              <div class="book-cover-progress-fill" style="width: ${progressPct}%;"></div>
-            </div>
             <div class="book-actions-overlay">
               ${isTrashView ? `
                 <button class="btn-book-restore" aria-label="Khôi phục sổ" title="Khôi phục sổ" data-id="${escapeAttr(nb.id)}">↩</button>
                 <button class="btn-book-delete-permanent" aria-label="Xóa sổ vĩnh viễn" title="Xóa vĩnh viễn" data-id="${escapeAttr(nb.id)}">×</button>
               ` : `
-                <button class="btn-book-share" aria-label="Sao chép liên kết sổ" title="Sao chép liên kết cuốn sổ (URL)" data-id="${escapeAttr(nb.id)}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="pointer-events: none;"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></button>
+                <button class="btn-book-share" aria-label="Sao chép deep-link dùng trên thiết bị này" title="Deep-link chỉ dùng trên thiết bị này" data-id="${escapeAttr(nb.id)}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="pointer-events: none;"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></button>
                 <button class="btn-book-duplicate" aria-label="Nhân bản sổ" title="Nhân bản sổ" data-id="${escapeAttr(nb.id)}">⧉</button>
                 <button class="btn-book-delete" aria-label="Chuyển sổ vào thùng rác" title="Chuyển vào thùng rác" data-id="${escapeAttr(nb.id)}">×</button>
               `}
@@ -712,7 +733,7 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
       const url = new URL(window.location.href);
       url.searchParams.set('book', id);
       url.searchParams.set('page', String(page));
-      copyTextToClipboard(url.toString(), `Đã sao chép liên kết cuốn “${nb ? nb.title : ''}”!`);
+      copyTextToClipboard(url.toString(), `Đã sao chép deep-link trên thiết bị này cho “${nb ? nb.title : ''}”.`);
     }));
     els.booksGrid.querySelectorAll('.btn-book-duplicate').forEach(btn => btn.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -849,7 +870,7 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
       url.searchParams.set('book', nb.id);
       url.searchParams.set('page', String(curPage));
     }
-    copyTextToClipboard(url.toString(), `Đã sao chép liên kết trang ${curPage} của cuốn “${nb ? nb.title : ''}”!`);
+    copyTextToClipboard(url.toString(), `Đã sao chép deep-link trang ${curPage}; liên kết chỉ dùng trên thiết bị này.`);
   }
 
   function parseRouteFromUrl() {
@@ -1077,6 +1098,16 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
     if (!skipUrlUpdate) {
       updateUrl(null, false);
     }
+  }
+
+  function showLibraryAfterStateReplacement() {
+    clearTimeout(saveTimer);
+    lastActiveEditable = null;
+    lastActiveTextarea = null;
+    els.notebookView.classList.add('hidden');
+    els.libraryView.classList.remove('hidden');
+    renderLibraryGrid();
+    updateUrl(null, true);
   }
 
   // SVG Templates & Ornaments matching A4 Study Templates (100% Vector PDF Match)
@@ -1307,13 +1338,12 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
   }
 
   function renderWorkLayout(sheetEl, page, pageNum, isLeft) {
-    const actions = (page.actions && page.actions.length === 5) ? page.actions : [
-      { checked: false, text: '' },
-      { checked: false, text: '' },
-      { checked: false, text: '' },
-      { checked: false, text: '' },
-      { checked: false, text: '' }
-    ];
+    const storedActions = Array.isArray(page.actions) ? page.actions : [];
+    const actions = storedActions.slice(0, 5).map(action => ({
+      checked: Boolean(action && action.checked),
+      text: String((action && action.text) || '')
+    }));
+    while (actions.length < 5) actions.push({ checked: false, text: '' });
 
     const actionRowsHtml = actions.map((act, idx) => `
       <div class="action-row" data-idx="${idx}">
@@ -1569,6 +1599,44 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
     return '.template-writing-area';
   }
 
+  function createNotebookPage(notebook, template = 'cornell', lang = 'VI') {
+    const pageNumber = notebook.pages.length + 1;
+    return {
+      id: createUniqueId('p'),
+      lang,
+      title: `TRANG ${pageNumber}`,
+      topic: `${notebook.title} - Trang ${pageNumber}`,
+      date: new Date().toLocaleDateString('vi-VN'),
+      no: String(pageNumber).padStart(2, '0'),
+      template: ['cornell', 'work', 'ruled'].includes(template) ? template : 'cornell',
+      updatedAt: new Date().toISOString(),
+      content: ''
+    };
+  }
+
+  function renderEmptyRightPagePlaceholder(notebook, template) {
+    els.rightPageSheet.innerHTML = `
+      <div class="empty-right-page" role="status">
+        <span>Đây là cuối cuốn sổ.</span>
+        <button type="button" class="btn-add-right-page">+ Thêm trang ${notebook.pages.length + 1}</button>
+      </div>
+    `;
+    const button = els.rightPageSheet.querySelector('.btn-add-right-page');
+    if (button) {
+      button.addEventListener('click', () => {
+        const newPage = createNotebookPage(notebook, template, 'VI');
+        notebook.pages.push(newPage);
+        notebook.updatedAt = newPage.updatedAt;
+        persistState();
+        renderBookPages();
+        const selector = newPage.template === 'cornell'
+          ? '.cornell-notes-text'
+          : newPage.template === 'work' ? '.work-notes-text' : '.ruled-canvas-text';
+        placeCaretAtStart(els.rightPageSheet.querySelector(selector));
+      });
+    }
+  }
+
   function advanceToNextPage(editable, sheetEl, page, overflowContent = '') {
     if (isAdvancingPage) return;
     isAdvancingPage = true;
@@ -1581,7 +1649,20 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
       extractTemplateDataFromSheet(sheetEl, page);
       saveActivePages();
 
+      const nb = getActiveNotebook();
+      if (!nb) {
+        isAdvancingPage = false;
+        return;
+      }
+
       if (currentPageMode === '2-page' && isLeftSheet) {
+        if (!nb.pages[appState.activePageIndex + 1]) {
+          const newRightPage = createNotebookPage(nb, page.template || 'cornell', page.lang || 'VI');
+          nb.pages.push(newRightPage);
+          nb.updatedAt = newRightPage.updatedAt;
+          persistState();
+          renderBookPages();
+        }
         // Move from Left sheet to Right sheet
         const rightEditable = els.rightPageSheet ? els.rightPageSheet.querySelector(selector) : null;
         if (rightEditable) {
@@ -1599,42 +1680,14 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
       }
 
       // Need to flip to the next page / sheet
-      const nb = getActiveNotebook();
-      if (!nb) {
-        isAdvancingPage = false;
-        return;
-      }
-
       const step = currentPageMode === '2-page' ? 2 : 1;
       // If at the end of the notebook, automatically create next page(s)
       if (appState.activePageIndex + step >= nb.pages.length) {
         const inheritTemplate = page.template || 'cornell';
-        const pNum1 = nb.pages.length + 1;
-        nb.pages.push({
-          id: 'p-' + Date.now(),
-          lang: page.lang || 'VI',
-          title: `TRANG ${pNum1}`,
-          topic: `${nb.title} - Trang ${pNum1}`,
-          date: new Date().toLocaleDateString('vi-VN'),
-          no: String(pNum1).padStart(2, '0'),
-          template: inheritTemplate,
-          updatedAt: new Date().toISOString(),
-          content: ''
-        });
+        nb.pages.push(createNotebookPage(nb, inheritTemplate, page.lang || 'VI'));
 
         if (currentPageMode === '2-page') {
-          const pNum2 = nb.pages.length + 1;
-          nb.pages.push({
-            id: 'p-' + (Date.now() + 1),
-            lang: 'EN',
-            title: `TRANG ${pNum2}`,
-            topic: `${nb.title} - Trang ${pNum2}`,
-            date: new Date().toLocaleDateString('vi-VN'),
-            no: String(pNum2).padStart(2, '0'),
-            template: inheritTemplate,
-            updatedAt: new Date().toISOString(),
-            content: ''
-          });
+          nb.pages.push(createNotebookPage(nb, inheritTemplate, 'EN'));
         }
         persistState();
       }
@@ -1877,17 +1930,7 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
       if (rightPage) {
         renderSheetContent(els.rightPageSheet, rightPage, curIdx + 2, false);
       } else {
-        const blankPage = {
-          id: 'p-blank-' + (curIdx + 2),
-          title: 'TRANG ' + (curIdx + 2),
-          topic: `${nb.title} - Trang ${curIdx + 2}`,
-          date: new Date().toLocaleDateString('vi-VN'),
-          no: String(curIdx + 2).padStart(2, '0'),
-          lang: 'EN',
-          template: leftPage.template || 'cornell',
-          content: ''
-        };
-        renderSheetContent(els.rightPageSheet, blankPage, curIdx + 2, false);
+        renderEmptyRightPagePlaceholder(nb, leftPage.template || 'cornell');
       }
     }
   }
@@ -2063,15 +2106,32 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
     // Extract current values before changing
     extractTemplateDataFromSheet(els.leftPageSheet, curPage);
 
-    // Harmonize content between templates
+    // Always convert from the currently visible template. Hidden fields from an
+    // older template must never win over the user's latest edit.
+    let latestBody = '';
+    let latestSide = '';
+    let latestSummary = '';
+    if (oldTemplate === 'cornell') {
+      latestBody = curPage.notes || curPage.content || '';
+      latestSide = curPage.cues || '';
+      latestSummary = curPage.summary || '';
+    } else if (oldTemplate === 'work') {
+      latestBody = curPage.discussions || curPage.content || '';
+      latestSide = curPage.agenda || '';
+    } else {
+      latestBody = curPage.content || '';
+    }
+
     if (templateKey === 'cornell') {
-      curPage.notes = curPage.notes || curPage.content || curPage.discussions || '';
-      curPage.cues = curPage.cues || curPage.agenda || '';
-      curPage.summary = curPage.summary || '';
+      curPage.notes = latestBody;
+      curPage.content = latestBody;
+      curPage.cues = latestSide || curPage.cues || '';
+      curPage.summary = latestSummary || curPage.summary || '';
     } else if (templateKey === 'work') {
-      curPage.discussions = curPage.discussions || curPage.notes || curPage.content || '';
-      curPage.agenda = curPage.agenda || curPage.cues || '';
-      curPage.actions = curPage.actions || [
+      curPage.discussions = latestBody;
+      curPage.content = latestBody;
+      curPage.agenda = latestSide || curPage.agenda || '';
+      curPage.actions = Array.isArray(curPage.actions) ? curPage.actions : [
         { checked: false, text: '' },
         { checked: false, text: '' },
         { checked: false, text: '' },
@@ -2079,7 +2139,7 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
         { checked: false, text: '' }
       ];
     } else {
-      curPage.content = curPage.content || curPage.notes || curPage.discussions || '';
+      curPage.content = latestBody;
       templateKey = 'ruled';
     }
 
@@ -2757,16 +2817,58 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
     const temp = document.createElement('div');
     temp.innerHTML = html;
 
-    temp.querySelectorAll('br').forEach(br => br.replaceWith('\n'));
-    temp.querySelectorAll('p, div').forEach(el => el.prepend('\n'));
-    temp.querySelectorAll('strong, b').forEach(el => { el.textContent = `**${el.textContent}**`; });
-    temp.querySelectorAll('em, i').forEach(el => { el.textContent = `*${el.textContent}*`; });
-    temp.querySelectorAll('u').forEach(el => { el.textContent = `<u>${el.textContent}</u>`; });
-    temp.querySelectorAll('s, strike').forEach(el => { el.textContent = `~~${el.textContent}~~`; });
-    temp.querySelectorAll('code').forEach(el => { el.textContent = `\`${el.textContent}\``; });
-    temp.querySelectorAll('blockquote').forEach(el => { el.textContent = `\n> ${el.textContent}\n`; });
+    const convertChildren = (node, depth = 0) => Array.from(node.childNodes)
+      .map(child => convertNode(child, depth))
+      .join('');
 
-    return (temp.textContent || temp.innerText || '').trim();
+    const convertList = (list, depth) => {
+      const ordered = list.tagName === 'OL';
+      let itemNumber = Number(list.getAttribute('start')) || 1;
+      const lines = [];
+      Array.from(list.children).filter(child => child.tagName === 'LI').forEach(item => {
+        const nestedLists = Array.from(item.children).filter(child => child.tagName === 'UL' || child.tagName === 'OL');
+        const body = Array.from(item.childNodes)
+          .filter(child => !(child.nodeType === Node.ELEMENT_NODE && (child.tagName === 'UL' || child.tagName === 'OL')))
+          .map(child => convertNode(child, depth))
+          .join('')
+          .replace(/\s*\n+\s*/g, ' ')
+          .trim();
+        const prefix = ordered ? `${itemNumber}. ` : '- ';
+        lines.push(`${'  '.repeat(depth)}${prefix}${body}`);
+        nestedLists.forEach(nested => lines.push(convertList(nested, depth + 1).trimEnd()));
+        itemNumber += 1;
+      });
+      return `${lines.join('\n')}\n\n`;
+    };
+
+    const convertNode = (node, depth = 0) => {
+      if (node.nodeType === Node.TEXT_NODE) return node.nodeValue || '';
+      if (node.nodeType !== Node.ELEMENT_NODE) return '';
+      const tag = node.tagName;
+      const inner = () => convertChildren(node, depth);
+      if (tag === 'BR') return '\n';
+      if (tag === 'STRONG' || tag === 'B') return `**${inner()}**`;
+      if (tag === 'EM' || tag === 'I') return `*${inner()}*`;
+      if (tag === 'U') return `<u>${inner()}</u>`;
+      if (tag === 'S' || tag === 'STRIKE') return `~~${inner()}~~`;
+      if (tag === 'CODE' && node.parentElement && node.parentElement.tagName !== 'PRE') return `\`${inner()}\``;
+      if (tag === 'PRE') return `\n\`\`\`\n${node.textContent || ''}\n\`\`\`\n\n`;
+      if (tag === 'BLOCKQUOTE') {
+        const quoted = inner().trim().split('\n').map(line => `> ${line}`).join('\n');
+        return `${quoted}\n\n`;
+      }
+      if (/^H[1-6]$/.test(tag)) return `${'#'.repeat(Number(tag.slice(1)))} ${inner().trim()}\n\n`;
+      if (tag === 'UL' || tag === 'OL') return convertList(node, depth);
+      if (tag === 'LI') return inner();
+      if (tag === 'HR') return '\n---\n\n';
+      if (tag === 'P' || tag === 'DIV') return `${inner().trimEnd()}\n\n`;
+      return inner();
+    };
+
+    return convertChildren(temp)
+      .replace(/[ \t]+\n/g, '\n')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim();
   }
 
   // Export Markdown
@@ -2797,6 +2899,43 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
     URL.revokeObjectURL(url);
   }
 
+  function printFullNotebook() {
+    if (!saveActivePages()) return;
+    const notebook = getActiveNotebook();
+    if (!notebook || !Array.isArray(notebook.pages) || notebook.pages.length === 0) {
+      showToast('Không có trang nào để in.');
+      return;
+    }
+
+    document.querySelectorAll('.print-all-pages').forEach(node => node.remove());
+    const printRoot = document.createElement('main');
+    printRoot.className = 'print-all-pages';
+    printRoot.setAttribute('aria-hidden', 'true');
+
+    notebook.pages.forEach((page, pageIndex) => {
+      const sheet = document.createElement('article');
+      sheet.className = 'book-page-sheet print-page-sheet';
+      renderSheetContent(sheet, JSON.parse(JSON.stringify(page)), pageIndex + 1, false);
+      sheet.querySelectorAll('[contenteditable]').forEach(el => el.setAttribute('contenteditable', 'false'));
+      sheet.querySelectorAll('input').forEach(input => input.setAttribute('readonly', 'readonly'));
+      printRoot.appendChild(sheet);
+    });
+
+    const cleanup = () => {
+      document.body.classList.remove('is-printing-all');
+      printRoot.remove();
+      window.removeEventListener('afterprint', cleanup);
+    };
+
+    document.body.appendChild(printRoot);
+    document.body.classList.add('is-printing-all');
+    window.addEventListener('afterprint', cleanup, { once: true });
+    requestAnimationFrame(() => {
+      window.print();
+      setTimeout(cleanup, 1500);
+    });
+  }
+
   // JSON Backup / Restore
   function exportJSONBackup() {
     saveActivePages();
@@ -2814,21 +2953,65 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
       throw new Error('File không có cấu trúc thư viện Notebook Studio hợp lệ.');
     }
     if (imported.notebooks.length > 500) throw new Error('File có quá nhiều cuốn sổ.');
-    imported.notebooks.forEach((nb, nbIndex) => {
+    const trash = imported.trash == null ? [] : imported.trash;
+    if (!Array.isArray(trash)) throw new Error('Dữ liệu thùng rác không hợp lệ.');
+    if (imported.notebooks.length + trash.length > 500) throw new Error('File có quá nhiều cuốn sổ, kể cả trong thùng rác.');
+    const notebookIds = new Set();
+    const pageIds = new Set();
+    let totalPages = 0;
+    [...imported.notebooks, ...trash].forEach((nb, nbIndex) => {
       if (!nb || typeof nb !== 'object' || typeof nb.title !== 'string' || !Array.isArray(nb.pages)) {
         throw new Error(`Cuốn sổ thứ ${nbIndex + 1} không hợp lệ.`);
       }
+      if (typeof nb.id !== 'string' || !nb.id.trim()) throw new Error(`Cuốn sổ “${nb.title}” thiếu ID.`);
+      if (notebookIds.has(nb.id.trim())) throw new Error(`ID cuốn sổ bị trùng: ${nb.id.trim()}.`);
+      notebookIds.add(nb.id.trim());
       if (nb.pages.length > 5000) throw new Error(`Cuốn sổ “${nb.title}” có quá nhiều trang.`);
       nb.pages.forEach((page, pageIndex) => {
         if (!page || typeof page !== 'object') throw new Error(`Trang ${pageIndex + 1} trong “${nb.title}” không hợp lệ.`);
+        if (typeof page.id !== 'string' || !page.id.trim()) throw new Error(`Trang ${pageIndex + 1} trong “${nb.title}” thiếu ID.`);
+        if (pageIds.has(page.id.trim())) throw new Error(`ID trang bị trùng: ${page.id.trim()}.`);
+        pageIds.add(page.id.trim());
+        if (page.actions != null && (!Array.isArray(page.actions) || page.actions.length > 5)) {
+          throw new Error(`Trang ${pageIndex + 1} trong “${nb.title}” có danh sách công việc không hợp lệ (tối đa 5 mục).`);
+        }
       });
+      totalPages += nb.pages.length;
     });
+    if (totalPages > 10000) throw new Error('File có quá nhiều trang để dùng an toàn trên thiết bị này.');
     return normalizeState(imported);
   }
 
+  function replaceApplicationState(nextState) {
+    const previousSerialized = JSON.stringify(appState);
+    const nextSerialized = JSON.stringify(nextState);
+    const previousBackup = localStorage.getItem(BACKUP_STORAGE_KEY);
+    try {
+      localStorage.setItem(BACKUP_STORAGE_KEY, previousSerialized);
+      if (localStorage.getItem(BACKUP_STORAGE_KEY) !== previousSerialized) throw new Error('Không thể tạo bản sao an toàn.');
+      localStorage.setItem(STORAGE_KEY, nextSerialized);
+      if (localStorage.getItem(STORAGE_KEY) !== nextSerialized) throw new Error('Không thể xác minh dữ liệu khôi phục.');
+    } catch (error) {
+      try {
+        localStorage.setItem(STORAGE_KEY, previousSerialized);
+        if (previousBackup == null) localStorage.removeItem(BACKUP_STORAGE_KEY);
+        else localStorage.setItem(BACKUP_STORAGE_KEY, previousBackup);
+      } catch (rollbackError) {
+        console.error('Không thể rollback dữ liệu sau lỗi import:', rollbackError);
+      }
+      throw error;
+    }
+
+    appState = nextState;
+    currentPageMode = appState.pageMode;
+    isTrashView = false;
+    showLibraryAfterStateReplacement();
+  }
+
   function importJSONBackup(file) {
-    if (!file || file.size > 25 * 1024 * 1024) {
-      showToast('File sao lưu không hợp lệ hoặc lớn hơn 25 MB.');
+    const maxImportBytes = 4 * 1024 * 1024;
+    if (!file || file.size > maxImportBytes) {
+      showToast('File sao lưu không hợp lệ hoặc lớn hơn 4 MB.');
       return;
     }
     const reader = new FileReader();
@@ -2836,19 +3019,13 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
       try {
         const imported = validateImportedState(JSON.parse(e.target.result));
         if (!confirm(`Khôi phục ${imported.notebooks.length} cuốn sổ từ file này? Thư viện hiện tại sẽ được lưu thành bản sao an toàn.`)) return;
-        localStorage.setItem(BACKUP_STORAGE_KEY, JSON.stringify(appState));
-        appState = imported;
-        currentPageMode = appState.pageMode;
-        isTrashView = false;
-        if (!persistState()) throw new Error('Không thể lưu thư viện đã nhập.');
-        renderLibraryGrid();
+        if (!saveActivePages()) throw new Error('Không thể lưu thay đổi hiện tại trước khi khôi phục.');
+        replaceApplicationState(imported);
         showToast(`Đã khôi phục ${appState.notebooks.length} cuốn sổ.`, 'Hoàn tác', () => {
           const previous = localStorage.getItem(BACKUP_STORAGE_KEY);
           if (!previous) return;
-          appState = normalizeState(JSON.parse(previous));
-          currentPageMode = appState.pageMode;
-          persistState();
-          renderLibraryGrid();
+          replaceApplicationState(normalizeState(JSON.parse(previous)));
+          showToast('Đã hoàn tác khôi phục dữ liệu.');
         });
       } catch (err) {
         showToast('Không thể khôi phục: ' + err.message);
@@ -3202,7 +3379,7 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
       if (els.exportPrintBtn) {
         els.exportPrintBtn.addEventListener('click', () => {
           els.exportMenu.hidden = true;
-          window.print();
+          printFullNotebook();
         });
       }
       if (els.exportJsonBtn) {
@@ -3227,13 +3404,13 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
     if (els.btnResetLibrary) {
       els.btnResetLibrary.addEventListener('click', () => {
         if (confirm('Khôi phục danh sách sổ về 4 mẫu sổ ghi chép A4 mặc định (Cornell, Work Notes, Ruled, Freeform)?')) {
-          localStorage.setItem(BACKUP_STORAGE_KEY, JSON.stringify(appState));
-          appState = normalizeState(JSON.parse(JSON.stringify(INITIAL_LIBRARY_DATA)));
-          currentPageMode = appState.pageMode;
-          isTrashView = false;
-          persistState();
-          renderLibraryGrid();
-          showToast('Đã khôi phục thư viện mẫu. Bản dữ liệu trước đó đã được giữ làm bản sao an toàn.');
+          try {
+            if (!saveActivePages()) throw new Error('Không thể lưu thay đổi hiện tại trước khi khôi phục.');
+            replaceApplicationState(normalizeState(JSON.parse(JSON.stringify(INITIAL_LIBRARY_DATA))));
+            showToast('Đã khôi phục thư viện mẫu. Bản dữ liệu trước đó đã được giữ làm bản sao an toàn.');
+          } catch (error) {
+            showToast('Không thể khôi phục thư viện mẫu: ' + error.message);
+          }
         }
       });
     }

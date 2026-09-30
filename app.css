@@ -395,26 +395,42 @@ body {
   justify-content: space-between;
 }
 
-.book-cover-progress-bar {
-  position: absolute;
-  left: 0;
-  bottom: 0;
-  right: 0;
-  height: 3.5px;
-  background: rgba(255, 255, 255, 0.2);
-  z-index: 6;
-}
-.book-cover-progress-fill {
-  height: 100%;
-  background: #38bdf8;
-  border-radius: 0 2px 2px 0;
-}
-
 .book-info {
   margin-top: 10px;
   display: flex;
   flex-direction: column;
   gap: 3px;
+}
+
+.empty-right-page {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: #64748b;
+  font-size: 13px;
+  text-align: center;
+  background: #fffdf8;
+}
+
+.btn-add-right-page {
+  border: 1px solid #94a3b8;
+  border-radius: 8px;
+  padding: 8px 12px;
+  background: #ffffff;
+  color: #0f172a;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.btn-add-right-page:hover,
+.btn-add-right-page:focus-visible {
+  border-color: #2563eb;
+  color: #1d4ed8;
 }
 .book-title {
   font-size: 13.5px;
@@ -2294,6 +2310,10 @@ mark {
 /* ========================================================
    HIGH-FIDELITY A4 PRINT STYLESHEET (In / Lưu PDF)
    ======================================================== */
+.print-all-pages {
+  display: none;
+}
+
 @media print {
   @page {
     size: A4 portrait;
@@ -2337,6 +2357,21 @@ mark {
     background: #ffffff !important;
     overflow: visible !important;
     position: static !important;
+  }
+
+  body.is-printing-all .notebook-view {
+    display: none !important;
+  }
+
+  body.is-printing-all .print-all-pages {
+    display: block !important;
+    width: 210mm !important;
+    margin: 0 auto !important;
+  }
+
+  .print-all-pages .book-page-sheet {
+    display: block !important;
+    position: relative !important;
   }
 
   .book-desk {

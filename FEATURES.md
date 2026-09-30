@@ -20,7 +20,7 @@ analytics hoặc các chức năng bán hàng.
 
 - [x] Tạo và đổi tên sổ tay.
 - [x] Ba mẫu trang: Cornell, Work Notes và Ruled Notebook.
-- [x] Hiển thị số trang và tiến độ từ dữ liệu thật.
+- [x] Hiển thị số trang và vị trí mở gần nhất từ dữ liệu thật.
 - [x] Tìm kiếm toàn văn trong tên sổ, nội dung trang và action items.
 - [x] Lọc category động và sắp xếp thư viện.
 - [x] Ghim và nhân bản sổ tay.
@@ -43,12 +43,12 @@ analytics hoặc các chức năng bán hàng.
 
 ## Điều hướng, dữ liệu và offline
 
-- [x] URL trực tiếp tới từng sổ và trang.
-- [x] Hỗ trợ browser Back/Forward và sao chép liên kết trang hiện tại.
+- [x] URL trực tiếp tới từng sổ và trang trên cùng thiết bị.
+- [x] Hỗ trợ browser Back/Forward và sao chép deep-link local có nhãn rõ ràng.
 - [x] Schema dữ liệu có version và migration dữ liệu cũ.
 - [x] Kiểm tra lỗi lưu trữ và chuẩn hóa dữ liệu khi tải.
-- [x] Backup/restore JSON có validation và bản sao dự phòng trước khi restore.
-- [x] Xuất Markdown và in/lưu PDF.
+- [x] Backup/restore JSON có validation ID, giới hạn dung lượng, ghi atomic và rollback.
+- [x] Xuất Markdown giữ cấu trúc danh sách và in/lưu PDF toàn bộ cuốn sổ.
 - [x] PWA manifest, icon và application shell dùng offline.
 - [x] Service Worker network-first để tránh giữ bản mã nguồn cũ.
 
