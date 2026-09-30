@@ -2518,7 +2518,7 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
     if (els.fontSizeLabel) els.fontSizeLabel.textContent = s;
   }
 
-  const CJK_CALLIGRAPHIC_STACK = '"CJK-Smart-Enlarged", "Songti SC", "STSong", "Kaiti SC", "STKaiti", "KaiTi", "SimKai", "Noto Serif SC", "SimSun", serif';
+  const CJK_CALLIGRAPHIC_STACK = '"CJK-Smart-Enlarged", "Kaiti SC", "STKaiti", "KaiTi", "SimKai", "KaiTi_GB2312", "BiauKai", "Noto Serif SC", "Songti SC", "STSong", "SimSun", serif';
 
   const FONT_MAP = {
     'sans': `'CJK-Smart-Enlarged', 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`,
