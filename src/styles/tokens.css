@@ -1,0 +1,78 @@
+/* ========================================================
+   NOTEBOOK STUDIO - DESIGN TOKENS & TYPOGRAPHY
+   ======================================================== */
+
+/* Auto-Enlarging CJK / Chinese Character Font Stack
+   Ensures Hanzi is ALWAYS prominent, large, and readable
+   relative to Latin / Vietnamese characters in notebooks. */
+@font-face {
+  font-family: 'CJK-Smart-Enlarged';
+  src: local('Kaiti SC'), local('STKaiti'), local('KaiTi'), local('SimKai'),
+       local('KaiTi_GB2312'), local('BiauKai'), local('Noto Serif SC'),
+       local('Songti SC'), local('STSong'), local('Hiragino Sans GB'),
+       local('STHeiti'), local('Heiti SC'), local('PingFang SC'),
+       local('Microsoft YaHei'), local('SimSun'), serif;
+  unicode-range: U+2E80-2EFF, U+2F00-2FDF, U+3000-303F, U+3100-312F,
+                 U+31C0-31EF, U+3200-32FF, U+3400-4DBF, U+4E00-9FFF,
+                 U+F900-FAFF, U+FE30-FE4F, U+FF00-FFEF;
+  size-adjust: 140%;
+}
+
+:root {
+  color-scheme: dark;
+  
+  /* Library Theme Colors */
+  --lib-bg: #0b111e;
+  --lib-header-bg: #0f172a;
+  --lib-card-bg: #131d2e;
+  --lib-border: rgba(255, 255, 255, 0.08);
+  --lib-search-bg: #162032;
+  --lib-text: #f8fafc;
+  --lib-text-muted: #94a3b8;
+  --lib-accent: #38bdf8;
+  --lib-accent-hover: #0284c7;
+
+  /* Open Book Reader Colors */
+  --reader-header-bg: #0e1526;
+  --reader-desk-bg: #080c14;
+  --book-casing-bg: #182236;
+  
+  /* Paper Styles */
+  --paper-cream: #ffffff;
+  --paper-border: #e2e8f0;
+  --text-editor: #111827;
+  --text-heading: #0f172a;
+  --text-muted: #64748b;
+
+  /* Cornell & Template Rules */
+  --rule-main: #94a3b8;
+  --rule-accent: #1e293b;
+  --ink-primary: #0f172a;
+  --ink-muted: #64748b;
+
+  /* Status Colors */
+  --status-saved: #10b981;
+  --status-dirty: #f59e0b;
+  --status-error: #ef4444;
+
+  /* Code Syntax */
+  --pre-bg: #1e1f29;
+  --pre-text: #f8f8f2;
+  --blockquote-border: #c8b968;
+  --blockquote-text: #475569;
+  --code-bg: rgba(0, 0, 0, 0.06);
+
+  --editor-font-size: 16px;
+  --notebook-font-size: 15px;
+  --notebook-line-height: 28px;
+  --notebook-lines-display: repeating-linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent calc(var(--notebook-line-height, 28px) - 1px),
+    #cbd5e1 calc(var(--notebook-line-height, 28px) - 1px),
+    #cbd5e1 var(--notebook-line-height, 28px)
+  );
+  --paper-zoom: 1.0;
+  --cjk-calligraphic-font: "CJK-Smart-Enlarged", "Kaiti SC", "STKaiti", "KaiTi", "SimKai", "KaiTi_GB2312", "BiauKai", "Noto Serif SC", "Songti SC", "STSong", "SimSun", serif;
+  --notebook-font-family: 'CJK-Smart-Enlarged', 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, var(--cjk-calligraphic-font);
+}

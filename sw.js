@@ -1,13 +1,12 @@
 // Notebook Studio - offline application shell
-const CACHE_NAME = 'notebook-studio-v6';
+const CACHE_NAME = 'notebook-studio-v7';
 const APP_SHELL = [
   './',
   './index.html',
-  './app.css',
-  './app.js',
+  './src/styles/main.css',
+  './src/main.js',
   './manifest.webmanifest',
-  './public/notebook-icon.svg',
-  './public/assets/js/editor-bundle.js'
+  './notebook-icon.svg'
 ];
 
 self.addEventListener('install', (e) => {

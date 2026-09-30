@@ -1,0 +1,194 @@
+/* ========================================================
+   HIGH-FIDELITY A4 PRINT STYLESHEET (In / Lưu PDF)
+   ======================================================== */
+
+.print-all-pages {
+  display: none;
+}
+
+.print-cover-sheet {
+  display: none;
+}
+
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 0;
+  }
+
+  *, *:before, *:after {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
+  }
+
+  html, body {
+    background: #ffffff !important;
+    color: #0f172a !important;
+    height: auto !important;
+    width: auto !important;
+    overflow: visible !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Hide UI Bars, overlays, ribbons, shadows */
+  .library-view,
+  .reader-header,
+  .editor-toolbar,
+  .fullscreen-rail,
+  .fullscreen-tools-panel,
+  .book-center-ribbon,
+  .book-center-spine,
+  .edge-turn-btn,
+  .modal-overlay,
+  .book-actions-overlay,
+  .export-menu,
+  .book-star-badge {
+    display: none !important;
+  }
+
+  .notebook-view {
+    display: block !important;
+    height: auto !important;
+    width: 100% !important;
+    background: #ffffff !important;
+    overflow: visible !important;
+    position: static !important;
+  }
+
+  body.is-printing-all .notebook-view {
+    display: none !important;
+  }
+
+  body.is-printing-all .print-all-pages {
+    display: block !important;
+    width: 210mm !important;
+    margin: 0 auto !important;
+  }
+
+  .print-all-pages .book-page-sheet {
+    display: block !important;
+    position: relative !important;
+  }
+
+  .print-all-pages .print-cover-sheet {
+    display: flex !important;
+    position: relative !important;
+    align-items: stretch;
+    width: 210mm !important;
+    height: 297mm !important;
+    min-height: 297mm !important;
+    max-height: 297mm !important;
+    box-sizing: border-box;
+    margin: 0 auto !important;
+    padding: 18mm;
+    overflow: hidden !important;
+    color: var(--print-cover-color, #ffffff) !important;
+    background: var(--print-cover-background, linear-gradient(135deg, #1e3a8a, #0f172a)) !important;
+    page-break-after: always !important;
+    page-break-inside: avoid !important;
+  }
+
+  .print-cover-sheet::before {
+    content: '';
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 15mm;
+    background: linear-gradient(to right, rgba(0, 0, 0, 0.42), rgba(255, 255, 255, 0.16) 28%, rgba(0, 0, 0, 0.18) 70%, transparent);
+  }
+
+  .print-cover-frame {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 13mm;
+    border: 0.6mm solid currentColor;
+    color: inherit;
+  }
+
+  .print-cover-category {
+    font-size: 11pt;
+    font-weight: 800;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    opacity: 0.82;
+  }
+
+  .print-cover-title {
+    max-width: 155mm;
+    margin: auto 0 8mm;
+    color: inherit !important;
+    font-size: 38pt;
+    line-height: 1.08;
+    letter-spacing: -0.02em;
+    text-transform: uppercase;
+    overflow-wrap: anywhere;
+  }
+
+  .print-cover-rule {
+    width: 24mm;
+    height: 1mm;
+    margin-bottom: auto;
+    background: currentColor;
+    opacity: 0.8;
+  }
+
+  .print-cover-footer {
+    display: flex;
+    justify-content: space-between;
+    gap: 10mm;
+    padding-top: 8mm;
+    border-top: 0.3mm solid currentColor;
+    font-size: 10pt;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .book-desk {
+    display: block !important;
+    height: auto !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    background: #ffffff !important;
+    perspective: none !important;
+  }
+
+  .book-desk-scaler {
+    transform: none !important;
+    display: block !important;
+    width: 100% !important;
+  }
+
+  .book-spread-casing {
+    display: block !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    border-radius: 0 !important;
+    border: none !important;
+    transform: none !important;
+  }
+
+  .book-page-sheet {
+    width: 210mm !important;
+    height: 297mm !important;
+    min-height: 297mm !important;
+    max-height: 297mm !important;
+    margin: 0 auto !important;
+    box-shadow: none !important;
+    border: none !important;
+    background: #ffffff !important;
+    page-break-after: always !important;
+    page-break-inside: avoid !important;
+    overflow: hidden !important;
+  }
+
+  .template-writing-area {
+    background-attachment: scroll !important;
+  }
+}

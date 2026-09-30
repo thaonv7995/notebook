@@ -1,0 +1,623 @@
+/* ========================================================
+   AUTHENTIC A4 NOTEBOOK TEMPLATES
+   Cornell Notes, Work Notes and Ruled Notebook
+   ======================================================== */
+
+.a4-template-sheet {
+  width: 100%;
+  height: 100%;
+  background: #ffffff;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  padding: 15px 14px 10px 28px;
+  box-sizing: border-box;
+  font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
+  color: var(--ink-primary);
+}
+
+.book-page-left .a4-template-sheet {
+  padding: 15px 28px 10px 14px;
+}
+
+/* 1-Page Mode comfortable margins */
+.book-spread-casing.mode-1-page .a4-template-sheet {
+  padding: 22px 20px 16px 36px;
+}
+.book-spread-casing.mode-1-page .book-page-left .a4-template-sheet {
+  padding: 22px 20px 16px 36px;
+}
+
+/* Punch Margin Line */
+.punch-margin-line {
+  position: absolute;
+  left: 20px;
+  top: 0;
+  bottom: 0;
+  width: 0;
+  border-left: 0.8px dashed #cbd5e1;
+  z-index: 2;
+  pointer-events: none;
+}
+.book-page-left .punch-margin-line {
+  left: auto;
+  right: 20px;
+}
+.book-spread-casing.mode-1-page .punch-margin-line {
+  left: 24px;
+  right: auto;
+}
+
+/* Edge Index Markers */
+.edge-index-markers {
+  position: absolute;
+  top: 24px;
+  right: 0;
+  width: 15px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  z-index: 10;
+  pointer-events: none;
+}
+.book-page-left .edge-index-markers {
+  left: 0;
+  right: auto;
+}
+.book-spread-casing.mode-1-page .edge-index-markers {
+  right: 0;
+  left: auto;
+}
+
+.index-notch {
+  width: 14px;
+  height: 20px;
+  border-top: 1px solid var(--rule-main);
+  border-bottom: 1px solid var(--rule-main);
+  border-left: 1px solid var(--rule-main);
+  background: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 7.5px;
+  font-weight: 700;
+  color: var(--ink-muted);
+  letter-spacing: 0.5px;
+  border-top-left-radius: 2px;
+  border-bottom-left-radius: 2px;
+}
+.book-page-left .index-notch {
+  border-left: none;
+  border-right: 1px solid var(--rule-main);
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+  border-top-right-radius: 2px;
+  border-bottom-right-radius: 2px;
+}
+.book-spread-casing.mode-1-page .index-notch {
+  border-right: none;
+  border-left: 1px solid var(--rule-main);
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+  border-top-left-radius: 2px;
+  border-bottom-left-radius: 2px;
+}
+
+/* Ornate Royal Corner Frames */
+.content-corner-frame {
+  position: absolute;
+  width: 26px;
+  height: 26px;
+  pointer-events: none;
+  z-index: 5;
+}
+.corner-tl { top: 7px; left: 20px; }
+.corner-tr { top: 7px; right: 10px; transform: scaleX(-1); }
+.corner-bl { bottom: 7px; left: 20px; transform: scaleY(-1); }
+.corner-br { bottom: 7px; right: 10px; transform: scale(-1); }
+
+.book-page-left .corner-tl { left: 10px; }
+.book-page-left .corner-tr { right: 20px; }
+.book-page-left .corner-bl { left: 10px; }
+.book-page-left .corner-br { right: 20px; }
+
+.book-spread-casing.mode-1-page .corner-tl { left: 22px; }
+.book-spread-casing.mode-1-page .corner-tr { right: 10px; }
+.book-spread-casing.mode-1-page .corner-bl { left: 22px; }
+.book-spread-casing.mode-1-page .corner-br { right: 10px; }
+
+/* Functional Header */
+.functional-header {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 5px;
+  z-index: 2;
+  flex-shrink: 0;
+}
+.header-top-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  min-height: 22px;
+}
+.header-purpose-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 8.5px;
+  font-weight: 800;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: var(--ink-primary);
+  border: 1px solid var(--rule-main);
+  padding: 1.5px 6px;
+  background: #ffffff;
+}
+.signature-seal-cartouche {
+  border: 1.2px solid var(--ink-primary);
+  padding: 1px 7px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: #ffffff;
+  box-shadow: inset 0 0 0 0.5px #cbd5e1;
+}
+.seal-user-handle {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 8px;
+  font-weight: 700;
+  color: var(--ink-primary);
+  line-height: 1.2;
+}
+.seal-user-sub {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 5.5px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+  line-height: 1.2;
+}
+.header-main-field {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+.field-label {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: var(--ink-primary);
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.field-underline-input {
+  flex: 1;
+  border: none;
+  border-bottom: 1.3px solid var(--ink-primary);
+  background: transparent;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-primary);
+  outline: none;
+  padding: 1px 4px;
+  font-family: var(--notebook-font-family);
+}
+.field-underline-input:focus {
+  border-bottom-color: #2563eb;
+  background: rgba(37, 99, 235, 0.03);
+}
+.header-sub-fields {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 9.5px;
+  letter-spacing: 0.5px;
+  color: var(--ink-muted);
+}
+.sub-field-group {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+.sub-field-input {
+  border: none;
+  border-bottom: 1px solid var(--rule-main);
+  background: transparent;
+  font-size: 9.5px;
+  font-weight: 600;
+  color: var(--ink-primary);
+  outline: none;
+  padding: 0 3px;
+  font-family: 'JetBrains Mono', monospace;
+}
+.sub-field-input:focus {
+  border-bottom-color: #2563eb;
+}
+.status-pills {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+.status-pill-btn {
+  border: 1px solid var(--rule-main);
+  background: #ffffff;
+  font-size: 8.5px;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  color: var(--ink-muted);
+}
+.status-pill-btn:hover {
+  border-color: #0f172a;
+  color: #0f172a;
+}
+.status-pill-btn.active-todo { background: #fee2e2; border-color: #ef4444; color: #b91c1c; }
+.status-pill-btn.active-wip { background: #fef3c7; border-color: #f59e0b; color: #b45309; }
+.status-pill-btn.active-done { background: #dcfce7; border-color: #22c55e; color: #15803d; }
+
+/* Guide Badges & Column Guide Bar */
+.col-guide-bar {
+  height: 22px;
+  display: flex;
+  align-items: center;
+  padding: 0 8px;
+  border-bottom: 1.2px solid var(--rule-accent);
+  background: rgba(0, 0, 0, 0.02);
+  flex-shrink: 0;
+}
+.col-guide-bar .section-guide-badge {
+  position: static;
+  display: inline-block;
+  font-size: 7.5px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--ink-primary);
+  background: #ffffff;
+  padding: 1px 5px;
+  border: 1px solid var(--rule-main);
+  line-height: 1.3;
+}
+
+.section-guide-badge {
+  position: absolute;
+  top: 3px;
+  left: 6px;
+  font-size: 7.5px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--ink-primary);
+  background: #ffffff;
+  padding: 1px 4px;
+  border: 1px solid var(--rule-main);
+  z-index: 4;
+  line-height: 1.3;
+  pointer-events: none;
+}
+
+/* Grid Containers */
+.cornell-container,
+.work-container,
+.ruled-full-canvas {
+  flex: 1;
+  min-height: 0;
+  border: 1.5px solid var(--rule-accent);
+  background: #ffffff;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  position: relative;
+}
+.cornell-body-split,
+.work-body-split {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  border-bottom: 1.5px solid var(--rule-accent);
+  box-sizing: border-box;
+  position: relative;
+}
+.cornell-cue-col {
+  width: 30%;
+  border-right: 1.5px solid var(--rule-accent);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+}
+.cornell-notes-col {
+  width: 70%;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+}
+.cornell-summary-area {
+  height: 98px;
+  flex-shrink: 0;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+}
+
+.work-side-col {
+  width: 32%;
+  border-right: 1.5px solid var(--rule-accent);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+}
+.work-notes-col {
+  width: 68%;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+}
+.work-action-area {
+  height: 120px;
+  flex-shrink: 0;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+}
+
+/* Work Notes Action Item Rows */
+.action-row {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  padding: 0 6px;
+  border-bottom: 1px solid var(--rule-main);
+  box-sizing: border-box;
+  gap: 6px;
+}
+.action-row:last-child {
+  border-bottom: none;
+}
+.action-check-square {
+  width: 14px;
+  height: 14px;
+  border: 1.2px solid var(--ink-primary);
+  border-radius: 2px;
+  flex-shrink: 0;
+  background: transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition: all 0.15s ease;
+}
+.action-check-square:hover {
+  border-color: #16a34a;
+  background: rgba(22, 163, 74, 0.08);
+}
+.action-check-square.checked {
+  background: #16a34a;
+  border-color: #16a34a;
+}
+.action-check-square.checked::after {
+  content: '✓';
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1;
+}
+.action-line-input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  font-size: 11.5px;
+  font-family: var(--notebook-font-family);
+  color: var(--ink-primary);
+  outline: none;
+  height: 100%;
+}
+.action-line-input.done-line {
+  text-decoration: line-through;
+  opacity: 0.55;
+  color: var(--ink-muted);
+}
+
+/* Ruled Writing Area (Fixed line height with flawless cursor baseline alignment) */
+.template-writing-area {
+  flex: 1;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0 12px;
+  margin: 0;
+  border: none;
+  outline: none;
+  resize: none;
+  font-family: var(--notebook-font-family, 'Plus Jakarta Sans', -apple-system, sans-serif);
+  font-size: var(--notebook-font-size, 15px);
+  line-height: var(--notebook-line-height, 28px);
+  color: var(--ink-primary);
+  background: var(--notebook-lines-display);
+  background-size: 100% var(--notebook-line-height, 28px);
+  background-position: 0 -6px;
+  background-attachment: local;
+  overflow: hidden !important;
+  white-space: pre-wrap !important;
+  word-break: break-word !important;
+  overflow-wrap: break-word !important;
+  cursor: text;
+}
+.template-writing-area div,
+.template-writing-area p {
+  margin: 0 !important;
+  padding: 0 !important;
+  line-height: var(--notebook-line-height, 28px) !important;
+  min-height: var(--notebook-line-height, 28px);
+}
+.template-writing-area:focus {
+  background-color: rgba(37, 99, 235, 0.015);
+}
+
+.template-writing-area[data-placeholder]:empty::before {
+  content: none !important;
+  display: none !important;
+}
+
+/* Chinese / Hanzi characters vertical centering in notebook ruled lines:
+   Using relative positioning shifts glyphs visually into the middle of the ruled row
+   WITHOUT altering line-box height, completely preventing line drift and preventing ruled lines
+   from cutting through the characters. */
+.hanzi-cjk {
+  display: inline;
+  position: relative;
+  top: -4.5px;
+}
+
+/* Rich Text Formatting inside Notebook Template Writing Area */
+.template-writing-area blockquote {
+  margin: 0 0 0 8px !important;
+  padding: 0 0 0 10px !important;
+  border-left: 3px solid #2563eb;
+  color: #1e3a8a;
+  font-style: italic;
+  line-height: var(--notebook-line-height, 28px) !important;
+  min-height: var(--notebook-line-height, 28px);
+}
+.template-writing-area ul,
+.template-writing-area ol {
+  margin: 0 !important;
+  padding-left: 24px !important;
+}
+.template-writing-area li {
+  line-height: var(--notebook-line-height, 28px) !important;
+  min-height: var(--notebook-line-height, 28px);
+}
+.template-writing-area h1,
+.template-writing-area h2,
+.template-writing-area h3 {
+  margin: 0 !important;
+  padding: 0 !important;
+  color: var(--ink-primary);
+  line-height: var(--notebook-line-height, 28px) !important;
+  min-height: var(--notebook-line-height, 28px);
+}
+.template-writing-area h1 {
+  font-size: 1.2em;
+  font-weight: 800;
+}
+.template-writing-area h2 {
+  font-size: 1.1em;
+  font-weight: 700;
+}
+.template-writing-area h3 {
+  font-size: 1.05em;
+  font-weight: 700;
+}
+.template-writing-area strong,
+.template-writing-area b {
+  font-weight: 700;
+  color: #0f172a;
+}
+.template-writing-area em,
+.template-writing-area i {
+  font-style: italic;
+}
+.template-writing-area u {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.template-writing-area s {
+  text-decoration: line-through;
+  opacity: 0.7;
+}
+.template-writing-area code {
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.9em;
+  color: #dc2626;
+}
+.template-writing-area mark {
+  background: #fef08a;
+  padding: 0 3px;
+  border-radius: 2px;
+}
+.template-writing-area .pill-badge,
+.template-writing-area .badge-pill,
+.template-writing-area [data-badge="true"] {
+  display: inline-block;
+  line-height: 1.2;
+  padding: 0.1em 0.55em;
+  margin: 0 0.15em;
+  border: 1.5px solid #2563eb;
+  background: rgba(37, 99, 235, 0.08);
+  color: #1d4ed8;
+  border-radius: 9999px;
+  font-size: 0.88em;
+  font-weight: 700;
+  vertical-align: baseline;
+}
+.template-writing-area hr {
+  border: none;
+  border-top: 1.5px dashed #94a3b8;
+  margin: 10px 0;
+}
+
+.ruled-canvas-text {
+  padding: 0 16px;
+  font-size: var(--notebook-font-size, 15px);
+  line-height: var(--notebook-line-height, 28px);
+  background: var(--notebook-lines-display);
+  background-size: 100% var(--notebook-line-height, 28px);
+  background-position: 0 -6px;
+  overflow: hidden !important;
+}
+
+/* Scholar Footer */
+.scholar-footer {
+  width: 100%;
+  height: 18px;
+  margin-top: 5px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 8px;
+  color: var(--ink-muted);
+  letter-spacing: 1px;
+  z-index: 2;
+  flex-shrink: 0;
+}
+.footer-left-tag {
+  font-weight: 700;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: var(--ink-primary);
+}
+.footer-page-box {
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: var(--ink-primary);
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+.footer-page-line {
+  width: 32px;
+  border-bottom: 1px solid var(--ink-primary);
+  display: inline-block;
+  text-align: center;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 8.5px;
+}

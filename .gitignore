@@ -14,3 +14,12 @@ output/
 
 # Logs
 *.log
+
+# Build output
+dist/
+dist
+
+# Legacy archives
+legacy/
+
+

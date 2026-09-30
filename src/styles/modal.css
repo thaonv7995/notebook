@@ -1,0 +1,192 @@
+/* ========================================================
+   MODAL & TOAST NOTIFICATIONS
+   ======================================================== */
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+.modal-overlay.open { opacity: 1; pointer-events: auto; }
+
+.modal-dialog {
+  background: #111a2e;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 14px;
+  width: 90%;
+  max-width: 480px;
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.7);
+  overflow: hidden;
+}
+.modal-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.modal-title { font-size: 16px; font-weight: 700; color: #ffffff; }
+.btn-close-modal { background: transparent; border: none; color: #94a3b8; cursor: pointer; font-size: 20px; }
+
+.modal-body { padding: 20px; display: flex; flex-direction: column; gap: 16px; }
+.form-group { display: flex; flex-direction: column; gap: 6px; }
+.form-label { font-size: 12px; font-weight: 600; color: #cbd5e1; }
+.form-input {
+  background: #090e17;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  outline: none;
+}
+.form-input:focus { border-color: #38bdf8; }
+select.form-input {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  padding-right: 34px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 12px 12px;
+  cursor: pointer;
+}
+select.form-input:hover {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2338bdf8' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+}
+select.form-input option {
+  background: #0f172a;
+  color: #f1f5f9;
+}
+
+.color-palette-choices { display: flex; gap: 10px; margin-top: 4px; }
+.cover-color-option {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: transform 0.15s ease;
+}
+.cover-color-option:hover { transform: scale(1.1); }
+.cover-color-option.selected {
+  border-color: #ffffff;
+  box-shadow: 0 0 0 2px #38bdf8;
+}
+
+.modal-footer {
+  padding: 14px 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  background: rgba(0, 0, 0, 0.2);
+}
+.btn-modal {
+  padding: 8px 18px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+.btn-modal--cancel { background: transparent; border-color: rgba(255, 255, 255, 0.15); color: #cbd5e1; }
+.btn-modal--confirm { background: #0284c7; color: #ffffff; }
+
+/* Danger Confirmation Modal */
+.modal-dialog--danger {
+  max-width: 440px;
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(239, 68, 68, 0.2);
+}
+.modal-danger-badge {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(239, 68, 68, 0.16);
+  color: #f87171;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 10px;
+  flex-shrink: 0;
+}
+.modal-delete-desc {
+  font-size: 13.5px;
+  color: #e2e8f0;
+  line-height: 1.5;
+  margin: 0;
+}
+.modal-delete-desc strong {
+  color: #ffffff;
+  font-weight: 700;
+}
+.modal-delete-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 11px 13px;
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.22);
+  border-radius: 8px;
+  color: #fca5a5;
+  font-size: 12px;
+  line-height: 1.45;
+}
+.modal-delete-warning svg {
+  flex-shrink: 0;
+  margin-top: 1px;
+  color: #f87171;
+}
+.btn-modal--danger {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  color: #ffffff;
+  border: 1px solid #f87171;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+.btn-modal--danger:hover {
+  background: linear-gradient(135deg, #dc2626, #b91c1c);
+  box-shadow: 0 4px 14px rgba(239, 68, 68, 0.4);
+  transform: translateY(-1px);
+}
+
+/* Toast Notifications */
+.app-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  transform: translate(-50%, 12px);
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  max-width: min(560px, calc(100vw - 32px));
+  padding: 11px 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: #111a2e;
+  color: #e2e8f0;
+  font-size: 12.5px;
+  opacity: 0;
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+.app-toast.is-visible { opacity: 1; transform: translate(-50%, 0); }
+.app-toast button {
+  border: 0;
+  background: transparent;
+  color: #38bdf8;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
