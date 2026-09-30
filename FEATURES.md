@@ -53,29 +53,17 @@ analytics hoặc các chức năng bán hàng.
 
 ## Tài khoản và cộng tác
 
-- [ ] Đăng ký, đăng nhập, đăng xuất và khôi phục tài khoản.
+- [ ] đăng nhập, đăng xuất và tạm thời chỉ 1 người dùng thôi.
 - [ ] Đồng bộ thư viện và nội dung sổ tay qua backend.
-- [ ] Mời thành viên bằng email hoặc liên kết riêng tư.
-- [ ] Quyền `Owner`, `Editor` và `Viewer` trên từng cuốn sổ.
-- [ ] Danh sách thành viên và thu hồi quyền truy cập.
 - [ ] Autosave lên server với cảnh báo xung đột chỉnh sửa.
-- [ ] Lịch sử phiên bản và khôi phục nội dung trên server.
-- [ ] Hiển thị người đang cùng mở một cuốn sổ.
-- [ ] Đồng bộ realtime sau khi luồng lưu/xung đột cơ bản ổn định.
 
 ## Bảo mật và riêng tư
 
-- [ ] Chỉ thành viên được mời mới có quyền truy cập sổ dùng chung.
 - [ ] Kiểm tra quyền ở backend cho mọi thao tác đọc/ghi.
-- [ ] Thu hồi toàn bộ session khi đổi mật khẩu hoặc nghi ngờ lộ tài khoản.
-- [ ] Cho phép tải dữ liệu cá nhân và xóa tài khoản.
-- [ ] Nhật ký tối thiểu cho thao tác mời, đổi quyền và xóa nội dung.
 
 ## Thứ tự triển khai tiếp theo
 
 1. Account và đồng bộ dữ liệu cá nhân.
-2. Mời thành viên cùng quyền Owner/Editor/Viewer.
 3. Kiểm soát xung đột và lịch sử phiên bản.
-4. Presence và realtime collaboration.
 
 Mọi tính năng mới phải được cập nhật trong file này cùng commit triển khai.

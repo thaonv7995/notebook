@@ -22,4 +22,6 @@ dist
 # Legacy archives
 legacy/
 
-
+# Server data & secrets
+data/
+.env

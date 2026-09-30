@@ -153,12 +153,22 @@ export function subscribe(fn) {
   return () => listeners.delete(fn);
 }
 
+let onPersistCallback = null;
+
+export function setOnPersist(fn) {
+  onPersistCallback = fn;
+}
+
 export function persistState() {
   try {
     const serialized = JSON.stringify(state);
     localStorage.setItem(STORAGE_KEY, serialized);
     if (localStorage.getItem(STORAGE_KEY) !== serialized) {
       throw new Error('Không thể xác minh dữ liệu vừa lưu.');
+    }
+    // Trigger server sync callback if registered
+    if (onPersistCallback) {
+      try { onPersistCallback(state); } catch {}
     }
     return true;
   } catch (e) {

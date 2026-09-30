@@ -6,7 +6,7 @@
  * global keyboard shortcuts, and deep-link routing.
  */
 
-import { getState, setState, persistState, replaceState, normalizeState } from './state/store.js';
+import { getState, setState, persistState, replaceState, normalizeState, setOnPersist } from './state/store.js';
 import { INITIAL_LIBRARY_DATA } from './config/initial-data.js';
 import { getEls } from './utils/dom.js';
 
@@ -216,7 +216,110 @@ function setupGlobalKeyAndWindowListeners() {
 /**
  * Main Application Bootstrapper
  */
-function init() {
+
+import { login, logout, checkSession, fetchNotebooks, syncNotebooks } from './api/client.js';
+
+let isAuthenticated = false;
+let syncTimer = null;
+const SYNC_DEBOUNCE_MS = 2000;
+
+// ─── Auth UI helpers ───
+
+function showLoginScreen() {
+  const loginView = document.getElementById('loginView');
+  const libraryView = document.getElementById('libraryView');
+  const notebookView = document.getElementById('notebookView');
+  if (loginView) loginView.classList.remove('hidden');
+  if (libraryView) libraryView.classList.add('hidden');
+  if (notebookView) notebookView.classList.add('hidden');
+}
+
+function hideLoginScreen() {
+  const loginView = document.getElementById('loginView');
+  if (loginView) loginView.classList.add('hidden');
+}
+
+function setupLoginForm() {
+  const form = document.getElementById('loginForm');
+  const errorEl = document.getElementById('loginError');
+  if (!form) return;
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const username = document.getElementById('loginUsername')?.value?.trim();
+    const password = document.getElementById('loginPassword')?.value;
+    if (!username || !password) return;
+
+    const btn = document.getElementById('loginBtn');
+    if (btn) btn.disabled = true;
+    if (errorEl) errorEl.hidden = true;
+
+    try {
+      await login(username, password);
+      isAuthenticated = true;
+      await loadFromServer();
+      hideLoginScreen();
+      renderLibraryGrid();
+      handleRouteFromUrl(true);
+      showToast('Đăng nhập thành công');
+    } catch (err) {
+      if (errorEl) {
+        errorEl.textContent = err.message || 'Sai tên đăng nhập hoặc mật khẩu';
+        errorEl.hidden = false;
+      }
+    } finally {
+      if (btn) btn.disabled = false;
+    }
+  });
+}
+
+function setupLogoutButton() {
+  const btn = document.getElementById('btnLogout');
+  if (!btn) return;
+  btn.addEventListener('click', async () => {
+    try {
+      await logout();
+    } catch {}
+    isAuthenticated = false;
+    showLoginScreen();
+    showToast('Đã đăng xuất');
+  });
+}
+
+// ─── Server Sync ───
+
+async function loadFromServer() {
+  try {
+    const data = await fetchNotebooks();
+    if (data.ok && Array.isArray(data.notebooks) && data.notebooks.length > 0) {
+      const normalized = normalizeState({
+        ...getState(),
+        notebooks: data.notebooks
+      });
+      replaceState(normalized);
+    }
+  } catch (err) {
+    console.warn('Could not load from server, using local data:', err.message);
+  }
+}
+
+function scheduleSyncToServer() {
+  if (!isAuthenticated) return;
+  clearTimeout(syncTimer);
+  syncTimer = setTimeout(async () => {
+    try {
+      const state = getState();
+      await syncNotebooks(state.notebooks);
+    } catch (err) {
+      console.warn('Sync to server failed:', err.message);
+    }
+  }, SYNC_DEBOUNCE_MS);
+}
+
+async function init() {
+  // Register server sync on every persistState call
+  setOnPersist(() => scheduleSyncToServer());
+
   setupComponentCallbacks();
 
   // Setup module listeners
@@ -250,19 +353,34 @@ function init() {
 
   setupGlobalKeyAndWindowListeners();
   setupRouting();
+  setupLoginForm();
+  setupLogoutButton();
 
   // Apply visual configurations from persisted state
   const state = getState();
-  persistState();
   applyFontSize(state.fontSize || 16);
   applyFontFamily(state.fontFamily || 'sans');
   applyLineHeight(state.lineHeight || '28');
   applyToolbarCollapse(Boolean(state.toolbarCollapsed), false);
 
-  renderLibraryGrid();
+  // ─── Auth check on boot ───
+  const session = await checkSession();
+  if (session && session.ok) {
+    isAuthenticated = true;
+    hideLoginScreen();
+    await loadFromServer();
+    persistState();
+    renderLibraryGrid();
+    handleRouteFromUrl(true);
+  } else {
+    showLoginScreen();
+  }
 
-  // Route recovery
-  handleRouteFromUrl(true);
+  // Listen for auth:required events (401 from API client)
+  window.addEventListener('auth:required', () => {
+    isAuthenticated = false;
+    showLoginScreen();
+  });
 
   // Register service worker if available
   if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {
