@@ -2501,11 +2501,8 @@ mark {
 }
 
 .template-writing-area[data-placeholder]:empty::before {
-  content: attr(data-placeholder);
-  color: #94a3b8;
-  opacity: 0.65;
-  pointer-events: none;
-  font-style: italic;
+  content: none !important;
+  display: none !important;
 }
 
 /* Rich Text Formatting inside Notebook Template Writing Area */

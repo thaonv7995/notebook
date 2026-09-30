@@ -1350,16 +1350,16 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
           </div>
           <div class="header-main-field">
             <span class="field-label">SUBJECT / TOPIC:</span>
-            <input type="text" class="field-underline-input topic-input" value="${escapeAttr(page.topic || page.title || '')}" placeholder="Nhập chủ đề bài học / nghiên cứu..." />
+            <input type="text" class="field-underline-input topic-input" value="${escapeAttr(page.topic || page.title || '')}" />
           </div>
           <div class="header-sub-fields">
             <div class="sub-field-group">
               <span style="font-weight: 700;">DATE:</span>
-              <input type="text" class="sub-field-input date-input" value="${escapeAttr(page.date || '')}" placeholder="DD/MM/YYYY" style="width: 80px;" />
+              <input type="text" class="sub-field-input date-input" value="${escapeAttr(page.date || '')}" style="width: 80px;" />
             </div>
             <div class="sub-field-group">
               <span style="font-weight: 700;">NO.</span>
-              <input type="text" class="sub-field-input no-input" value="${escapeAttr(page.no || String(pageNum).padStart(2, '0'))}" placeholder="01" style="width: 45px;" />
+              <input type="text" class="sub-field-input no-input" value="${escapeAttr(page.no || String(pageNum).padStart(2, '0'))}" style="width: 45px;" />
             </div>
           </div>
         </div>
@@ -1368,16 +1368,16 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
           <div class="cornell-body-split">
             <div class="cornell-cue-col">
               <div class="col-guide-bar"><span class="section-guide-badge">CUES & QUESTIONS</span></div>
-              <div contenteditable="true" class="template-writing-area cornell-cues-text" data-placeholder="Từ khóa, câu hỏi ôn tập, luận điểm chính...">${formatContentToHtml(page.cues || '')}</div>
+              <div contenteditable="true" class="template-writing-area cornell-cues-text">${formatContentToHtml(page.cues || '')}</div>
             </div>
             <div class="cornell-notes-col">
               <div class="col-guide-bar"><span class="section-guide-badge">NOTES</span></div>
-              <div contenteditable="true" class="template-writing-area cornell-notes-text" data-placeholder="Ghi chép chi tiết, công thức, định nghĩa, sơ đồ...">${formatContentToHtml(page.notes || page.content || '')}</div>
+              <div contenteditable="true" class="template-writing-area cornell-notes-text">${formatContentToHtml(page.notes || page.content || '')}</div>
             </div>
           </div>
           <div class="cornell-summary-area">
             <div class="col-guide-bar"><span class="section-guide-badge">SUMMARY & SYNTHESIS</span></div>
-            <div contenteditable="true" class="template-writing-area cornell-summary-text" data-placeholder="Tóm tắt & tổng hợp kiến thức cốt lõi của trang...">${formatContentToHtml(page.summary || '')}</div>
+            <div contenteditable="true" class="template-writing-area cornell-summary-text">${formatContentToHtml(page.summary || '')}</div>
           </div>
         </div>
 
@@ -1406,7 +1406,7 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
       <div class="action-row" data-idx="${idx}">
         <button type="button" class="action-check-square ${act.checked ? 'checked' : ''}" data-idx="${idx}" title="Đánh dấu hoàn thành"></button>
         ${idx === 0 ? '<span class="section-guide-badge" style="position: static; margin-right: 4px;">ACTION ITEMS & NEXT STEPS</span>' : ''}
-        <input type="text" class="action-line-input ${act.checked ? 'done-line' : ''}" data-idx="${idx}" value="${escapeAttr(act.text || '')}" placeholder="Hành động ${idx + 1}, người phụ trách..." />
+        <input type="text" class="action-line-input ${act.checked ? 'done-line' : ''}" data-idx="${idx}" value="${escapeAttr(act.text || '')}" />
       </div>
     `).join('');
 
@@ -1426,14 +1426,14 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
           </div>
           <div class="header-main-field">
             <span class="field-label">PROJECT / OBJECTIVE:</span>
-            <input type="text" class="field-underline-input project-input" value="${escapeAttr(page.project || page.topic || page.title || '')}" placeholder="Tên dự án, mục tiêu công việc..." />
+            <input type="text" class="field-underline-input project-input" value="${escapeAttr(page.project || page.topic || page.title || '')}" />
           </div>
           <div class="header-sub-fields">
             <div class="sub-field-group">
               <span style="font-weight: 700;">DATE:</span>
-              <input type="text" class="sub-field-input date-input" value="${escapeAttr(page.date || '')}" placeholder="DD/MM/YYYY" style="width: 75px;" />
+              <input type="text" class="sub-field-input date-input" value="${escapeAttr(page.date || '')}" style="width: 75px;" />
               <span style="font-weight: 700; margin-left: 6px;">DEADLINE:</span>
-              <input type="text" class="sub-field-input deadline-input" value="${escapeAttr(page.deadline || '')}" placeholder="DD/MM/YYYY" style="width: 75px;" />
+              <input type="text" class="sub-field-input deadline-input" value="${escapeAttr(page.deadline || '')}" style="width: 75px;" />
             </div>
             <div class="sub-field-group">
               <span style="font-weight: 700;">STATUS:</span>
@@ -1450,11 +1450,11 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
           <div class="work-body-split">
             <div class="work-side-col">
               <div class="col-guide-bar"><span class="section-guide-badge">AGENDA & DECISIONS</span></div>
-              <div contenteditable="true" class="template-writing-area work-agenda-text" data-placeholder="Chương trình họp, quyết định then chốt, mục tiêu...">${formatContentToHtml(page.agenda || '')}</div>
+              <div contenteditable="true" class="template-writing-area work-agenda-text">${formatContentToHtml(page.agenda || '')}</div>
             </div>
             <div class="work-notes-col">
               <div class="col-guide-bar"><span class="section-guide-badge">NOTES & DISCUSSIONS</span></div>
-              <div contenteditable="true" class="template-writing-area work-notes-text" data-placeholder="Ghi chép thảo luận, ý kiến đóng góp, phân tích...">${formatContentToHtml(page.discussions || page.content || '')}</div>
+              <div contenteditable="true" class="template-writing-area work-notes-text">${formatContentToHtml(page.discussions || page.content || '')}</div>
             </div>
           </div>
           <div class="work-action-area">
@@ -1492,22 +1492,22 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
           </div>
           <div class="header-main-field">
             <span class="field-label">SUBJECT / TOPIC:</span>
-            <input type="text" class="field-underline-input topic-input" value="${escapeAttr(page.topic || page.title || '')}" placeholder="Chủ đề sổ tay ghi chép kẻ ngang..." />
+            <input type="text" class="field-underline-input topic-input" value="${escapeAttr(page.topic || page.title || '')}" />
           </div>
           <div class="header-sub-fields">
             <div class="sub-field-group">
               <span style="font-weight: 700;">DATE:</span>
-              <input type="text" class="sub-field-input date-input" value="${escapeAttr(page.date || '')}" placeholder="DD/MM/YYYY" style="width: 80px;" />
+              <input type="text" class="sub-field-input date-input" value="${escapeAttr(page.date || '')}" style="width: 80px;" />
             </div>
             <div class="sub-field-group">
               <span style="font-weight: 700;">NO.</span>
-              <input type="text" class="sub-field-input no-input" value="${escapeAttr(page.no || String(pageNum).padStart(2, '0'))}" placeholder="01" style="width: 45px;" />
+              <input type="text" class="sub-field-input no-input" value="${escapeAttr(page.no || String(pageNum).padStart(2, '0'))}" style="width: 45px;" />
             </div>
           </div>
         </div>
 
         <div class="ruled-full-canvas">
-          <div contenteditable="true" class="template-writing-area ruled-canvas-text" data-placeholder="Bắt đầu viết suy nghĩ, ý tưởng, ghi chép tự do vào các dòng kẻ ngang...">${formatContentToHtml(page.content || '')}</div>
+          <div contenteditable="true" class="template-writing-area ruled-canvas-text">${formatContentToHtml(page.content || '')}</div>
         </div>
 
         <div class="scholar-footer">
