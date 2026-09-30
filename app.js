@@ -21,6 +21,8 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
     activePageIndex: 0,
     pageMode: '2-page', // '1-page' or '2-page'
     zoomLevel: 1.0,
+    toolbarCollapsed: false,
+    toolbarAdvanced: false,
     fontSize: 16,
     fontFamily: 'sans',
     lineHeight: '28',
@@ -191,6 +193,9 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
     // Views
     libraryView: document.querySelector('#libraryView'),
     notebookView: document.querySelector('#notebookView'),
+    readerHeader: document.querySelector('.reader-header'),
+    readerHeaderRight: document.querySelector('.reader-header-right'),
+    editorToolbar: document.querySelector('.editor-toolbar'),
 
     // Library View
     libBrandLogo: document.querySelector('#libBrandLogo'),
@@ -221,6 +226,8 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
     btnMode2Pages: document.querySelector('#btnMode2Pages'),
     readerTemplateSelect: document.querySelector('#readerTemplateSelect'),
     btnAddPage: document.querySelector('#btnAddPage'),
+    btnToggleFormatToolbar: document.querySelector('#btnToggleFormatToolbar'),
+    btnToggleFullscreen: document.querySelector('#btnToggleFullscreen'),
     saveStatus: document.querySelector('#save-status'),
     saveStatusText: document.querySelector('#save-status-text'),
 
@@ -279,6 +286,13 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
     pdfExportMenu: document.querySelector('#pdf-export-menu'),
     exportPdfWithCoverBtn: document.querySelector('#export-pdf-with-cover'),
     exportPdfContentOnlyBtn: document.querySelector('#export-pdf-content-only'),
+    btnToolbarMore: document.querySelector('#btnToolbarMore'),
+    fullscreenRail: document.querySelector('#fullscreenRail'),
+    btnFullscreenExit: document.querySelector('#btnFullscreenExit'),
+    btnFullscreenChrome: document.querySelector('#btnFullscreenChrome'),
+    btnFullscreenPrev: document.querySelector('#btnFullscreenPrev'),
+    btnFullscreenNext: document.querySelector('#btnFullscreenNext'),
+    btnFullscreenAddPage: document.querySelector('#btnFullscreenAddPage'),
 
     // Modal
     newNotebookModal: document.querySelector('#newNotebookModal'),
@@ -317,6 +331,8 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
     state.trash = Array.isArray(state.trash) ? state.trash : [];
     state.pageMode = state.pageMode === '1-page' ? '1-page' : '2-page';
     state.zoomLevel = Number.isFinite(state.zoomLevel) ? Math.max(0.3, Math.min(state.zoomLevel, 3.5)) : 1;
+    state.toolbarCollapsed = Boolean(state.toolbarCollapsed);
+    state.toolbarAdvanced = Boolean(state.toolbarAdvanced);
     if (previousVersion < 3 && state.zoomLevel <= 0.3) state.zoomLevel = 1;
     state.fontSize = Number.isInteger(state.fontSize) && state.fontSize >= 10 && state.fontSize <= 200 ? state.fontSize : 16;
     state.fontFamily = typeof state.fontFamily === 'string' && state.fontFamily ? state.fontFamily : 'sans';
