@@ -2520,7 +2520,7 @@ mark {
   color: var(--ink-primary);
   background: var(--notebook-lines-display);
   background-size: 100% var(--notebook-line-height, 28px);
-  background-position: 0 0;
+  background-position: 0 -6px;
   background-attachment: local;
   overflow: hidden !important;
   white-space: pre-wrap !important;
@@ -2545,13 +2545,13 @@ mark {
 }
 
 /* Chinese / Hanzi characters vertical centering in notebook ruled lines:
-   Using relative positioning shifts glyphs visually upwards into the middle of the ruled row
+   Using relative positioning shifts glyphs visually into the middle of the ruled row
    WITHOUT altering line-box height, completely preventing line drift and preventing ruled lines
    from cutting through the characters. */
 .hanzi-cjk {
   display: inline;
   position: relative;
-  top: 1px;
+  top: -2px;
 }
 
 /* Rich Text Formatting inside Notebook Template Writing Area */
@@ -2650,7 +2650,7 @@ mark {
   line-height: var(--notebook-line-height, 28px);
   background: var(--notebook-lines-display);
   background-size: 100% var(--notebook-line-height, 28px);
-  background-position: 0 0;
+  background-position: 0 -6px;
   overflow: hidden !important;
 }
 
