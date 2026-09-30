@@ -148,10 +148,8 @@ Hệ thống tuân thủ nghiêm ngặt 3 quy tắc quang học bất biến nh�
 ### Cài đặt nhanh (One-Line Install)
 
 ```bash
-curl -fsSL "https://github.com/thaonv7995/notebook/releases/latest/download/install.sh" | sh -s -- "thaonv7995/notebook"
+curl -fsSL "https://github.com/thaonv7995/notebook/releases/latest/download/install.sh" | bash -s -- "thaonv7995/notebook"
 ```
-
-> Thay `thaonv7995/notebook` bằng đường dẫn GitHub thực tế (ví dụ: `thaonv/notebook-studio`).
 
 Script sẽ tự động:
 - ✅ Tải release mới nhất
@@ -159,6 +157,22 @@ Script sẽ tự động:
 - ✅ Tạo tài khoản `admin@notebook.com` với **mật khẩu ngẫu nhiên**
 - ✅ Sinh JWT secret
 - ✅ Khởi động server tại `http://localhost:27972`
+
+### Cập nhật phiên bản (Update)
+
+```bash
+curl -fsSL "https://github.com/thaonv7995/notebook/releases/latest/download/install.sh" | bash -s -- "thaonv7995/notebook" update
+```
+
+> Dữ liệu, mật khẩu và cấu hình `.env` được **giữ nguyên** khi cập nhật.
+
+### Gỡ cài đặt (Uninstall)
+
+```bash
+curl -fsSL "https://github.com/thaonv7995/notebook/releases/latest/download/install.sh" | bash -s -- "thaonv7995/notebook" uninstall
+```
+
+> Dữ liệu sẽ được **backup** vào `~/notebook-studio-backup-*` trước khi xóa.
 
 ### Cài đặt thủ công (Manual Setup)
 

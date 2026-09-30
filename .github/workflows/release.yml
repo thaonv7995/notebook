@@ -63,25 +63,27 @@ jobs:
       - name: Generate release notes
         id: notes
         run: |
-          TAG="${GITHUB_REF_NAME}"
           cat > release-notes.md <<'NOTES'
-          ## 📓 Notebook Studio ${TAG}
+          ## 📓 Notebook Studio
 
-          ### Quick Install
-
+          ### Install
           ```bash
-          curl -fsSL "https://github.com/${{ github.repository }}/releases/latest/download/install.sh" | sh -s -- "${{ github.repository }}"
+          curl -fsSL "https://github.com/${{ github.repository }}/releases/latest/download/install.sh" | bash -s -- "${{ github.repository }}"
+          ```
+
+          ### Update
+          ```bash
+          curl -fsSL "https://github.com/${{ github.repository }}/releases/latest/download/install.sh" | bash -s -- "${{ github.repository }}" update
+          ```
+
+          ### Uninstall
+          ```bash
+          curl -fsSL "https://github.com/${{ github.repository }}/releases/latest/download/install.sh" | bash -s -- "${{ github.repository }}" uninstall
           ```
 
           ### Requirements
           - Node.js v18+
-          - curl, tar
-
-          ### What's in this release
-          - Pre-built frontend (dist/)
-          - Express backend server
-          - JWT authentication
-          - JSON file database
+          - bash, curl, tar
 
           See [README.md](https://github.com/${{ github.repository }}#readme) for full documentation.
           NOTES
