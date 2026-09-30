@@ -53,20 +53,33 @@ Codebase được thiết kế theo kiến trúc module hóa hướng miền ngh
 Notebook Project/
 ├── index.html                   # Giao diện chính A4 ngữ nghĩa & SEO
 ├── vite.config.js               # Cấu hình Vite Dev Server & Build (Port 27972)
-├── package.json                 # Khai báo kịch bản lệnh & devDependencies
+├── package.json                 # Khai báo kịch bản lệnh & dependencies
+├── install.sh                   # Script cài đặt one-liner
 ├── sw.js                        # Service Worker hỗ trợ Offline PWA
 ├── manifest.webmanifest         # PWA Manifest & App Icons
-├── README.md                    # Tài liệu hướng dẫn & kiến trúc hệ thống
+├── .env                         # Cấu hình server (gitignored)
 │
-├── src/                         # 📂 Toàn bộ mã nguồn module hóa
-│   ├── main.js                  # 🚀 Entry point: Khởi tạo ứng dụng & kết nối sự kiện
+├── .github/workflows/           # 🔄 CI/CD
+│   └── release.yml              # GitHub Actions: Build → Tag → Release
+│
+├── server/                      # 🖥️ Backend Express Server
+│   ├── index.js                 # Entry point: Express + static serve / Vite proxy
+│   ├── auth.js                  # JWT authentication (bcrypt + httpOnly cookie)
+│   ├── api.js                   # REST API: notebooks CRUD & sync
+│   └── db.js                    # JSON file database (data/db.json)
+│
+├── src/                         # 📂 Toàn bộ mã nguồn frontend module hóa
+│   ├── main.js                  # 🚀 Entry point: Khởi tạo, auth, server sync
+│   │
+│   ├── api/                     # 🌐 API Client
+│   │   └── client.js            # Fetch wrapper, auto 401 redirect
 │   │
 │   ├── config/                  # ⚙️ Cấu hình hệ thống & Hằng số
 │   │   ├── constants.js         # Khóa storage, version, font stack, line-height presets
 │   │   └── initial-data.js      # Bộ dữ liệu khởi tạo 4 cuốn sổ A4 mẫu mặc định
 │   │
 │   ├── state/                   # 💾 Quản lý trạng thái tập trung (State Store)
-│   │   └── store.js             # Reactive Store, debounce autosave, migration, rollback
+│   │   └── store.js             # Reactive Store, debounce autosave, server sync hook
 │   │
 │   ├── editor/                  # 🖋️ Bộ xử lý soạn thảo & Typography CJK
 │   │   ├── hanzi-aligner.js     # Thuật toán bọc chữ Hán & bảo toàn caret offset
@@ -98,10 +111,11 @@ Notebook Project/
 │   ├── utils/                   # 🛠️ Tiện ích bổ trợ
 │   │   └── dom.js               # Cache DOM elements tập trung theo ID & class
 │   │
-│   └── styles/                  # 🎨 Hệ thống CSS module hóa chuẩn BEM
+│   └── styles/                  # 🎨 Hệ thống CSS module hóa
 │       ├── main.css             # Master stylesheet tổng hợp toàn bộ CSS
 │       ├── tokens.css           # Biến CSS root, @font-face CJK-Smart-Enlarged
 │       ├── base.css             # Reset CSS, thanh cuộn cuộn mềm
+│       ├── login.css            # Màn hình đăng nhập glassmorphic
 │       ├── library.css          # Giao diện tủ sách, kệ sách, thẻ sổ bọc da
 │       ├── reader.css           # Casing 3D, gáy sách, lật trang 3D, dải lụa đỏ
 │       ├── templates.css        # Quy tắc ô kẻ ngang vector 28px, chữ Hán, font Kaiti
@@ -111,9 +125,8 @@ Notebook Project/
 │       ├── responsive.css       # Giao diện thích ứng tablet & mobile
 │       └── print.css            # Định dạng in ấn chuẩn A4 @media print
 │
-└── legacy/                      # 📦 Thư mục lưu trữ mã nguồn monolith cũ trước refactor
-    ├── app.js
-    └── app.css
+└── data/                        # 💾 Database (gitignored, auto-created)
+    └── db.json                  # JSON file database
 ```
 
 ---
@@ -130,35 +143,74 @@ Hệ thống tuân thủ nghiêm ngặt 3 quy tắc quang học bất biến nh�
 
 ---
 
-## 🚀 Hướng Dẫn Cài Đặt & Khởi Chạy
+## 🚀 Cài Đặt & Khởi Chạy
 
-Dự án sử dụng Vite làm môi trường phát triển và đóng gói sản phẩm.
+### Cài đặt nhanh (One-Line Install)
 
-### 1. Cài đặt thư viện
 ```bash
+curl -fsSL "https://github.com/thaonv7995/notebook/releases/latest/download/install.sh" | sh -s -- "thaonv7995/notebook"
+```
+
+> Thay `thaonv7995/notebook` bằng đường dẫn GitHub thực tế (ví dụ: `thaonv/notebook-studio`).
+
+Script sẽ tự động:
+- ✅ Tải release mới nhất
+- ✅ Cài đặt dependencies (production)
+- ✅ Tạo tài khoản `admin@notebook.com` với **mật khẩu ngẫu nhiên**
+- ✅ Sinh JWT secret
+- ✅ Khởi động server tại `http://localhost:27972`
+
+### Cài đặt thủ công (Manual Setup)
+
+```bash
+# 1. Clone & cài đặt
+git clone https://github.com/thaonv7995/notebook.git notebook-studio
+cd notebook-studio
 npm install
-```
 
-### 2. Khởi động môi trường phát triển (Dev Server)
-```bash
-npm run dev
-```
-Ứng dụng sẽ chạy tại cổng **`27972`**:
-- 🔗 **Local**: `http://localhost:27972/`
-- 🔗 **Network (LAN)**: `http://192.168.1.109:27972/`
-- Hỗ trợ Hot Module Replacement (HMR) cập nhật tức thì khi chỉnh sửa code.
+# 2. Tạo file cấu hình
+cp .env.example .env    # Hoặc tạo thủ công (xem bên dưới)
 
-### 3. Biên dịch bản sản xuất (Production Build)
-```bash
+# 3. Build frontend
 npm run build
-```
-Mã nguồn tối ưu sẽ được đóng gói vào thư mục `dist/` (kiểm tra 0 lỗi biên dịch, dung lượng nén gzip siêu nhẹ ~26KB JS / ~10KB CSS).
 
-### 4. Xem trước bản sản xuất (Preview Build)
-```bash
-npm run preview
+# 4. Chạy production server
+npm start               # → http://localhost:27972
 ```
-Khởi chạy server preview bản build tại cổng `http://localhost:27972/`.
+
+### Cấu hình `.env`
+
+```env
+PORT=27972
+JWT_SECRET=your-random-secret-at-least-32-chars
+ADMIN_USERNAME=admin@notebook.com
+ADMIN_PASSWORD=your-secure-password
+NODE_ENV=production
+```
+
+> Server tự động tạo tài khoản admin từ `.env` khi khởi động lần đầu.
+
+### Chế độ phát triển (Development)
+
+```bash
+npm run dev    # Chạy đồng thời Vite HMR (port 27973) + Express API (port 27972)
+```
+
+### Kiến trúc Server
+
+```text
+Server (Express + JSON DB)
+├── POST   /api/auth/login      → Đăng nhập, nhận JWT cookie
+├── POST   /api/auth/logout     → Đăng xuất, xóa cookie
+├── GET    /api/auth/me         → Kiểm tra phiên đăng nhập
+├── GET    /api/notebooks       → Tải toàn bộ thư viện
+├── PUT    /api/notebooks/sync  → Đồng bộ toàn bộ dữ liệu
+└── DELETE /api/notebooks/:id   → Xóa cuốn sổ
+```
+
+- **Auth**: JWT (bcrypt hash) lưu trong httpOnly cookie, hết hạn 7 ngày
+- **Database**: `data/db.json` — JSON file với atomic writes
+- **Frontend**: Build tĩnh từ `dist/`, serve bởi Express
 
 ---
 

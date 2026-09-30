@@ -1,0 +1,98 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build frontend
+        run: npm run build
+
+      - name: Prepare release package
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          RELEASE_DIR="notebook-studio-${TAG}"
+          mkdir -p "$RELEASE_DIR"
+
+          # Copy production files
+          cp -r dist/         "$RELEASE_DIR/"
+          cp -r server/       "$RELEASE_DIR/"
+          cp    package.json  "$RELEASE_DIR/"
+          cp    package-lock.json "$RELEASE_DIR/"
+          cp    install.sh    "$RELEASE_DIR/"
+          cp    sw.js         "$RELEASE_DIR/"
+          cp    README.md     "$RELEASE_DIR/"
+          cp    FEATURES.md   "$RELEASE_DIR/"
+
+          # Copy public assets if any
+          if [ -d "public" ]; then
+            cp -r public/ "$RELEASE_DIR/"
+          fi
+
+          # Copy manifest
+          if [ -f "manifest.webmanifest" ]; then
+            cp manifest.webmanifest "$RELEASE_DIR/"
+          fi
+
+          # Create tarball
+          tar -czf "notebook-studio-${TAG}.tar.gz" "$RELEASE_DIR"
+
+          echo "RELEASE_TAG=${TAG}" >> $GITHUB_ENV
+          echo "TARBALL=notebook-studio-${TAG}.tar.gz" >> $GITHUB_ENV
+
+      - name: Generate release notes
+        id: notes
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          cat > release-notes.md <<'NOTES'
+          ## 📓 Notebook Studio ${TAG}
+
+          ### Quick Install
+
+          ```bash
+          curl -fsSL "https://github.com/${{ github.repository }}/releases/latest/download/install.sh" | sh -s -- "${{ github.repository }}"
+          ```
+
+          ### Requirements
+          - Node.js v18+
+          - curl, tar
+
+          ### What's in this release
+          - Pre-built frontend (dist/)
+          - Express backend server
+          - JWT authentication
+          - JSON file database
+
+          See [README.md](https://github.com/${{ github.repository }}#readme) for full documentation.
+          NOTES
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "Notebook Studio ${{ env.RELEASE_TAG }}"
+          body_path: release-notes.md
+          draft: false
+          prerelease: false
+          files: |
+            ${{ env.TARBALL }}
+            install.sh
