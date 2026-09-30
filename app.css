@@ -599,16 +599,16 @@ body {
 
 /* Reader Top Navigation Bar */
 .reader-header {
-  height: 52px;
+  height: 46px;
   background: var(--reader-header-bg);
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 16px;
+  padding: 0 14px;
   z-index: 100;
   flex-shrink: 0;
-  gap: 12px;
+  gap: 10px;
   overflow-x: auto;
   scrollbar-width: none;
 }
@@ -617,7 +617,7 @@ body {
 .reader-header-left {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   flex-shrink: 0;
 }
 
@@ -625,8 +625,8 @@ body {
   background: rgba(255, 255, 255, 0.06);
   border: 1px solid rgba(255, 255, 255, 0.1);
   color: #cbd5e1;
-  width: 32px;
-  height: 32px;
+  width: 30px;
+  height: 30px;
   padding: 0;
   border-radius: 6px;
   display: flex;
@@ -888,16 +888,59 @@ body {
 .reader-header-right {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   flex-shrink: 0;
+}
+
+.btn-header-icon {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #cbd5e1;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+.btn-header-icon:hover {
+  background: rgba(255, 255, 255, 0.14);
+  color: #38bdf8;
+  border-color: rgba(56, 189, 248, 0.4);
+}
+.btn-header-icon.is-active,
+.btn-header-icon[aria-pressed="true"] {
+  background: rgba(56, 189, 248, 0.18);
+  color: #38bdf8;
+  border-color: rgba(56, 189, 248, 0.45);
+}
+.btn-header-icon svg {
+  width: 15px;
+  height: 15px;
+  stroke: currentColor;
+  stroke-width: 2;
+  fill: none;
+}
+.btn-header-icon .icon-exit-fullscreen {
+  display: none;
+}
+.notebook-view.is-fullscreen .btn-header-icon .icon-enter-fullscreen {
+  display: none;
+}
+.notebook-view.is-fullscreen .btn-header-icon .icon-exit-fullscreen {
+  display: block;
 }
 
 .btn-add-page-reader {
   background: rgba(56, 189, 248, 0.15);
   border: 1px solid rgba(56, 189, 248, 0.3);
   color: #38bdf8;
-  width: 32px;
-  height: 32px;
+  width: 30px;
+  height: 30px;
   padding: 0;
   border-radius: 6px;
   display: flex;
@@ -918,8 +961,8 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  width: 30px;
+  height: 30px;
   padding: 0;
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.05);
@@ -965,17 +1008,29 @@ body {
 
 /* Formatting Sub-Toolbar */
 .editor-toolbar {
-  height: 44px;
+  height: 42px;
+  max-height: 42px;
   background: #111a2e;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 0 16px;
+  justify-content: flex-start;
+  padding: 0 14px;
   z-index: 500;
   flex-shrink: 0;
   overflow: visible !important;
   position: relative;
+  transition: max-height 0.22s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease, padding 0.2s ease, border-color 0.2s ease;
+}
+
+.editor-toolbar.is-collapsed {
+  max-height: 0;
+  opacity: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+  border-bottom-color: transparent;
+  pointer-events: none;
+  overflow: hidden !important;
 }
 
 .toolbar-group {
@@ -1180,6 +1235,376 @@ body {
   color: #94a3b8;
 }
 .color-swatch--reset svg { width: 12px; height: 12px; stroke: currentColor; }
+
+/* Toolbar More Menu Dropdown */
+.toolbar-more-wrapper {
+  position: relative;
+}
+.toolbar-more-btn {
+  color: #94a3b8;
+}
+.toolbar-more-btn:hover,
+.toolbar-more-btn[aria-expanded="true"] {
+  color: #38bdf8;
+  background: rgba(255, 255, 255, 0.1);
+}
+.toolbar-more-menu {
+  min-width: 220px;
+  left: 0;
+  right: auto;
+  top: calc(100% + 6px);
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.tool-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: #cbd5e1;
+  font-size: 12px;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+.tool-menu-item:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+}
+.tool-menu-icon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #94a3b8;
+}
+.tool-menu-item:hover .tool-menu-icon {
+  color: #38bdf8;
+}
+.tool-menu-badge {
+  font-size: 11px;
+  font-weight: 700;
+  font-family: 'JetBrains Mono', monospace;
+  color: #38bdf8;
+  min-width: 18px;
+  text-align: center;
+}
+.menu-divider-line {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.08);
+  margin: 4px 6px;
+}
+
+/* ========================================================
+   FULLSCREEN MODE (CHẾ ĐỘ TOÀN MÀN HÌNH & LEFT RAIL)
+   ======================================================== */
+.notebook-view.is-fullscreen .reader-header,
+.notebook-view.is-fullscreen .editor-toolbar {
+  display: none !important;
+}
+
+.notebook-view.is-fullscreen .open-book-workspace {
+  padding-left: 72px;
+  padding-right: 24px;
+}
+
+/* Fullscreen Left Rail */
+.fullscreen-rail {
+  position: fixed;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  background: rgba(15, 23, 42, 0.88);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 12px;
+  box-shadow: 
+    0 16px 36px rgba(0, 0, 0, 0.65),
+    0 0 0 1px rgba(255, 255, 255, 0.06);
+  padding: 8px 6px;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  user-select: none;
+}
+.fullscreen-rail[hidden] {
+  display: none !important;
+}
+
+.rail-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: #94a3b8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  position: relative;
+  padding: 0;
+}
+.rail-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+}
+.rail-btn.is-active,
+.rail-btn[aria-pressed="true"] {
+  background: rgba(56, 189, 248, 0.2);
+  color: #38bdf8;
+  border-color: rgba(56, 189, 248, 0.35);
+}
+.rail-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+.rail-btn svg {
+  width: 17px;
+  height: 17px;
+}
+.rail-btn--accent {
+  color: #38bdf8;
+}
+.rail-btn--accent:hover:not(:disabled) {
+  background: rgba(56, 189, 248, 0.22);
+  color: #ffffff;
+}
+
+.fullscreen-rail-divider {
+  width: 20px;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.12);
+  margin: 3px 0;
+}
+
+.fullscreen-page-badge {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: #e2e8f0;
+  font-family: 'JetBrains Mono', monospace;
+  padding: 3px 4px;
+  text-align: center;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  min-width: 32px;
+  line-height: 1.15;
+}
+
+.fullscreen-save-dot {
+  width: 14px;
+  height: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 2px;
+}
+.save-dot-circle {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #22c55e;
+  transition: all 0.2s ease;
+}
+.fullscreen-save-dot[data-state="dirty"] .save-dot-circle {
+  background: #f59e0b;
+}
+.fullscreen-save-dot[data-state="loading"] .save-dot-circle {
+  background: #38bdf8;
+  animation: status-spin 1s linear infinite;
+}
+.fullscreen-save-dot[data-state="error"] .save-dot-circle {
+  background: #ef4444;
+}
+
+/* Fullscreen Tools Floating Panel (Docked to the left next to rail) */
+.fullscreen-tools-panel {
+  position: fixed;
+  left: 68px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 1000;
+  width: 232px;
+  background: rgba(15, 23, 42, 0.95);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 12px;
+  box-shadow: 
+    0 24px 50px rgba(0, 0, 0, 0.75),
+    0 0 0 1px rgba(255, 255, 255, 0.06);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  user-select: none;
+  animation: fsPanelSlideIn 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.fullscreen-tools-panel[hidden] {
+  display: none !important;
+}
+
+@keyframes fsPanelSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-50%) translateX(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(-50%) translateX(0);
+  }
+}
+
+.fs-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 6px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+.fs-panel-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #94a3b8;
+}
+.fs-panel-close {
+  background: transparent;
+  border: none;
+  color: #64748b;
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+.fs-panel-close:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+}
+
+.fs-panel-content {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.fs-tool-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.fs-row-divider {
+  width: 1px;
+  height: 16px;
+  background: rgba(255, 255, 255, 0.1);
+  margin: 0 4px;
+}
+
+.fs-tool-btn {
+  flex: 1;
+  height: 28px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  background: rgba(255, 255, 255, 0.05);
+  color: #cbd5e1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.12s ease;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 0;
+}
+.fs-tool-btn:hover {
+  background: rgba(255, 255, 255, 0.14);
+  color: #38bdf8;
+  border-color: rgba(56, 189, 248, 0.3);
+}
+.fs-tool-btn svg {
+  width: 14px;
+  height: 14px;
+  stroke: currentColor;
+  stroke-width: 2;
+  fill: none;
+}
+.fs-font-step {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.fs-section-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  margin-top: 2px;
+}
+
+.fs-swatches-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 4px;
+}
+.fs-color-swatch,
+.fs-bg-swatch {
+  width: 100%;
+  height: 22px;
+  border-radius: 4px;
+}
+
+.fs-pill-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.fs-pill-btn {
+  flex: 1;
+  height: 24px;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.05);
+  color: #94a3b8;
+  font-size: 10.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.12s ease;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.fs-pill-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+}
+.fs-pill-btn.active {
+  background: #2563eb;
+  color: #ffffff;
+  border-color: #3b82f6;
+}
 
 /* ========================================================
    THE BOOK READING & WRITING WORKSPACE
@@ -2363,6 +2788,8 @@ mark {
   .library-view,
   .reader-header,
   .editor-toolbar,
+  .fullscreen-rail,
+  .fullscreen-tools-panel,
   .book-center-ribbon,
   .book-center-spine,
   .edge-turn-btn,

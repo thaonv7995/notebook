@@ -287,12 +287,19 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
     exportPdfWithCoverBtn: document.querySelector('#export-pdf-with-cover'),
     exportPdfContentOnlyBtn: document.querySelector('#export-pdf-content-only'),
     btnToolbarMore: document.querySelector('#btnToolbarMore'),
+    toolbarMoreMenu: document.querySelector('#toolbarMoreMenu'),
+    btnCollapseToolbar: document.querySelector('#btnCollapseToolbar'),
     fullscreenRail: document.querySelector('#fullscreenRail'),
     btnFullscreenExit: document.querySelector('#btnFullscreenExit'),
     btnFullscreenChrome: document.querySelector('#btnFullscreenChrome'),
     btnFullscreenPrev: document.querySelector('#btnFullscreenPrev'),
     btnFullscreenNext: document.querySelector('#btnFullscreenNext'),
     btnFullscreenAddPage: document.querySelector('#btnFullscreenAddPage'),
+    btnFullscreenModeToggle: document.querySelector('#btnFullscreenModeToggle'),
+    fullscreenPageIndicator: document.querySelector('#fullscreenPageIndicator'),
+    fullscreenSaveStatus: document.querySelector('#fullscreenSaveStatus'),
+    fullscreenToolsPanel: document.querySelector('#fullscreenToolsPanel'),
+    btnCloseFsPanel: document.querySelector('#btnCloseFsPanel'),
 
     // Modal
     newNotebookModal: document.querySelector('#newNotebookModal'),
@@ -487,10 +494,15 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
   }
 
   function showStatus(text, state) {
-    if (!els.saveStatus) return;
-    els.saveStatus.setAttribute('data-state', state);
-    els.saveStatus.setAttribute('title', text);
+    if (els.saveStatus) {
+      els.saveStatus.setAttribute('data-state', state);
+      els.saveStatus.setAttribute('title', text);
+    }
     if (els.saveStatusText) els.saveStatusText.textContent = text;
+    if (els.fullscreenSaveStatus) {
+      els.fullscreenSaveStatus.setAttribute('data-state', state);
+      els.fullscreenSaveStatus.setAttribute('title', text);
+    }
   }
 
   // Auto-Save
@@ -1083,6 +1095,8 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
     els.libraryView.classList.add('hidden');
     els.notebookView.classList.remove('hidden');
 
+    applyToolbarCollapse(Boolean(appState.toolbarCollapsed), false);
+
     const compact = window.innerWidth <= 900;
     wasCompactViewport = compact;
     if (els.btnFitPage) els.btnFitPage.classList.remove('active');
@@ -1102,6 +1116,9 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
   }
 
   function returnToLibrary(skipUrlUpdate = false) {
+    if (isFullscreenActive()) {
+      exitFullscreen();
+    }
     saveActivePages();
 
     els.notebookView.classList.add('hidden');
@@ -1924,6 +1941,7 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
       const step = currentPageMode === '2-page' ? 2 : 1;
       els.btnNextPage.disabled = curIdx + step >= totalPages;
     }
+    updateFullscreenRailControls();
 
     // Set Template Selector value to active left page's template
     if (els.readerTemplateSelect) {
@@ -2934,6 +2952,153 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
     return escapeHTML(str);
   }
 
+  // Toolbar Collapse & Expand Controller
+  function applyToolbarCollapse(collapsed, save = true) {
+    appState.toolbarCollapsed = Boolean(collapsed);
+    if (els.editorToolbar) {
+      els.editorToolbar.classList.toggle('is-collapsed', appState.toolbarCollapsed);
+    }
+    if (els.btnToggleFormatToolbar) {
+      els.btnToggleFormatToolbar.setAttribute('aria-pressed', String(!appState.toolbarCollapsed));
+      els.btnToggleFormatToolbar.setAttribute('title', appState.toolbarCollapsed ? 'Hiện thanh định dạng (Ctrl+\\)' : 'Thu gọn thanh định dạng (Ctrl+\\)');
+      els.btnToggleFormatToolbar.classList.toggle('is-active', !appState.toolbarCollapsed);
+    }
+    if (save) persistState();
+    if (els.btnFitPage && els.btnFitPage.classList.contains('active')) {
+      setTimeout(handleFitPage, 240);
+    }
+  }
+
+  // Fullscreen Mode Controller
+  function isFullscreenActive() {
+    return Boolean(document.fullscreenElement || document.webkitFullscreenElement || (els.notebookView && els.notebookView.classList.contains('is-fullscreen')));
+  }
+
+  function updateFullscreenRailControls() {
+    const nb = getActiveNotebook();
+    if (!nb || !els.fullscreenRail) return;
+    const totalPages = nb.pages.length;
+    const curIdx = appState.activePageIndex;
+    const step = currentPageMode === '2-page' ? 2 : 1;
+
+    if (els.fullscreenPageIndicator) {
+      if (currentPageMode === '2-page') {
+        const rightNum = Math.min(curIdx + 2, totalPages);
+        els.fullscreenPageIndicator.textContent = `${curIdx + 1}${curIdx + 1 < rightNum ? '-' + rightNum : ''}/${totalPages}`;
+      } else {
+        els.fullscreenPageIndicator.textContent = `${curIdx + 1}/${totalPages}`;
+      }
+    }
+
+    if (els.btnFullscreenPrev) {
+      els.btnFullscreenPrev.disabled = curIdx <= 0;
+    }
+    if (els.btnFullscreenNext) {
+      els.btnFullscreenNext.disabled = curIdx + step >= totalPages;
+    }
+    if (els.btnFullscreenModeToggle) {
+      els.btnFullscreenModeToggle.classList.toggle('is-active', currentPageMode === '2-page');
+      els.btnFullscreenModeToggle.setAttribute('title', currentPageMode === '2-page' ? 'Chế độ 2 trang (Bấm để chuyển 1 trang)' : 'Chế độ 1 trang (Bấm để chuyển 2 trang)');
+    }
+  }
+
+  function updateFullscreenUI(isFs) {
+    if (els.notebookView) {
+      els.notebookView.classList.toggle('is-fullscreen', isFs);
+    }
+    document.body.classList.toggle('is-fullscreen', isFs);
+
+    if (els.btnToggleFullscreen) {
+      els.btnToggleFullscreen.setAttribute('aria-pressed', String(isFs));
+      els.btnToggleFullscreen.setAttribute('title', isFs ? 'Thoát toàn màn hình (Esc)' : 'Toàn màn hình (F11)');
+      els.btnToggleFullscreen.classList.toggle('is-active', isFs);
+    }
+
+    if (els.fullscreenRail) {
+      els.fullscreenRail.hidden = !isFs;
+    }
+
+    if (!isFs) {
+      closeFullscreenToolsPanel();
+    }
+
+    updateFullscreenRailControls();
+
+    if (els.btnFitPage && els.btnFitPage.classList.contains('active')) {
+      setTimeout(handleFitPage, 220);
+    } else if (els.btnFitWidth && els.btnFitWidth.classList.contains('active')) {
+      setTimeout(handleFitWidth, 220);
+    }
+  }
+
+  function enterFullscreen() {
+    const elem = document.documentElement;
+    try {
+      if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+        if (elem.requestFullscreen) {
+          elem.requestFullscreen().catch(err => console.warn('Browser requestFullscreen prevented:', err));
+        } else if (elem.webkitRequestFullscreen) {
+          elem.webkitRequestFullscreen();
+        }
+      }
+    } catch (err) {
+      console.warn('requestFullscreen error:', err);
+    }
+    updateFullscreenUI(true);
+  }
+
+  function exitFullscreen() {
+    try {
+      if (document.fullscreenElement) {
+        if (document.exitFullscreen) {
+          document.exitFullscreen().catch(err => console.warn('exitFullscreen prevented:', err));
+        } else if (document.webkitExitFullscreen) {
+          document.webkitExitFullscreen();
+        }
+      }
+    } catch (err) {
+      console.warn('exitFullscreen error:', err);
+    }
+    updateFullscreenUI(false);
+  }
+
+  function toggleFullscreen() {
+    if (isFullscreenActive()) {
+      exitFullscreen();
+    } else {
+      enterFullscreen();
+    }
+  }
+
+  function openFullscreenToolsPanel() {
+    if (!els.fullscreenToolsPanel) return;
+    els.fullscreenToolsPanel.hidden = false;
+    els.fullscreenToolsPanel.classList.add('is-open');
+    if (els.btnFullscreenChrome) {
+      els.btnFullscreenChrome.classList.add('is-active');
+      els.btnFullscreenChrome.setAttribute('aria-pressed', 'true');
+    }
+  }
+
+  function closeFullscreenToolsPanel() {
+    if (!els.fullscreenToolsPanel) return;
+    els.fullscreenToolsPanel.classList.remove('is-open');
+    els.fullscreenToolsPanel.hidden = true;
+    if (els.btnFullscreenChrome) {
+      els.btnFullscreenChrome.classList.remove('is-active');
+      els.btnFullscreenChrome.setAttribute('aria-pressed', 'false');
+    }
+  }
+
+  function toggleFullscreenToolsPanel() {
+    if (!els.fullscreenToolsPanel) return;
+    if (els.fullscreenToolsPanel.hidden || !els.fullscreenToolsPanel.classList.contains('is-open')) {
+      openFullscreenToolsPanel();
+    } else {
+      closeFullscreenToolsPanel();
+    }
+  }
+
   // Setup Global Event Listeners
   function setupEventListeners() {
     // Back to library
@@ -3069,7 +3234,7 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
     }
 
     // Prevent losing text selection on clicking formatting buttons, swatches, or menus
-    document.querySelectorAll('.editor-toolbar .tool-btn, .editor-toolbar .tool-badge-btn, .editor-toolbar .color-swatch, .editor-toolbar .export-menu').forEach(btn => {
+    document.querySelectorAll('.editor-toolbar .tool-btn, .editor-toolbar .tool-badge-btn, .editor-toolbar .color-swatch, .editor-toolbar .export-menu, .toolbar-more-menu .tool-menu-item, .fullscreen-rail button, .fullscreen-tools-panel button, .fullscreen-tools-panel .color-swatch, .fullscreen-tools-panel .fs-pill-btn').forEach(btn => {
       btn.addEventListener('mousedown', (e) => {
         e.preventDefault();
         saveCurrentSelection();
@@ -3127,7 +3292,7 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
     }
 
     function closeAllPopoverMenus() {
-      [els.fmtColorPalette, els.fmtBgPalette, els.lineHeightMenu, els.pdfExportMenu].forEach(m => {
+      [els.fmtColorPalette, els.fmtBgPalette, els.lineHeightMenu, els.pdfExportMenu, els.toolbarMoreMenu].forEach(m => {
         if (m) {
           m.setAttribute('hidden', '');
           m.hidden = true;
@@ -3135,6 +3300,7 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
         }
       });
       if (els.exportPrintBtn) els.exportPrintBtn.setAttribute('aria-expanded', 'false');
+      if (els.btnToolbarMore) els.btnToolbarMore.setAttribute('aria-expanded', 'false');
     }
 
     // Color popover
@@ -3267,6 +3433,134 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
       }
     }
 
+    // Toolbar Collapse & Expand Toggle
+    if (els.btnToggleFormatToolbar) {
+      els.btnToggleFormatToolbar.addEventListener('click', () => {
+        applyToolbarCollapse(!appState.toolbarCollapsed, true);
+      });
+    }
+    if (els.btnCollapseToolbar) {
+      els.btnCollapseToolbar.addEventListener('click', () => {
+        applyToolbarCollapse(true, true);
+      });
+    }
+
+    // Toolbar More Menu
+    if (els.btnToolbarMore && els.toolbarMoreMenu) {
+      els.btnToolbarMore.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        saveCurrentSelection();
+      });
+      els.btnToolbarMore.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        openPopoverMenu(els.toolbarMoreMenu, [els.fmtColorPalette, els.fmtBgPalette, els.lineHeightMenu, els.pdfExportMenu]);
+        els.btnToolbarMore.setAttribute('aria-expanded', String(!els.toolbarMoreMenu.hidden));
+      });
+
+      els.toolbarMoreMenu.querySelectorAll('.tool-menu-item').forEach(btn => {
+        btn.addEventListener('click', () => {
+          closeAllPopoverMenus();
+        });
+      });
+    }
+
+    // Fullscreen Mode Controls
+    if (els.btnToggleFullscreen) {
+      els.btnToggleFullscreen.addEventListener('click', toggleFullscreen);
+    }
+    if (els.btnFullscreenExit) {
+      els.btnFullscreenExit.addEventListener('click', exitFullscreen);
+    }
+    if (els.btnFullscreenChrome) {
+      els.btnFullscreenChrome.addEventListener('click', toggleFullscreenToolsPanel);
+    }
+    if (els.btnCloseFsPanel) {
+      els.btnCloseFsPanel.addEventListener('click', closeFullscreenToolsPanel);
+    }
+    if (els.btnFullscreenPrev) {
+      els.btnFullscreenPrev.addEventListener('click', turnPageBackward);
+    }
+    if (els.btnFullscreenNext) {
+      els.btnFullscreenNext.addEventListener('click', turnPageForward);
+    }
+    if (els.btnFullscreenAddPage) {
+      els.btnFullscreenAddPage.addEventListener('click', addPageToCurrentBook);
+    }
+    if (els.btnFullscreenModeToggle) {
+      els.btnFullscreenModeToggle.addEventListener('click', () => {
+        applyPageMode(currentPageMode === '2-page' ? '1-page' : '2-page');
+        updateFullscreenRailControls();
+      });
+    }
+
+    // Fullscreen Tools Drawer formatting actions
+    const fsUndo = document.querySelector('#fs-fmt-undo');
+    if (fsUndo) fsUndo.addEventListener('click', () => applyFormattingToActiveTarget('undo'));
+    const fsRedo = document.querySelector('#fs-fmt-redo');
+    if (fsRedo) fsRedo.addEventListener('click', () => applyFormattingToActiveTarget('redo'));
+    const fsFontDec = document.querySelector('#fs-font-decrease');
+    if (fsFontDec) fsFontDec.addEventListener('click', () => updateFontSize(-1));
+    const fsFontInc = document.querySelector('#fs-font-increase');
+    if (fsFontInc) fsFontInc.addEventListener('click', () => updateFontSize(1));
+
+    const fsBold = document.querySelector('#fs-fmt-bold');
+    if (fsBold) fsBold.addEventListener('click', () => applyFormattingToActiveTarget('bold'));
+    const fsItalic = document.querySelector('#fs-fmt-italic');
+    if (fsItalic) fsItalic.addEventListener('click', () => applyFormattingToActiveTarget('italic'));
+    const fsUnderline = document.querySelector('#fs-fmt-underline');
+    if (fsUnderline) fsUnderline.addEventListener('click', () => applyFormattingToActiveTarget('underline'));
+    const fsStrike = document.querySelector('#fs-fmt-strike');
+    if (fsStrike) fsStrike.addEventListener('click', () => applyFormattingToActiveTarget('strike'));
+
+    document.querySelectorAll('.fs-color-swatch').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const color = btn.dataset.color || '';
+        if (els.currentColorBar) {
+          els.currentColorBar.style.backgroundColor = color || 'currentColor';
+        }
+        applyFormattingToActiveTarget('color', color);
+      });
+    });
+    document.querySelectorAll('.fs-bg-swatch').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const bg = btn.dataset.bg || '';
+        if (els.currentBgBar) {
+          els.currentBgBar.style.backgroundColor = bg || '#fef08a';
+        }
+        applyFormattingToActiveTarget('bg', bg);
+      });
+    });
+
+    const fsH1 = document.querySelector('#fs-fmt-h1');
+    if (fsH1) fsH1.addEventListener('click', () => applyFormattingToActiveTarget('h1'));
+    const fsH2 = document.querySelector('#fs-fmt-h2');
+    if (fsH2) fsH2.addEventListener('click', () => applyFormattingToActiveTarget('h2'));
+    const fsBullet = document.querySelector('#fs-fmt-bullet');
+    if (fsBullet) fsBullet.addEventListener('click', () => applyFormattingToActiveTarget('bullet'));
+    const fsTodo = document.querySelector('#fs-fmt-todo');
+    if (fsTodo) fsTodo.addEventListener('click', () => applyFormattingToActiveTarget('todo'));
+    const fsQuote = document.querySelector('#fs-fmt-quote');
+    if (fsQuote) fsQuote.addEventListener('click', () => applyFormattingToActiveTarget('quote'));
+
+    document.querySelectorAll('.fs-lh-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.fs-lh-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        setLineHeight(btn.dataset.lh);
+      });
+    });
+
+    // Native Fullscreen Change Listeners
+    document.addEventListener('fullscreenchange', () => {
+      const isFs = Boolean(document.fullscreenElement);
+      updateFullscreenUI(isFs);
+    });
+    document.addEventListener('webkitfullscreenchange', () => {
+      const isFs = Boolean(document.webkitFullscreenElement);
+      updateFullscreenUI(isFs);
+    });
+
     if (els.btnResetLibrary) {
       els.btnResetLibrary.addEventListener('click', () => {
         if (confirm('Khôi phục danh sách sổ về 4 mẫu sổ ghi chép A4 mặc định (Cornell, Work Notes, Ruled, Freeform)?')) {
@@ -3361,20 +3655,52 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
       });
     }
 
-    // Close popovers
+    // Close popovers and floating panels on click outside
     document.addEventListener('click', (e) => {
       const isInsideColor = (els.fmtColorPalette && els.fmtColorPalette.contains(e.target)) || (els.fmtColorBtn && els.fmtColorBtn.contains(e.target));
       const isInsideBg = (els.fmtBgPalette && els.fmtBgPalette.contains(e.target)) || (els.fmtBgBtn && els.fmtBgBtn.contains(e.target));
       const isInsidePdfExport = (els.pdfExportMenu && els.pdfExportMenu.contains(e.target)) || (els.exportPrintBtn && els.exportPrintBtn.contains(e.target));
       const isInsideLh = (els.lineHeightMenu && els.lineHeightMenu.contains(e.target)) || (els.btnLineHeightSettings && els.btnLineHeightSettings.contains(e.target));
-      if (!isInsideColor && !isInsideBg && !isInsidePdfExport && !isInsideLh) {
+      const isInsideMore = (els.toolbarMoreMenu && els.toolbarMoreMenu.contains(e.target)) || (els.btnToolbarMore && els.btnToolbarMore.contains(e.target));
+      if (!isInsideColor && !isInsideBg && !isInsidePdfExport && !isInsideLh && !isInsideMore) {
         closeAllPopoverMenus();
+      }
+
+      if (els.fullscreenToolsPanel && !els.fullscreenToolsPanel.hidden && els.fullscreenToolsPanel.classList.contains('is-open')) {
+        const isInsideFsTools = els.fullscreenToolsPanel.contains(e.target) || (els.btnFullscreenChrome && els.btnFullscreenChrome.contains(e.target));
+        if (!isInsideFsTools) {
+          closeFullscreenToolsPanel();
+        }
       }
     });
 
     document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && els.newNotebookModal && els.newNotebookModal.classList.contains('open')) {
-        closeNewNotebookModal();
+      if (e.key === 'Escape') {
+        if (els.newNotebookModal && els.newNotebookModal.classList.contains('open')) {
+          closeNewNotebookModal();
+          return;
+        }
+        if (els.fullscreenToolsPanel && !els.fullscreenToolsPanel.hidden && els.fullscreenToolsPanel.classList.contains('is-open')) {
+          closeFullscreenToolsPanel();
+          return;
+        }
+        if (isFullscreenActive()) {
+          exitFullscreen();
+          return;
+        }
+      }
+
+      if (e.key === 'F11' || (e.altKey && e.key === 'Enter')) {
+        e.preventDefault();
+        toggleFullscreen();
+        return;
+      }
+
+      const isMod = e.ctrlKey || e.metaKey;
+      if (isMod && e.key === '\\') {
+        e.preventDefault();
+        applyToolbarCollapse(!appState.toolbarCollapsed, true);
+        return;
       }
     });
 
@@ -3444,6 +3770,7 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
     applyFontSize(appState.fontSize || 16);
     applyFontFamily(appState.fontFamily || 'sans');
     applyLineHeight(appState.lineHeight || '28');
+    applyToolbarCollapse(Boolean(appState.toolbarCollapsed), false);
     renderLibraryGrid();
 
     // Deep-link / route recovery on initial page load or reload
