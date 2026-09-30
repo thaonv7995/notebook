@@ -184,6 +184,7 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
   let wasCompactViewport = window.innerWidth <= 900;
   let lastActiveTextarea = null;
   let lastActiveEditable = null;
+  let focusedPageSide = 'left'; // 'left' or 'right'
   let toastTimer = null;
   let generatedIdCounter = 0;
   let selectedCoverGradient = 'linear-gradient(135deg, #dc2626, #991b1b)';
@@ -246,6 +247,7 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
     leftPageFooterNum: document.querySelector('#leftPageFooterNum'),
     rightPageFooterNum: document.querySelector('#rightPageFooterNum'),
     bookCenterSpine: document.querySelector('#bookCenterSpine'),
+    bookFocusRibbon: document.querySelector('#bookFocusRibbon'),
 
     // Formatting Toolbar
     fmtBold: document.querySelector('#fmt-bold'),
@@ -1797,9 +1799,51 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
     advanceToNextPage(editable, sheetEl, page, overflowHtml);
   }
 
+  function setFocusedPageSide(side) {
+    if (currentPageMode === '1-page') side = 'left';
+    focusedPageSide = (side === 'right') ? 'right' : 'left';
+
+    if (els.bookSpreadCasing) {
+      els.bookSpreadCasing.classList.remove('focus-left', 'focus-right');
+      els.bookSpreadCasing.classList.add(`focus-${focusedPageSide}`);
+    }
+
+    if (els.bookFocusRibbon) {
+      els.bookFocusRibbon.classList.remove('focus-left', 'focus-right');
+      els.bookFocusRibbon.classList.add(`focus-${focusedPageSide}`);
+      const curIdx = appState.activePageIndex;
+      const leftPageNum = curIdx + 1;
+      const rightPageNum = curIdx + 2;
+      const curPageNum = (focusedPageSide === 'left') ? leftPageNum : rightPageNum;
+      const otherPageNum = (focusedPageSide === 'left') ? rightPageNum : leftPageNum;
+      els.bookFocusRibbon.setAttribute(
+        'title',
+        currentPageMode === '2-page'
+          ? `Trang đang viết: Trang ${curPageNum} • Bấm để chuyển sang Trang ${otherPageNum}`
+          : `Trang đang viết: Trang ${leftPageNum}`
+      );
+    }
+  }
+
+  function updateFocusedPageFromElement(el) {
+    if (!el) return;
+    const sheet = el.closest('.book-page-sheet');
+    if (sheet) {
+      if (sheet.id === 'rightPageSheet' || sheet.classList.contains('book-page-right')) {
+        setFocusedPageSide('right');
+      } else {
+        setFocusedPageSide('left');
+      }
+    }
+  }
+
   function handleWritingAreaClick(editable, e, sheetEl, page) {
     if (!editable) return;
     lastActiveEditable = editable;
+    if (sheetEl) {
+      const side = (sheetEl === els.rightPageSheet || sheetEl.id === 'rightPageSheet' || sheetEl.classList.contains('book-page-right')) ? 'right' : 'left';
+      setFocusedPageSide(side);
+    }
     if (document.activeElement !== editable) {
       editable.focus();
     }
@@ -1807,11 +1851,18 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
 
   function attachTemplateInputListeners(sheetEl, page) {
     if (!sheetEl || !page) return;
+    const sheetSide = (sheetEl === els.rightPageSheet || sheetEl.id === 'rightPageSheet' || sheetEl.classList.contains('book-page-right')) ? 'right' : 'left';
 
     // Listen to all inputs (topic, date, deadline, no, etc.)
     sheetEl.querySelectorAll('input').forEach(input => {
-      input.addEventListener('focus', () => { lastActiveTextarea = input; });
-      input.addEventListener('click', () => { lastActiveTextarea = input; });
+      input.addEventListener('focus', () => {
+        lastActiveTextarea = input;
+        setFocusedPageSide(sheetSide);
+      });
+      input.addEventListener('click', () => {
+        lastActiveTextarea = input;
+        setFocusedPageSide(sheetSide);
+      });
       input.addEventListener('input', () => {
         extractTemplateDataFromSheet(sheetEl, page);
         scheduleSave();
@@ -1822,19 +1873,23 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
     sheetEl.querySelectorAll('.template-writing-area[contenteditable="true"]').forEach(editable => {
       editable.addEventListener('focus', () => {
         lastActiveEditable = editable;
+        setFocusedPageSide(sheetSide);
       });
       editable.addEventListener('click', (e) => {
         e.stopPropagation();
         lastActiveEditable = editable;
+        setFocusedPageSide(sheetSide);
         saveCurrentSelection();
         handleWritingAreaClick(editable, e, sheetEl, page);
       });
       editable.addEventListener('keyup', () => {
         lastActiveEditable = editable;
+        setFocusedPageSide(sheetSide);
         saveCurrentSelection();
       });
       editable.addEventListener('mouseup', () => {
         lastActiveEditable = editable;
+        setFocusedPageSide(sheetSide);
         saveCurrentSelection();
       });
 
@@ -1888,6 +1943,7 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
     sheetEl.querySelectorAll('.action-check-square').forEach(btn => {
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
+        setFocusedPageSide(sheetSide);
         const idx = parseInt(btn.dataset.idx, 10);
         btn.classList.toggle('checked');
         const input = sheetEl.querySelector(`.action-line-input[data-idx="${idx}"]`);
@@ -1903,6 +1959,7 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
     sheetEl.querySelectorAll('.status-pill-btn').forEach(btn => {
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
+        setFocusedPageSide(sheetSide);
         const st = btn.dataset.status;
         page.status = st;
         sheetEl.querySelectorAll('.status-pill-btn').forEach(b => {
@@ -1981,6 +2038,7 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
         renderEmptyRightPagePlaceholder(nb, leftPage.template || 'cornell');
       }
     }
+    setFocusedPageSide(focusedPageSide);
   }
 
   // Apply 1-Page vs 2-Page Mode
@@ -2460,8 +2518,11 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
     if (act && act.classList && act.classList.contains('template-writing-area')) {
       return act;
     }
-    if (els.leftPageSheet) {
-      const el = els.leftPageSheet.querySelector('.template-writing-area[contenteditable="true"]');
+    const targetSheet = (focusedPageSide === 'right' && currentPageMode === '2-page' && els.rightPageSheet)
+      ? els.rightPageSheet
+      : els.leftPageSheet;
+    if (targetSheet) {
+      const el = targetSheet.querySelector('.template-writing-area[contenteditable="true"]');
       if (el) return el;
     }
     return null;
@@ -3216,12 +3277,41 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
       }
     });
 
+    // Ribbon Focus Toggle and Sheet Click Listeners
+    if (els.bookFocusRibbon) {
+      els.bookFocusRibbon.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (currentPageMode === '2-page') {
+          const nextSide = (focusedPageSide === 'left') ? 'right' : 'left';
+          setFocusedPageSide(nextSide);
+          const targetSheet = (nextSide === 'right') ? els.rightPageSheet : els.leftPageSheet;
+          if (targetSheet) {
+            const editable = targetSheet.querySelector('.template-writing-area[contenteditable="true"]');
+            if (editable) editable.focus();
+          }
+        }
+      });
+    }
+
+    if (els.leftPageSheet) {
+      els.leftPageSheet.addEventListener('pointerdown', () => setFocusedPageSide('left'));
+    }
+    if (els.rightPageSheet) {
+      els.rightPageSheet.addEventListener('pointerdown', () => setFocusedPageSide('right'));
+    }
+
     // Mode Toggle: 1-Page vs 2-Pages
     if (els.btnMode1Page) {
-      els.btnMode1Page.addEventListener('click', () => applyPageMode('1-page'));
+      els.btnMode1Page.addEventListener('click', () => {
+        applyPageMode('1-page');
+        setFocusedPageSide('left');
+      });
     }
     if (els.btnMode2Pages) {
-      els.btnMode2Pages.addEventListener('click', () => applyPageMode('2-page'));
+      els.btnMode2Pages.addEventListener('click', () => {
+        applyPageMode('2-page');
+        setFocusedPageSide(focusedPageSide);
+      });
     }
 
     // Template Chooser
