@@ -2543,6 +2543,14 @@ mark {
   display: none !important;
 }
 
+/* Chinese / Hanzi characters vertical centering in notebook ruled lines:
+   Ideographic characters float centered within the row band,
+   while Latin letters rest naturally on the baseline touching the bottom rule. */
+.hanzi-cjk {
+  display: inline;
+  vertical-align: 0.16em;
+}
+
 /* Rich Text Formatting inside Notebook Template Writing Area */
 .template-writing-area blockquote {
   margin: 4px 0 4px 8px;
