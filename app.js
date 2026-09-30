@@ -297,8 +297,16 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
     btnFullscreenPrev: document.querySelector('#btnFullscreenPrev'),
     btnFullscreenNext: document.querySelector('#btnFullscreenNext'),
     btnFullscreenAddPage: document.querySelector('#btnFullscreenAddPage'),
-    btnFullscreenModeToggle: document.querySelector('#btnFullscreenModeToggle'),
     fullscreenPageIndicator: document.querySelector('#fullscreenPageIndicator'),
+    fsPageCur: document.querySelector('#fsPageCur'),
+    fsPageTotal: document.querySelector('#fsPageTotal'),
+    btnFullscreenMode1Page: document.querySelector('#btnFullscreenMode1Page'),
+    btnFullscreenMode2Pages: document.querySelector('#btnFullscreenMode2Pages'),
+    btnFullscreenZoomIn: document.querySelector('#btnFullscreenZoomIn'),
+    fullscreenScaleValue: document.querySelector('#fullscreenScaleValue'),
+    btnFullscreenZoomOut: document.querySelector('#btnFullscreenZoomOut'),
+    btnFullscreenFitPage: document.querySelector('#btnFullscreenFitPage'),
+    btnFullscreenFitWidth: document.querySelector('#btnFullscreenFitWidth'),
     fullscreenSaveStatus: document.querySelector('#fullscreenSaveStatus'),
     fullscreenToolsPanel: document.querySelector('#fullscreenToolsPanel'),
     btnCloseFsPanel: document.querySelector('#btnCloseFsPanel'),
@@ -2088,6 +2096,9 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
     if (els.readerScaleValue) {
       els.readerScaleValue.textContent = `${Math.round(clampedScale * 100)}%`;
     }
+    if (els.fullscreenScaleValue) {
+      els.fullscreenScaleValue.textContent = `${Math.round(clampedScale * 100)}%`;
+    }
     if (persistPreference) persistState();
   }
 
@@ -2097,6 +2108,8 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
     const next = Math.min(3.0, Math.round((cur + step) * 100) / 100);
     if (els.btnFitPage) els.btnFitPage.classList.remove('active');
     if (els.btnFitWidth) els.btnFitWidth.classList.remove('active');
+    if (els.btnFullscreenFitPage) els.btnFullscreenFitPage.classList.remove('is-active');
+    if (els.btnFullscreenFitWidth) els.btnFullscreenFitWidth.classList.remove('is-active');
     applyZoom(next);
   }
 
@@ -2106,12 +2119,16 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
     const next = Math.max(0.3, Math.round((cur - step) * 100) / 100);
     if (els.btnFitPage) els.btnFitPage.classList.remove('active');
     if (els.btnFitWidth) els.btnFitWidth.classList.remove('active');
+    if (els.btnFullscreenFitPage) els.btnFullscreenFitPage.classList.remove('is-active');
+    if (els.btnFullscreenFitWidth) els.btnFullscreenFitWidth.classList.remove('is-active');
     applyZoom(next);
   }
 
   function resetZoom() {
     if (els.btnFitPage) els.btnFitPage.classList.remove('active');
     if (els.btnFitWidth) els.btnFitWidth.classList.remove('active');
+    if (els.btnFullscreenFitPage) els.btnFullscreenFitPage.classList.remove('is-active');
+    if (els.btnFullscreenFitWidth) els.btnFullscreenFitWidth.classList.remove('is-active');
     applyZoom(1.0);
   }
 
@@ -2297,6 +2314,8 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
   function handleFitPage() {
     if (els.btnFitPage) els.btnFitPage.classList.add('active');
     if (els.btnFitWidth) els.btnFitWidth.classList.remove('active');
+    if (els.btnFullscreenFitPage) els.btnFullscreenFitPage.classList.add('is-active');
+    if (els.btnFullscreenFitWidth) els.btnFullscreenFitWidth.classList.remove('is-active');
     const desk = els.openBookWorkspace;
     const casing = els.bookSpreadCasing;
     if (desk && casing) {
@@ -2312,6 +2331,8 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
   function handleFitWidth() {
     if (els.btnFitWidth) els.btnFitWidth.classList.add('active');
     if (els.btnFitPage) els.btnFitPage.classList.remove('active');
+    if (els.btnFullscreenFitWidth) els.btnFullscreenFitWidth.classList.add('is-active');
+    if (els.btnFullscreenFitPage) els.btnFullscreenFitPage.classList.remove('is-active');
     const desk = els.openBookWorkspace;
     const casing = els.bookSpreadCasing;
     if (desk && casing) {
@@ -3059,13 +3080,17 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
     const curIdx = appState.activePageIndex;
     const step = currentPageMode === '2-page' ? 2 : 1;
 
-    if (els.fullscreenPageIndicator) {
+    // Vertical page badge
+    if (els.fsPageCur && els.fsPageTotal) {
       if (currentPageMode === '2-page') {
         const rightNum = Math.min(curIdx + 2, totalPages);
-        els.fullscreenPageIndicator.textContent = `${curIdx + 1}${curIdx + 1 < rightNum ? '-' + rightNum : ''}/${totalPages}`;
+        els.fsPageCur.textContent = (curIdx + 1 < rightNum) ? `${curIdx + 1}-${rightNum}` : `${curIdx + 1}`;
       } else {
-        els.fullscreenPageIndicator.textContent = `${curIdx + 1}/${totalPages}`;
+        els.fsPageCur.textContent = `${curIdx + 1}`;
       }
+      els.fsPageTotal.textContent = `${totalPages}`;
+    } else if (els.fullscreenPageIndicator) {
+      els.fullscreenPageIndicator.textContent = `${curIdx + 1}/${totalPages}`;
     }
 
     if (els.btnFullscreenPrev) {
@@ -3074,9 +3099,28 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
     if (els.btnFullscreenNext) {
       els.btnFullscreenNext.disabled = curIdx + step >= totalPages;
     }
-    if (els.btnFullscreenModeToggle) {
-      els.btnFullscreenModeToggle.classList.toggle('is-active', currentPageMode === '2-page');
-      els.btnFullscreenModeToggle.setAttribute('title', currentPageMode === '2-page' ? 'Chế độ 2 trang (Bấm để chuyển 1 trang)' : 'Chế độ 1 trang (Bấm để chuyển 2 trang)');
+
+    // 1-Page / 2-Pages mode buttons
+    if (els.btnFullscreenMode1Page) {
+      els.btnFullscreenMode1Page.classList.toggle('is-active', currentPageMode === '1-page');
+    }
+    if (els.btnFullscreenMode2Pages) {
+      els.btnFullscreenMode2Pages.classList.toggle('is-active', currentPageMode === '2-page');
+    }
+
+    // Zoom scale badge in rail
+    if (els.fullscreenScaleValue) {
+      els.fullscreenScaleValue.textContent = `${Math.round((appState.zoomLevel || 1.0) * 100)}%`;
+    }
+
+    // Fit states in rail
+    const isFitPageActive = Boolean(els.btnFitPage && els.btnFitPage.classList.contains('active'));
+    const isFitWidthActive = Boolean(els.btnFitWidth && els.btnFitWidth.classList.contains('active'));
+    if (els.btnFullscreenFitPage) {
+      els.btnFullscreenFitPage.classList.toggle('is-active', isFitPageActive);
+    }
+    if (els.btnFullscreenFitWidth) {
+      els.btnFullscreenFitWidth.classList.toggle('is-active', isFitWidthActive);
     }
   }
 
@@ -3594,9 +3638,51 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
     if (els.btnFullscreenAddPage) {
       els.btnFullscreenAddPage.addEventListener('click', addPageToCurrentBook);
     }
-    if (els.btnFullscreenModeToggle) {
-      els.btnFullscreenModeToggle.addEventListener('click', () => {
-        applyPageMode(currentPageMode === '2-page' ? '1-page' : '2-page');
+
+    // Fullscreen 1-Page / 2-Pages Mode toggles
+    if (els.btnFullscreenMode1Page) {
+      els.btnFullscreenMode1Page.addEventListener('click', () => {
+        applyPageMode('1-page');
+        setFocusedPageSide('left');
+        updateFullscreenRailControls();
+      });
+    }
+    if (els.btnFullscreenMode2Pages) {
+      els.btnFullscreenMode2Pages.addEventListener('click', () => {
+        applyPageMode('2-page');
+        setFocusedPageSide(focusedPageSide);
+        updateFullscreenRailControls();
+      });
+    }
+
+    // Fullscreen Zoom & Fit Controls
+    if (els.btnFullscreenZoomIn) {
+      els.btnFullscreenZoomIn.addEventListener('click', () => {
+        zoomIn();
+        updateFullscreenRailControls();
+      });
+    }
+    if (els.btnFullscreenZoomOut) {
+      els.btnFullscreenZoomOut.addEventListener('click', () => {
+        zoomOut();
+        updateFullscreenRailControls();
+      });
+    }
+    if (els.fullscreenScaleValue) {
+      els.fullscreenScaleValue.addEventListener('click', () => {
+        resetZoom();
+        updateFullscreenRailControls();
+      });
+    }
+    if (els.btnFullscreenFitPage) {
+      els.btnFullscreenFitPage.addEventListener('click', () => {
+        handleFitPage();
+        updateFullscreenRailControls();
+      });
+    }
+    if (els.btnFullscreenFitWidth) {
+      els.btnFullscreenFitWidth.addEventListener('click', () => {
+        handleFitWidth();
         updateFullscreenRailControls();
       });
     }
