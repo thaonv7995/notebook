@@ -1831,6 +1831,10 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
           : `Trang đang viết: Trang ${leftPageNum}`
       );
     }
+
+    if (isFullscreenActive()) {
+      updateFullscreenRailControls();
+    }
   }
 
   function updateFocusedPageFromElement(el) {
@@ -2180,10 +2184,20 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
   // Jump to Direct Page Number
   function jumpToPage(pageNum) {
     const nb = getActiveNotebook();
-    const idx = Math.max(0, Math.min(pageNum - 1, nb.pages.length - 1));
+    if (!nb) return;
     saveActivePages();
+    let idx = Math.max(0, Math.min(pageNum - 1, nb.pages.length - 1));
+    if (currentPageMode === '2-page') {
+      if (idx % 2 === 1) {
+        idx = idx - 1;
+        focusedPageSide = 'right';
+      } else {
+        focusedPageSide = 'left';
+      }
+    }
     appState.activePageIndex = idx;
     renderBookPages();
+    setFocusedPageSide(focusedPageSide);
   }
 
   // Add Page to Current Notebook
@@ -3080,17 +3094,25 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
     const curIdx = appState.activePageIndex;
     const step = currentPageMode === '2-page' ? 2 : 1;
 
-    // Vertical page badge
-    if (els.fsPageCur && els.fsPageTotal) {
-      if (currentPageMode === '2-page') {
-        const rightNum = Math.min(curIdx + 2, totalPages);
-        els.fsPageCur.textContent = (curIdx + 1 < rightNum) ? `${curIdx + 1}-${rightNum}` : `${curIdx + 1}`;
-      } else {
-        els.fsPageCur.textContent = `${curIdx + 1}`;
-      }
-      els.fsPageTotal.textContent = `${totalPages}`;
+    // Single active page number in Fullscreen mode
+    const activePageNum = (currentPageMode === '2-page' && focusedPageSide === 'right' && nb.pages[curIdx + 1])
+      ? curIdx + 2
+      : curIdx + 1;
+
+    if (els.fsPageCur) {
+      els.fsPageCur.textContent = `${activePageNum}`;
     } else if (els.fullscreenPageIndicator) {
-      els.fullscreenPageIndicator.textContent = `${curIdx + 1}/${totalPages}`;
+      els.fullscreenPageIndicator.textContent = `${activePageNum}`;
+    }
+    if (els.fsPageTotal) {
+      els.fsPageTotal.textContent = `${totalPages}`;
+    }
+
+    if (els.fullscreenPageIndicator) {
+      els.fullscreenPageIndicator.setAttribute(
+        'title',
+        `Trang ${activePageNum} / ${totalPages} • Bấm để nhập số trang`
+      );
     }
 
     if (els.btnFullscreenPrev) {
@@ -3637,6 +3659,32 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
     }
     if (els.btnFullscreenAddPage) {
       els.btnFullscreenAddPage.addEventListener('click', addPageToCurrentBook);
+    }
+
+    // Fullscreen Page Indicator click to jump
+    if (els.fullscreenPageIndicator) {
+      const promptJump = () => {
+        const nb = getActiveNotebook();
+        if (!nb) return;
+        const total = nb.pages.length;
+        const curIdx = appState.activePageIndex;
+        const currentNum = (currentPageMode === '2-page' && focusedPageSide === 'right' && nb.pages[curIdx + 1])
+          ? curIdx + 2
+          : curIdx + 1;
+        const input = window.prompt(`Chuyển đến trang (1 - ${total}):`, `${currentNum}`);
+        if (!input) return;
+        const page = parseInt(input.trim(), 10);
+        if (Number.isFinite(page) && page >= 1 && page <= total) {
+          jumpToPage(page);
+        }
+      };
+      els.fullscreenPageIndicator.addEventListener('click', promptJump);
+      els.fullscreenPageIndicator.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          promptJump();
+        }
+      });
     }
 
     // Fullscreen 1-Page / 2-Pages Mode toggles
