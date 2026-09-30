@@ -2551,7 +2551,7 @@ mark {
 .hanzi-cjk {
   display: inline;
   position: relative;
-  top: -2px;
+  top: -4.5px;
 }
 
 /* Rich Text Formatting inside Notebook Template Writing Area */
