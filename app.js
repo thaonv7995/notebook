@@ -113,7 +113,7 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
       },
       {
         id: 'nb-ruled-classic',
-        title: 'Ruled Notebook • Sổ Kẻ Ngang A4',
+        title: 'Ruled Notebook',
         author: 'Notebook Studio',
         category: 'Ghi chép',
         lang: 'EN · VI',
@@ -355,7 +355,13 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
         : createUniqueId('nb', notebookIds);
       notebookIds.add(nb.id);
       nb.pages = Array.isArray(nb.pages) ? nb.pages : [];
-      nb.title = String(nb.title || 'Cuốn sổ chưa đặt tên');
+      nb.title = String(nb.title || 'Cuốn sổ chưa đặt tên')
+        .replace(/\s*•\s*Sổ\s+Kẻ\s+Ngang\s+A4\s*—\s*Bản\s+sao/gi, '')
+        .replace(/\s*Sổ\s+Kẻ\s+Ngang\s+A4\s*—\s*Bản\s+sao\s*/gi, '')
+        .replace(/\s*•\s*Sổ\s+Kẻ\s+Ngang\s+A4/gi, '')
+        .replace(/\s*Sổ\s+Kẻ\s+Ngang\s+A4/gi, '')
+        .trim();
+      if (!nb.title) nb.title = 'Ruled Notebook';
       nb.author = String(nb.author || 'Cá nhân');
       nb.category = String(nb.category || 'Ghi chép');
       nb.lang = String(nb.lang || 'VI');
@@ -417,7 +423,13 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (parsed && Array.isArray(parsed.notebooks)) return normalizeState(parsed);
+        if (parsed && Array.isArray(parsed.notebooks)) {
+          const state = normalizeState(parsed);
+          try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+          } catch (_) {}
+          return state;
+        }
       }
     } catch (e) {
       console.warn('Error loading state:', e);
@@ -835,7 +847,12 @@ import { createNotebookEditor } from './public/assets/js/editor-bundle.js';
     const now = Date.now();
     const copy = JSON.parse(JSON.stringify(source));
     copy.id = `nb-${now}`;
-    copy.title = `${source.title} — Bản sao`;
+    const cleanSourceTitle = source.title
+      .replace(/\s*•\s*Sổ\s+Kẻ\s+Ngang\s+A4/gi, '')
+      .replace(/\s*Sổ\s+Kẻ\s+Ngang\s+A4/gi, '')
+      .replace(/\s*—\s*Bản\s+sao/gi, '')
+      .trim();
+    copy.title = `${cleanSourceTitle || 'Ruled Notebook'} — Bản sao`;
     copy.createdAt = new Date().toISOString();
     copy.updatedAt = copy.createdAt;
     copy.isPinned = false;
