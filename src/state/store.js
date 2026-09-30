@@ -40,6 +40,8 @@ export function normalizeState(rawState) {
   state.fontFamily = typeof state.fontFamily === 'string' && state.fontFamily ? state.fontFamily : 'sans';
   const validLineHeights = ['24', '28', '32', '36', '42', 'none'];
   state.lineHeight = validLineHeights.includes(String(state.lineHeight)) ? String(state.lineHeight) : '28';
+  const validPaperTones = ['cream', 'white', 'dark'];
+  state.paperTone = validPaperTones.includes(String(state.paperTone)) ? String(state.paperTone) : 'cream';
 
   const notebookIds = new Set();
   const pageIds = new Set();

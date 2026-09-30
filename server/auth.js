@@ -8,7 +8,7 @@
 
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
-import { findUserByUsername, createUser } from './db.js';
+import { findUserByUsername, findUserById, createUser, updateUserPassword } from './db.js';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'notebook-studio-secret-change-me';
 const TOKEN_EXPIRY = '7d';
@@ -103,5 +103,25 @@ export function authRoutes(app) {
       ok: true,
       user: { id: req.user.id, username: req.user.username }
     });
+  });
+
+  // POST /api/auth/change-password
+  app.post('/api/auth/change-password', requireAuth, (req, res) => {
+    const { oldPassword, newPassword } = req.body || {};
+    if (!oldPassword || !newPassword) {
+      return res.status(400).json({ error: 'Vui lòng nhập mật khẩu hiện tại và mật khẩu mới' });
+    }
+    if (typeof newPassword !== 'string' || newPassword.length < 6) {
+      return res.status(400).json({ error: 'Mật khẩu mới phải có độ dài từ 6 ký tự trở lên' });
+    }
+
+    const user = findUserById(req.user.id);
+    if (!user || !bcrypt.compareSync(oldPassword, user.password_hash)) {
+      return res.status(400).json({ error: 'Mật khẩu hiện tại không chính xác' });
+    }
+
+    const newHash = bcrypt.hashSync(newPassword, 12);
+    updateUserPassword(user.id, newHash);
+    res.json({ ok: true, message: 'Đổi mật khẩu thành công' });
   });
 }

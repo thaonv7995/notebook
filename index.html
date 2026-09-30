@@ -72,6 +72,12 @@
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
           <span>Tạo sổ mới</span>
         </button>
+        <button id="btnOpenChangePassword" class="btn-lib-action" title="Đổi mật khẩu tài khoản">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.778-7.778zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/>
+          </svg>
+          <span>Đổi mật khẩu</span>
+        </button>
         <button id="btnLogout" class="btn-logout" title="Đăng xuất">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
           <span>Đăng xuất</span>
@@ -123,6 +129,16 @@
       <div class="reader-header-center">
         <!-- Pagination controls -->
         <div class="reader-pagination-box">
+          <button id="btnTogglePageDrawer" class="btn-reader-page" title="Xem danh sách tất cả các trang (Mục lục)" aria-label="Mục lục trang">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="8" y1="6" x2="21" y2="6"></line>
+              <line x1="8" y1="12" x2="21" y2="12"></line>
+              <line x1="8" y1="18" x2="21" y2="18"></line>
+              <line x1="3" y1="6" x2="3.01" y2="6"></line>
+              <line x1="3" y1="12" x2="3.01" y2="12"></line>
+              <line x1="3" y1="18" x2="3.01" y2="18"></line>
+            </svg>
+          </button>
           <button id="btnPrevPage" class="btn-reader-page" title="Lật trang trước">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg>
           </button>
@@ -181,6 +197,13 @@
           <option value="cornell">✨ Cornell</option>
           <option value="work">💼 Work</option>
           <option value="ruled">📄 Normal</option>
+        </select>
+
+        <!-- Paper Tone Chooser -->
+        <select id="readerToneSelect" class="reader-template-select reader-tone-select" title="Tông màu giấy viết">
+          <option value="cream">📜 Giấy Kem</option>
+          <option value="white">📄 Giấy Trắng</option>
+          <option value="dark">🌙 Dark Paper</option>
         </select>
       </div>
 
@@ -466,6 +489,18 @@
         </svg>
       </button>
 
+      <!-- View Page List / Outline in Fullscreen -->
+      <button id="fsRailBtnPageList" class="rail-btn" type="button" title="Mục lục & danh sách trang" aria-label="Mục lục các trang">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="8" y1="6" x2="21" y2="6"></line>
+          <line x1="8" y1="12" x2="21" y2="12"></line>
+          <line x1="8" y1="18" x2="21" y2="18"></line>
+          <line x1="3" y1="6" x2="3.01" y2="6"></line>
+          <line x1="3" y1="12" x2="3.01" y2="12"></line>
+          <line x1="3" y1="18" x2="3.01" y2="18"></line>
+        </svg>
+      </button>
+
       <span class="fullscreen-rail-divider"></span>
 
       <!-- Page Navigation (Vertical & Compact) -->
@@ -658,6 +693,14 @@
           <button type="button" class="fs-pill-btn fs-tpl-pill" data-template="work">💼 Work</button>
           <button type="button" class="fs-pill-btn fs-tpl-pill" data-template="ruled">📄 Normal</button>
         </div>
+
+        <!-- Paper Tone quick options in Fullscreen Drawer -->
+        <div class="fs-section-label">Tông màu giấy</div>
+        <div class="fs-pill-row fs-tone-pill-row">
+          <button type="button" class="fs-pill-btn fs-tone-pill" data-tone="cream">📜 Giấy Kem</button>
+          <button type="button" class="fs-pill-btn fs-tone-pill" data-tone="white">📄 Giấy Trắng</button>
+          <button type="button" class="fs-pill-btn fs-tone-pill" data-tone="dark">🌙 Dark Paper</button>
+        </div>
       </div>
     </div>
 
@@ -699,6 +742,35 @@
         </div>
       </div>
     </main>
+
+    <!-- Page Navigation Drawer & Backdrop -->
+    <div id="pageNavDrawer" class="page-nav-drawer" hidden>
+      <div class="page-nav-drawer-header">
+        <div class="page-nav-drawer-title">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+          </svg>
+          <span>Mục lục trang</span>
+          <span class="page-nav-drawer-count" id="pageDrawerCount">0 trang</span>
+        </div>
+        <button id="btnClosePageDrawer" class="btn-close-drawer" aria-label="Đóng">&times;</button>
+      </div>
+      <div class="page-nav-drawer-search">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        <input type="text" id="pageDrawerSearch" placeholder="Lọc theo tên hoặc chủ đề trang..." />
+      </div>
+      <div class="page-nav-drawer-list" id="pageDrawerList">
+        <!-- Dynamically rendered pages -->
+      </div>
+      <div class="page-nav-drawer-footer">
+        <button id="btnDrawerAddPage" class="btn-drawer-add" type="button">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+          <span>Thêm trang mới vào cuối</span>
+        </button>
+      </div>
+    </div>
+    <div id="pageNavBackdrop" class="page-nav-backdrop" hidden></div>
   </div>
 
   <!-- ========================================================
@@ -798,6 +870,37 @@
         <button id="btnCancelGenericModal" class="btn-modal btn-modal--cancel" style="display:none;">Hủy bỏ</button>
         <button id="btnConfirmGenericModal" class="btn-modal btn-modal--confirm">Đồng ý</button>
       </div>
+    </div>
+  <!-- ========================================================
+       MODAL: ĐỔI MẬT KHẨU
+       ======================================================== -->
+  <div id="changePasswordModal" class="modal-overlay" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="changePasswordModalTitle">
+    <div class="modal-dialog modal-dialog--sm">
+      <div class="modal-header">
+        <h2 id="changePasswordModalTitle" class="modal-title">Đổi Mật Khẩu</h2>
+        <button id="btnCloseChangePasswordModal" class="btn-close-modal" aria-label="Đóng">&times;</button>
+      </div>
+      <form id="changePasswordForm">
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="oldPasswordInput" class="form-label">Mật khẩu hiện tại:</label>
+            <input type="password" id="oldPasswordInput" class="form-input" autocomplete="current-password" required placeholder="Nhập mật khẩu đang dùng" />
+          </div>
+          <div class="form-group">
+            <label for="newPasswordInput" class="form-label">Mật khẩu mới:</label>
+            <input type="password" id="newPasswordInput" class="form-input" autocomplete="new-password" required minlength="6" placeholder="Tối thiểu 6 ký tự" />
+          </div>
+          <div class="form-group">
+            <label for="confirmNewPasswordInput" class="form-label">Xác nhận mật khẩu mới:</label>
+            <input type="password" id="confirmNewPasswordInput" class="form-input" autocomplete="new-password" required minlength="6" placeholder="Nhập lại mật khẩu mới" />
+          </div>
+          <p id="changePasswordError" class="modal-form-error" hidden></p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" id="btnCancelChangePassword" class="btn-modal btn-modal--cancel">Hủy bỏ</button>
+          <button type="submit" id="btnSubmitChangePassword" class="btn-modal btn-modal--confirm">Lưu thay đổi</button>
+        </div>
+      </form>
     </div>
   </div>
 

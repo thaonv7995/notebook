@@ -49,6 +49,10 @@ export async function checkSession() {
   }
 }
 
+export async function changePassword(oldPassword, newPassword) {
+  return request('POST', '/auth/change-password', { oldPassword, newPassword });
+}
+
 // ─── Notebooks ───
 
 export async function fetchNotebooks() {

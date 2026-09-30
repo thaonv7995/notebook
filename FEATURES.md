@@ -29,9 +29,11 @@ analytics hoặc các chức năng bán hàng.
 
 ## Soạn thảo và trình bày
 
-- [x] Autosave trên thiết bị và thông báo trạng thái lưu.
+- [x] Autosave trên thiết bị và đồng bộ backend.
 - [x] Chế độ một trang hoặc hai trang.
 - [x] Thêm, xóa, chuyển và nhảy nhanh tới trang.
+- [x] Ngăn kéo mục lục & danh sách trang (Page Navigation Drawer) với tìm kiếm nhanh.
+- [x] Tông màu giấy đa dạng (Paper Tones): Giấy Kem vintage, Giấy Trắng tinh và Dark Paper dịu mắt.
 - [x] Rich-text: heading, đậm, nghiêng, gạch chân, gạch ngang, màu chữ,
   highlight, badge, danh sách, checklist, quote, code block và đường phân cách.
 - [x] Hoàn tác và làm lại.
@@ -51,19 +53,11 @@ analytics hoặc các chức năng bán hàng.
 - [x] PWA manifest, icon và application shell dùng offline.
 - [x] Service Worker network-first để tránh giữ bản mã nguồn cũ.
 
-## Tài khoản và cộng tác
+## Tài khoản và bảo mật
 
-- [ ] đăng nhập, đăng xuất và tạm thời chỉ 1 người dùng thôi.
-- [ ] Đồng bộ thư viện và nội dung sổ tay qua backend.
-- [ ] Autosave lên server với cảnh báo xung đột chỉnh sửa.
-
-## Bảo mật và riêng tư
-
-- [ ] Kiểm tra quyền ở backend cho mọi thao tác đọc/ghi.
-
-## Thứ tự triển khai tiếp theo
-
-1. Account và đồng bộ dữ liệu cá nhân.
-3. Kiểm soát xung đột và lịch sử phiên bản.
+- [x] Đăng nhập, đăng xuất bảo mật với bcrypt & JWT cookie.
+- [x] Đổi mật khẩu trực tiếp trên giao diện web.
+- [x] Đồng bộ thư viện và nội dung sổ tay qua backend.
+- [x] Kiểm tra quyền ở backend cho mọi thao tác đọc/ghi.
 
 Mọi tính năng mới phải được cập nhật trong file này cùng commit triển khai.

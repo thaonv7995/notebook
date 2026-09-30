@@ -31,6 +31,9 @@ import {
   addPageToCurrentBook,
   changePageTemplate,
   applyPageMode,
+  applyPaperTone,
+  togglePageDrawer,
+  closePageDrawer,
   zoomIn,
   zoomOut,
   resetZoom,
@@ -63,7 +66,8 @@ import {
 import {
   setupModalListeners,
   showToast,
-  closeNewNotebookModal
+  closeNewNotebookModal,
+  closeChangePasswordModal
 } from './components/modal.js';
 
 import {
@@ -126,6 +130,14 @@ function setupGlobalKeyAndWindowListeners() {
   // Global keydown listeners
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
+      if (els.changePasswordModal && els.changePasswordModal.classList.contains('open')) {
+        closeChangePasswordModal();
+        return;
+      }
+      if (els.pageNavDrawer && els.pageNavDrawer.classList.contains('is-open')) {
+        closePageDrawer();
+        return;
+      }
       if (els.newNotebookModal && els.newNotebookModal.classList.contains('open')) {
         closeNewNotebookModal();
         return;
@@ -340,6 +352,8 @@ async function init() {
     onJumpToPage: (p) => jumpToPage(p),
     onPageModeChange: (m) => applyPageMode(m),
     onChangeTemplate: (t) => changePageTemplate(t),
+    onChangeTone: (tone) => applyPaperTone(tone),
+    onTogglePageDrawer: () => togglePageDrawer(),
     onZoomIn: () => zoomIn(),
     onZoomOut: () => zoomOut(),
     onResetZoom: () => resetZoom(),
@@ -361,6 +375,7 @@ async function init() {
   applyFontSize(state.fontSize || 16);
   applyFontFamily(state.fontFamily || 'sans');
   applyLineHeight(state.lineHeight || '28');
+  applyPaperTone(state.paperTone || 'cream', false);
   applyToolbarCollapse(Boolean(state.toolbarCollapsed), false);
 
   // ─── Auth check on boot ───

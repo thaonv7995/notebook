@@ -4,6 +4,7 @@
 
 import { getEls } from '../utils/dom.js';
 import { getState, persistState } from '../state/store.js';
+import { changePassword } from '../api/client.js';
 
 let toastTimer = null;
 let selectedCoverGradient = 'linear-gradient(135deg, #1e3a8a, #0f172a)';
@@ -83,6 +84,30 @@ export function closeDeleteNotebookModal() {
   els.deleteNotebookModal.classList.remove('open');
   els.deleteNotebookModal.setAttribute('aria-hidden', 'true');
   pendingDeleteAction = null;
+}
+
+export function openChangePasswordModal() {
+  const els = getEls();
+  if (!els.changePasswordModal) return;
+  if (els.oldPasswordInput) els.oldPasswordInput.value = '';
+  if (els.newPasswordInput) els.newPasswordInput.value = '';
+  if (els.confirmNewPasswordInput) els.confirmNewPasswordInput.value = '';
+  if (els.changePasswordError) {
+    els.changePasswordError.hidden = true;
+    els.changePasswordError.textContent = '';
+  }
+  els.changePasswordModal.classList.add('open');
+  els.changePasswordModal.setAttribute('aria-hidden', 'false');
+  if (els.oldPasswordInput) {
+    setTimeout(() => els.oldPasswordInput.focus(), 60);
+  }
+}
+
+export function closeChangePasswordModal() {
+  const els = getEls();
+  if (!els.changePasswordModal) return;
+  els.changePasswordModal.classList.remove('open');
+  els.changePasswordModal.setAttribute('aria-hidden', 'true');
 }
 
 export function showStatus(text, state) {
@@ -195,6 +220,70 @@ export function setupModalListeners({ onNotebookCreated } = {}) {
   if (els.deleteNotebookModal) {
     els.deleteNotebookModal.addEventListener('click', (e) => {
       if (e.target === els.deleteNotebookModal) closeDeleteNotebookModal();
+    });
+  }
+
+  // Change Password Modal Listeners
+  if (els.btnOpenChangePassword) {
+    els.btnOpenChangePassword.addEventListener('click', openChangePasswordModal);
+  }
+  if (els.btnCloseChangePasswordModal) {
+    els.btnCloseChangePasswordModal.addEventListener('click', closeChangePasswordModal);
+  }
+  if (els.btnCancelChangePassword) {
+    els.btnCancelChangePassword.addEventListener('click', closeChangePasswordModal);
+  }
+  if (els.changePasswordModal) {
+    els.changePasswordModal.addEventListener('click', (e) => {
+      if (e.target === els.changePasswordModal) closeChangePasswordModal();
+    });
+  }
+  if (els.changePasswordForm) {
+    els.changePasswordForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const oldPassword = els.oldPasswordInput ? els.oldPasswordInput.value : '';
+      const newPassword = els.newPasswordInput ? els.newPasswordInput.value : '';
+      const confirmNewPassword = els.confirmNewPasswordInput ? els.confirmNewPasswordInput.value : '';
+
+      if (!oldPassword || !newPassword) {
+        if (els.changePasswordError) {
+          els.changePasswordError.textContent = 'Vui lòng nhập đầy đủ thông tin';
+          els.changePasswordError.hidden = false;
+        }
+        return;
+      }
+
+      if (newPassword.length < 6) {
+        if (els.changePasswordError) {
+          els.changePasswordError.textContent = 'Mật khẩu mới phải có tối thiểu 6 ký tự';
+          els.changePasswordError.hidden = false;
+        }
+        return;
+      }
+
+      if (newPassword !== confirmNewPassword) {
+        if (els.changePasswordError) {
+          els.changePasswordError.textContent = 'Xác nhận mật khẩu mới không khớp';
+          els.changePasswordError.hidden = false;
+        }
+        return;
+      }
+
+      if (els.btnSubmitChangePassword) els.btnSubmitChangePassword.disabled = true;
+      if (els.changePasswordError) els.changePasswordError.hidden = true;
+
+      try {
+        await changePassword(oldPassword, newPassword);
+        closeChangePasswordModal();
+        showToast('Đã đổi mật khẩu thành công!');
+      } catch (err) {
+        if (els.changePasswordError) {
+          els.changePasswordError.textContent = err.message || 'Lỗi khi đổi mật khẩu';
+          els.changePasswordError.hidden = false;
+        }
+      } finally {
+        if (els.btnSubmitChangePassword) els.btnSubmitChangePassword.disabled = false;
+      }
     });
   }
 }

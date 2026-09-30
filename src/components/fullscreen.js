@@ -96,6 +96,11 @@ export function updateFullscreenRailControls() {
   document.querySelectorAll('.fs-tpl-pill').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.template === curTemplate);
   });
+
+  const curTone = state.paperTone || 'cream';
+  document.querySelectorAll('.fs-tone-pill').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.tone === curTone);
+  });
 }
 
 export function updateFullscreenUI(isFs) {
@@ -206,6 +211,8 @@ export function setupFullscreenListeners({
   onJumpToPage,
   onPageModeChange,
   onChangeTemplate,
+  onChangeTone,
+  onTogglePageDrawer,
   onZoomIn,
   onZoomOut,
   onResetZoom,
@@ -217,6 +224,11 @@ export function setupFullscreenListeners({
   if (els.btnToggleFullscreen) els.btnToggleFullscreen.addEventListener('click', toggleFullscreen);
   if (els.btnFullscreenExit) els.btnFullscreenExit.addEventListener('click', exitFullscreen);
   if (els.btnFullscreenChrome) els.btnFullscreenChrome.addEventListener('click', toggleFullscreenToolsPanel);
+  if (els.fsRailBtnPageList) {
+    els.fsRailBtnPageList.addEventListener('click', () => {
+      if (onTogglePageDrawer) onTogglePageDrawer();
+    });
+  }
   if (els.btnCloseFsPanel) els.btnCloseFsPanel.addEventListener('click', closeFullscreenToolsPanel);
   if (els.btnFullscreenPrev) els.btnFullscreenPrev.addEventListener('click', () => onTurnBackward && onTurnBackward());
   if (els.btnFullscreenNext) els.btnFullscreenNext.addEventListener('click', () => onTurnForward && onTurnForward());
@@ -275,6 +287,12 @@ export function setupFullscreenListeners({
   document.querySelectorAll('.fs-tpl-pill').forEach(btn => {
     btn.addEventListener('click', () => {
       if (onChangeTemplate) onChangeTemplate(btn.dataset.template);
+    });
+  });
+
+  document.querySelectorAll('.fs-tone-pill').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (onChangeTone) onChangeTone(btn.dataset.tone);
     });
   });
 

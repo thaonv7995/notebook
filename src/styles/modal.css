@@ -160,6 +160,20 @@ select.form-input option {
   transform: translateY(-1px);
 }
 
+.modal-dialog--sm {
+  max-width: 400px;
+}
+
+.modal-form-error {
+  color: #f87171;
+  font-size: 12.5px;
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  border-radius: 6px;
+  padding: 8px 12px;
+  margin: 0;
+}
+
 /* Toast Notifications */
 .app-toast {
   position: fixed;

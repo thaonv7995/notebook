@@ -27,6 +27,7 @@ export function getEls() {
     // Reader View Top Header
     btnBackToLibrary: document.querySelector('#btnBackToLibrary'),
     openBookTitle: document.querySelector('#openBookTitle'),
+    btnTogglePageDrawer: document.querySelector('#btnTogglePageDrawer'),
     btnPrevPage: document.querySelector('#btnPrevPage'),
     btnNextPage: document.querySelector('#btnNextPage'),
     readerPageInput: document.querySelector('#readerPageInput'),
@@ -39,6 +40,7 @@ export function getEls() {
     btnMode1Page: document.querySelector('#btnMode1Page'),
     btnMode2Pages: document.querySelector('#btnMode2Pages'),
     readerTemplateSelect: document.querySelector('#readerTemplateSelect'),
+    readerToneSelect: document.querySelector('#readerToneSelect'),
     btnAddPage: document.querySelector('#btnAddPage'),
     btnToggleFormatToolbar: document.querySelector('#btnToggleFormatToolbar'),
     btnToggleFullscreen: document.querySelector('#btnToggleFullscreen'),
@@ -108,6 +110,7 @@ export function getEls() {
     fullscreenRail: document.querySelector('#fullscreenRail'),
     btnFullscreenExit: document.querySelector('#btnFullscreenExit'),
     btnFullscreenChrome: document.querySelector('#btnFullscreenChrome'),
+    fsRailBtnPageList: document.querySelector('#fsRailBtnPageList'),
     btnFullscreenPrev: document.querySelector('#btnFullscreenPrev'),
     btnFullscreenNext: document.querySelector('#btnFullscreenNext'),
     btnFullscreenAddPage: document.querySelector('#btnFullscreenAddPage'),
@@ -128,6 +131,15 @@ export function getEls() {
     btnFsTplWork: document.querySelector('#btnFsTplWork'),
     btnFsTplNormal: document.querySelector('#btnFsTplNormal'),
 
+    // Page Drawer
+    pageNavDrawer: document.querySelector('#pageNavDrawer'),
+    pageNavBackdrop: document.querySelector('#pageNavBackdrop'),
+    btnClosePageDrawer: document.querySelector('#btnClosePageDrawer'),
+    pageDrawerList: document.querySelector('#pageDrawerList'),
+    pageDrawerCount: document.querySelector('#pageDrawerCount'),
+    pageDrawerSearch: document.querySelector('#pageDrawerSearch'),
+    btnDrawerAddPage: document.querySelector('#btnDrawerAddPage'),
+
     // Modal
     newNotebookModal: document.querySelector('#newNotebookModal'),
     btnCloseModal: document.querySelector('#btnCloseModal'),
@@ -143,6 +155,18 @@ export function getEls() {
     btnCloseDeleteModal: document.querySelector('#btnCloseDeleteModal'),
     btnCancelDeleteModal: document.querySelector('#btnCancelDeleteModal'),
     btnConfirmDeleteModal: document.querySelector('#btnConfirmDeleteModal'),
+
+    // Change Password Modal
+    btnOpenChangePassword: document.querySelector('#btnOpenChangePassword'),
+    changePasswordModal: document.querySelector('#changePasswordModal'),
+    changePasswordForm: document.querySelector('#changePasswordForm'),
+    oldPasswordInput: document.querySelector('#oldPasswordInput'),
+    newPasswordInput: document.querySelector('#newPasswordInput'),
+    confirmNewPasswordInput: document.querySelector('#confirmNewPasswordInput'),
+    changePasswordError: document.querySelector('#changePasswordError'),
+    btnCloseChangePasswordModal: document.querySelector('#btnCloseChangePasswordModal'),
+    btnCancelChangePassword: document.querySelector('#btnCancelChangePassword'),
+    btnSubmitChangePassword: document.querySelector('#btnSubmitChangePassword'),
 
     // Feedback
     appToast: document.querySelector('#appToast'),

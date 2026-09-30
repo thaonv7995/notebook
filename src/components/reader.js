@@ -245,6 +245,7 @@ export function renderBookPages() {
   applyFontFamily(nb.fontFamily || state.fontFamily || 'sans');
   applyFontSize(state.fontSize || 16);
   applyLineHeight((nb && nb.lineHeight) || state.lineHeight || '28');
+  applyPaperTone(state.paperTone || 'cream', false);
 
   // Render Left Page Sheet
   renderSheetContent(els.leftPageSheet, leftPage, curIdx + 1, true, attachTemplateInputListeners);
@@ -268,6 +269,151 @@ export function renderBookPages() {
     }
   }
   setFocusedPageSide(focusedPageSide);
+
+  if (els.pageNavDrawer && els.pageNavDrawer.classList.contains('is-open')) {
+    renderPageDrawerList(els.pageDrawerSearch ? els.pageDrawerSearch.value : '');
+  }
+}
+
+function escapeHTML(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+export function applyPaperTone(tone, persistPreference = true) {
+  const els = getEls();
+  const validTones = ['cream', 'white', 'dark'];
+  const safeTone = validTones.includes(tone) ? tone : 'cream';
+  if (persistPreference) setState({ paperTone: safeTone });
+  if (els.notebookView) {
+    els.notebookView.setAttribute('data-paper-tone', safeTone);
+  }
+  if (els.bookSpreadCasing) {
+    els.bookSpreadCasing.setAttribute('data-paper-tone', safeTone);
+  }
+  if (els.readerToneSelect) {
+    els.readerToneSelect.value = safeTone;
+  }
+  document.querySelectorAll('.fs-tone-pill').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.tone === safeTone);
+  });
+  if (persistPreference) persistState();
+}
+
+export function openPageDrawer() {
+  const els = getEls();
+  if (!els.pageNavDrawer) return;
+  renderPageDrawerList(els.pageDrawerSearch ? els.pageDrawerSearch.value : '');
+  els.pageNavDrawer.hidden = false;
+  els.pageNavDrawer.removeAttribute('hidden');
+  if (els.pageNavBackdrop) {
+    els.pageNavBackdrop.hidden = false;
+    els.pageNavBackdrop.removeAttribute('hidden');
+  }
+  void els.pageNavDrawer.offsetWidth;
+  els.pageNavDrawer.classList.add('is-open');
+  if (els.pageNavBackdrop) els.pageNavBackdrop.classList.add('is-open');
+  if (els.pageDrawerSearch) {
+    setTimeout(() => els.pageDrawerSearch.focus(), 60);
+  }
+}
+
+export function closePageDrawer() {
+  const els = getEls();
+  if (!els.pageNavDrawer) return;
+  els.pageNavDrawer.classList.remove('is-open');
+  if (els.pageNavBackdrop) els.pageNavBackdrop.classList.remove('is-open');
+  setTimeout(() => {
+    if (!els.pageNavDrawer.classList.contains('is-open')) {
+      els.pageNavDrawer.hidden = true;
+      els.pageNavDrawer.setAttribute('hidden', '');
+      if (els.pageNavBackdrop) {
+        els.pageNavBackdrop.hidden = true;
+        els.pageNavBackdrop.setAttribute('hidden', '');
+      }
+    }
+  }, 240);
+}
+
+export function togglePageDrawer() {
+  const els = getEls();
+  if (!els.pageNavDrawer) return;
+  if (els.pageNavDrawer.classList.contains('is-open')) {
+    closePageDrawer();
+  } else {
+    openPageDrawer();
+  }
+}
+
+export function renderPageDrawerList(filter = '') {
+  const els = getEls();
+  if (!els.pageDrawerList) return;
+  const nb = getActiveNotebook();
+  if (!nb || !Array.isArray(nb.pages)) return;
+
+  const state = getState();
+  const currentIdx = state.activePageIndex || 0;
+  const query = filter.trim().toLowerCase();
+
+  if (els.pageDrawerCount) {
+    els.pageDrawerCount.textContent = `${nb.pages.length} trang`;
+  }
+
+  els.pageDrawerList.innerHTML = '';
+
+  const filteredPages = nb.pages.map((p, idx) => ({ page: p, originalIndex: idx }))
+    .filter(({ page, originalIndex }) => {
+      if (!query) return true;
+      const topic = (page.topic || '').toLowerCase();
+      const title = (page.title || '').toLowerCase();
+      const content = (page.content || '').replace(/<[^>]+>/g, '').toLowerCase();
+      const numStr = String(originalIndex + 1);
+      return topic.includes(query) || title.includes(query) || content.includes(query) || numStr.includes(query);
+    });
+
+  if (filteredPages.length === 0) {
+    const empty = document.createElement('div');
+    empty.className = 'page-nav-empty';
+    empty.textContent = 'Không tìm thấy trang nào phù hợp';
+    els.pageDrawerList.appendChild(empty);
+    return;
+  }
+
+  filteredPages.forEach(({ page, originalIndex }) => {
+    const item = document.createElement('div');
+    item.className = 'page-nav-item' + (originalIndex === currentIdx ? ' is-active' : '');
+    item.setAttribute('role', 'button');
+    item.setAttribute('tabindex', '0');
+
+    const displayTitle = page.topic || page.title || `Trang ${originalIndex + 1}`;
+    const tplName = page.template === 'cornell' ? 'Cornell' : (page.template === 'work' ? 'Work' : 'Normal');
+    const tplClass = `tpl-${page.template || 'ruled'}`;
+    const dateStr = page.date ? ` • ${page.date}` : '';
+
+    item.innerHTML = `
+      <div class="page-nav-item-num">P.${originalIndex + 1}</div>
+      <div class="page-nav-item-body">
+        <div class="page-nav-item-title">${escapeHTML(displayTitle)}</div>
+        <div class="page-nav-item-meta">
+          <span class="page-nav-badge ${tplClass}">${tplName}</span>
+          ${page.status ? `<span class="page-nav-badge">${escapeHTML(page.status)}</span>` : ''}
+          <span>${escapeHTML(dateStr)}</span>
+        </div>
+      </div>
+    `;
+
+    item.addEventListener('click', () => {
+      jumpToPage(originalIndex + 1);
+      closePageDrawer();
+    });
+
+    els.pageDrawerList.appendChild(item);
+  });
 }
 
 export function applyPageMode(mode, persistPreference = true) {
@@ -634,6 +780,7 @@ export function openNotebook(notebookId, targetPageIndex = null, skipUrlUpdate =
 
 export function returnToLibrary(skipUrlUpdate = false) {
   saveActivePages();
+  closePageDrawer();
   const els = getEls();
   els.notebookView.classList.add('hidden');
   els.libraryView.classList.remove('hidden');
@@ -749,6 +896,35 @@ export function setupReaderListeners({ onCopyBookLink } = {}) {
   if (els.readerTemplateSelect) {
     els.readerTemplateSelect.addEventListener('change', (e) => {
       changePageTemplate(e.target.value);
+    });
+  }
+
+  // Paper Tone select
+  if (els.readerToneSelect) {
+    els.readerToneSelect.addEventListener('change', (e) => {
+      applyPaperTone(e.target.value);
+    });
+  }
+
+  // Page Drawer toggles and search
+  if (els.btnTogglePageDrawer) {
+    els.btnTogglePageDrawer.addEventListener('click', togglePageDrawer);
+  }
+  if (els.btnClosePageDrawer) {
+    els.btnClosePageDrawer.addEventListener('click', closePageDrawer);
+  }
+  if (els.pageNavBackdrop) {
+    els.pageNavBackdrop.addEventListener('click', closePageDrawer);
+  }
+  if (els.pageDrawerSearch) {
+    els.pageDrawerSearch.addEventListener('input', (e) => {
+      renderPageDrawerList(e.target.value);
+    });
+  }
+  if (els.btnDrawerAddPage) {
+    els.btnDrawerAddPage.addEventListener('click', () => {
+      addPageToCurrentBook();
+      renderPageDrawerList(els.pageDrawerSearch ? els.pageDrawerSearch.value : '');
     });
   }
 

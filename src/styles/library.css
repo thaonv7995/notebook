@@ -167,6 +167,29 @@
   box-shadow: 0 4px 14px rgba(37, 99, 235, 0.45);
 }
 
+.btn-lib-action {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 6px 12px;
+  color: #94a3b8;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 38px;
+  box-sizing: border-box;
+}
+.btn-lib-action:hover {
+  background: rgba(56, 189, 248, 0.1);
+  border-color: rgba(56, 189, 248, 0.3);
+  color: #38bdf8;
+}
+
 /* Library Grid */
 .lib-main {
   flex: 1;

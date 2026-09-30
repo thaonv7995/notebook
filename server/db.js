@@ -71,6 +71,17 @@ export function createUser(username, passwordHash) {
   return user;
 }
 
+export function updateUserPassword(userId, newPasswordHash) {
+  const user = db.users.find(u => u.id === userId);
+  if (user) {
+    user.password_hash = newPasswordHash;
+    user.updated_at = new Date().toISOString();
+    persist();
+    return true;
+  }
+  return false;
+}
+
 // ─── Notebook Operations ───
 
 export function loadFullState(userId) {
