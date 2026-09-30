@@ -2532,7 +2532,8 @@ mark {
 .template-writing-area p {
   margin: 0 !important;
   padding: 0 !important;
-  line-height: inherit !important;
+  line-height: var(--notebook-line-height, 28px) !important;
+  min-height: var(--notebook-line-height, 28px);
 }
 .template-writing-area:focus {
   background-color: rgba(37, 99, 235, 0.015);
@@ -2544,11 +2545,13 @@ mark {
 }
 
 /* Chinese / Hanzi characters vertical centering in notebook ruled lines:
-   Ideographic characters float centered within the row band,
-   while Latin letters rest naturally on the baseline touching the bottom rule. */
+   Using relative positioning shifts glyphs visually upwards into the middle of the ruled row
+   WITHOUT altering line-box height, completely preventing line drift and preventing ruled lines
+   from cutting through the characters. */
 .hanzi-cjk {
   display: inline;
-  vertical-align: 0.16em;
+  position: relative;
+  top: -2.5px;
 }
 
 /* Rich Text Formatting inside Notebook Template Writing Area */
