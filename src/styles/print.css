@@ -202,24 +202,15 @@
   }
 
   /*
-   * CSS zoom: lays out at original 480×680px (identical to web),
-   * then uniformly scales everything up to fill A4.
-   * Unlike transform:scale, zoom affects LAYOUT — so fonts, backgrounds,
-   * ruled lines, column proportions, paddings ALL scale perfectly.
-   * 210mm ≈ 794px (at 96dpi). 794/480 ≈ 1.655
+   * For Cmd+P direct print: zoom up the 480×680 layout to fill A4.
+   * For JS exporter (printFullNotebook): inline styles override this.
+   * User should set Margins: None in print dialog for best match.
    */
   .book-page-sheet > .a4-template-sheet {
-    zoom: 1.655 !important;
     width: 480px !important;
     height: 680px !important;
+    zoom: 1.655 !important;
     transform: none !important;
-  }
-
-  /* 1-page mode: 660×820 → A4 (794/660 ≈ 1.203) */
-  .book-spread-casing.mode-1-page .book-page-sheet > .a4-template-sheet {
-    zoom: 1.203 !important;
-    width: 660px !important;
-    height: 820px !important;
   }
 
   /* Ensure ruled-line backgrounds render in print */

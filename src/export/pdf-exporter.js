@@ -89,7 +89,16 @@ export function printFullNotebook(includeCover = false) {
 
   document.body.appendChild(printRoot);
   document.body.classList.add('is-printing-all');
+
+  // Apply zoom to each sheet to match web view proportions
+  // The web page is 480×680px. A4 is 210×297mm ≈ 794×1123px at 96dpi.
+  // We set .a4-template-sheet to 480×680 + zoom to fill A4.
+  printRoot.querySelectorAll('.book-page-sheet .a4-template-sheet').forEach(tpl => {
+    tpl.style.cssText += 'width:480px !important; height:680px !important; zoom:1.655 !important; transform:none !important;';
+  });
+
   window.addEventListener('afterprint', cleanup, { once: true });
+  showToast('💡 Để bản in y hệt web: chọn Margins → None', 4000);
   requestAnimationFrame(() => {
     window.print();
     setTimeout(cleanup, 1500);
