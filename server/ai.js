@@ -89,6 +89,7 @@ QUY TẮC CỐT LÕI: KIỂM SOÁT KÍCH THƯỚC TRANG ĐỂ TRÁNH TRÀN TRANG
      "paperTone": "aged",
      "lineHeight": "28"
    }
+`;
 
   if (action === 'grammar') {
     return `${base}
