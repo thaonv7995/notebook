@@ -196,14 +196,35 @@
         <select id="readerTemplateSelect" class="reader-template-select" title="Định dạng bố cục trang sổ">
           <option value="cornell">✨ Cornell</option>
           <option value="work">💼 Work</option>
-          <option value="ruled">📄 Normal</option>
+          <option value="ruled">📄 Kẻ Ngang</option>
+          <option value="vocab">🗣️ Từ Vựng</option>
+          <option value="charting">📊 So Sánh</option>
+          <option value="reading">📖 Đọc Sách</option>
+          <option value="dotgrid">⬡ Chấm Lưới</option>
+          <option value="grid">📐 Ô Vuông</option>
+          <option value="blank">🎨 Tự Do</option>
+          <option value="quadrant">🔲 Eisenhower</option>
         </select>
 
         <!-- Paper Tone Chooser -->
         <select id="readerToneSelect" class="reader-template-select reader-tone-select" title="Tông màu giấy viết">
           <option value="cream">📜 Giấy Kem</option>
           <option value="white">📄 Giấy Trắng</option>
-          <option value="dark">🌙 Dark Paper</option>
+          <option value="ivory">🏛️ Giấy Ngà</option>
+          <option value="aged">📰 Giấy Cũ</option>
+          <option value="mint">🌿 Xanh Bạc Hà</option>
+          <option value="rose">🌸 Hồng Pastel</option>
+          <option value="lavender">💜 Tím Lavender</option>
+        </select>
+
+        <!-- Paper Texture Chooser -->
+        <select id="readerTextureSelect" class="reader-template-select reader-texture-select" title="Vân bề mặt giấy">
+          <option value="grain">🌾 Hạt Sần (Grain)</option>
+          <option value="smooth">✨ Giấy Mịn (Smooth)</option>
+          <option value="kraft">📦 Tái Chế (Kraft)</option>
+          <option value="linen">🧵 Vải Lanh (Linen)</option>
+          <option value="washi">🎋 Giấy Dó (Washi)</option>
+          <option value="vellum">📜 Da Dê Cổ (Vellum)</option>
         </select>
       </div>
 
@@ -691,7 +712,14 @@
         <div class="fs-pill-row fs-template-pill-row">
           <button type="button" class="fs-pill-btn fs-tpl-pill" data-template="cornell">✨ Cornell</button>
           <button type="button" class="fs-pill-btn fs-tpl-pill" data-template="work">💼 Work</button>
-          <button type="button" class="fs-pill-btn fs-tpl-pill" data-template="ruled">📄 Normal</button>
+          <button type="button" class="fs-pill-btn fs-tpl-pill" data-template="ruled">📄 Kẻ Ngang</button>
+          <button type="button" class="fs-pill-btn fs-tpl-pill" data-template="vocab">🗣️ Từ Vựng</button>
+          <button type="button" class="fs-pill-btn fs-tpl-pill" data-template="charting">📊 So Sánh</button>
+          <button type="button" class="fs-pill-btn fs-tpl-pill" data-template="reading">📖 Đọc Sách</button>
+          <button type="button" class="fs-pill-btn fs-tpl-pill" data-template="dotgrid">⬡ Chấm Lưới</button>
+          <button type="button" class="fs-pill-btn fs-tpl-pill" data-template="grid">📐 Ô Vuông</button>
+          <button type="button" class="fs-pill-btn fs-tpl-pill" data-template="blank">🎨 Tự Do</button>
+          <button type="button" class="fs-pill-btn fs-tpl-pill" data-template="quadrant">🔲 Eisenhower</button>
         </div>
 
         <!-- Paper Tone quick options in Fullscreen Drawer -->
@@ -699,7 +727,22 @@
         <div class="fs-pill-row fs-tone-pill-row">
           <button type="button" class="fs-pill-btn fs-tone-pill" data-tone="cream">📜 Giấy Kem</button>
           <button type="button" class="fs-pill-btn fs-tone-pill" data-tone="white">📄 Giấy Trắng</button>
-          <button type="button" class="fs-pill-btn fs-tone-pill" data-tone="dark">🌙 Dark Paper</button>
+          <button type="button" class="fs-pill-btn fs-tone-pill" data-tone="ivory">🏛️ Giấy Ngà</button>
+          <button type="button" class="fs-pill-btn fs-tone-pill" data-tone="aged">📰 Giấy Cũ</button>
+          <button type="button" class="fs-pill-btn fs-tone-pill" data-tone="mint">🌿 Bạc Hà</button>
+          <button type="button" class="fs-pill-btn fs-tone-pill" data-tone="rose">🌸 Hồng</button>
+          <button type="button" class="fs-pill-btn fs-tone-pill" data-tone="lavender">💜 Lavender</button>
+        </div>
+
+        <!-- Paper Texture quick options in Fullscreen Drawer -->
+        <div class="fs-section-label">Vân bề mặt giấy</div>
+        <div class="fs-pill-row fs-texture-pill-row">
+          <button type="button" class="fs-pill-btn fs-texture-pill" data-texture="grain">🌾 Hạt Sần</button>
+          <button type="button" class="fs-pill-btn fs-texture-pill" data-texture="smooth">✨ Mịn</button>
+          <button type="button" class="fs-pill-btn fs-texture-pill" data-texture="kraft">📦 Tái Chế</button>
+          <button type="button" class="fs-pill-btn fs-texture-pill" data-texture="linen">🧵 Vải Lanh</button>
+          <button type="button" class="fs-pill-btn fs-texture-pill" data-texture="washi">🎋 Giấy Dó</button>
+          <button type="button" class="fs-pill-btn fs-texture-pill" data-texture="vellum">📜 Da Dê</button>
         </div>
       </div>
     </div>
@@ -796,9 +839,16 @@
         <div class="form-group">
           <label for="newNotebookTemplate" class="form-label">Mẫu định dạng trang:</label>
           <select id="newNotebookTemplate" class="form-input">
-            <option value="cornell">✨ Cornell</option>
-            <option value="work">💼 Work</option>
-            <option value="ruled">📄 Normal</option>
+            <option value="cornell">✨ Cornell (Ghi chú bài giảng & tổng hợp)</option>
+            <option value="work">💼 Work (Biên bản họp & Action items)</option>
+            <option value="ruled">📄 Kẻ Ngang (Dòng kẻ truyền thống)</option>
+            <option value="vocab">🗣️ Từ Vựng (Học ngoại ngữ 3 cột)</option>
+            <option value="charting">📊 So Sánh (Bảng đối chiếu & phân tích)</option>
+            <option value="reading">📖 Đọc Sách (Ý chính & trích dẫn hay)</option>
+            <option value="dotgrid">⬡ Chấm Lưới (Bullet Journal & phác thảo)</option>
+            <option value="grid">📐 Ô Vuông (Toán học, sơ đồ & kỹ thuật)</option>
+            <option value="blank">🎨 Tự Do (Trang trắng không dòng kẻ)</option>
+            <option value="quadrant">🔲 Eisenhower (Ma trận quản lý ưu tiên)</option>
           </select>
         </div>
 

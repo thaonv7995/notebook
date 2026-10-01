@@ -41,6 +41,7 @@ export function getEls() {
     btnMode2Pages: document.querySelector('#btnMode2Pages'),
     readerTemplateSelect: document.querySelector('#readerTemplateSelect'),
     readerToneSelect: document.querySelector('#readerToneSelect'),
+    readerTextureSelect: document.querySelector('#readerTextureSelect'),
     btnAddPage: document.querySelector('#btnAddPage'),
     btnToggleFormatToolbar: document.querySelector('#btnToggleFormatToolbar'),
     btnToggleFullscreen: document.querySelector('#btnToggleFullscreen'),

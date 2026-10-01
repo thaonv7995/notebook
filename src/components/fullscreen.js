@@ -101,6 +101,11 @@ export function updateFullscreenRailControls() {
   document.querySelectorAll('.fs-tone-pill').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.tone === curTone);
   });
+
+  const curTexture = state.paperTexture || 'grain';
+  document.querySelectorAll('.fs-texture-pill').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.texture === curTexture);
+  });
 }
 
 export function updateFullscreenUI(isFs) {
@@ -212,6 +217,7 @@ export function setupFullscreenListeners({
   onPageModeChange,
   onChangeTemplate,
   onChangeTone,
+  onChangeTexture,
   onTogglePageDrawer,
   onZoomIn,
   onZoomOut,
@@ -293,6 +299,12 @@ export function setupFullscreenListeners({
   document.querySelectorAll('.fs-tone-pill').forEach(btn => {
     btn.addEventListener('click', () => {
       if (onChangeTone) onChangeTone(btn.dataset.tone);
+    });
+  });
+
+  document.querySelectorAll('.fs-texture-pill').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (onChangeTexture) onChangeTexture(btn.dataset.texture);
     });
   });
 

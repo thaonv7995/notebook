@@ -119,5 +119,20 @@ export function getMatchingSelector(editable) {
   if (editable.classList.contains('cornell-summary-text')) return '.cornell-summary-text';
   if (editable.classList.contains('work-notes-text')) return '.work-notes-text';
   if (editable.classList.contains('work-agenda-text')) return '.work-agenda-text';
+  if (editable.classList.contains('vocab-word-text')) return '.vocab-word-text';
+  if (editable.classList.contains('vocab-meaning-text')) return '.vocab-meaning-text';
+  if (editable.classList.contains('vocab-example-text')) return '.vocab-example-text';
+  if (editable.classList.contains('vocab-review-text')) return '.vocab-review-text';
+  if (editable.classList.contains('charting-col1-text')) return '.charting-col1-text';
+  if (editable.classList.contains('charting-col2-text')) return '.charting-col2-text';
+  if (editable.classList.contains('charting-col3-text')) return '.charting-col3-text';
+  if (editable.classList.contains('charting-notes-text')) return '.charting-notes-text';
+  if (editable.classList.contains('reading-ideas-text')) return '.reading-ideas-text';
+  if (editable.classList.contains('reading-quotes-text')) return '.reading-quotes-text';
+  if (editable.classList.contains('reading-summary-text')) return '.reading-summary-text';
+  if (editable.classList.contains('quadrant-q1-text')) return '.quadrant-q1-text';
+  if (editable.classList.contains('quadrant-q2-text')) return '.quadrant-q2-text';
+  if (editable.classList.contains('quadrant-q3-text')) return '.quadrant-q3-text';
+  if (editable.classList.contains('quadrant-q4-text')) return '.quadrant-q4-text';
   return '.template-writing-area';
 }

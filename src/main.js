@@ -32,6 +32,7 @@ import {
   changePageTemplate,
   applyPageMode,
   applyPaperTone,
+  applyPaperTexture,
   togglePageDrawer,
   closePageDrawer,
   zoomIn,
@@ -248,7 +249,9 @@ function showLoginScreen() {
 
 function hideLoginScreen() {
   const loginView = document.getElementById('loginView');
+  const libraryView = document.getElementById('libraryView');
   if (loginView) loginView.classList.add('hidden');
+  if (libraryView) libraryView.classList.remove('hidden');
 }
 
 function setupLoginForm() {
@@ -353,6 +356,7 @@ async function init() {
     onPageModeChange: (m) => applyPageMode(m),
     onChangeTemplate: (t) => changePageTemplate(t),
     onChangeTone: (tone) => applyPaperTone(tone),
+    onChangeTexture: (texture) => applyPaperTexture(texture),
     onTogglePageDrawer: () => togglePageDrawer(),
     onZoomIn: () => zoomIn(),
     onZoomOut: () => zoomOut(),
@@ -376,6 +380,7 @@ async function init() {
   applyFontFamily(state.fontFamily || 'sans');
   applyLineHeight(state.lineHeight || '28');
   applyPaperTone(state.paperTone || 'cream', false);
+  applyPaperTexture(state.paperTexture || 'grain', false);
   applyToolbarCollapse(Boolean(state.toolbarCollapsed), false);
 
   // ─── Auth check on boot ───

@@ -40,8 +40,10 @@ export function normalizeState(rawState) {
   state.fontFamily = typeof state.fontFamily === 'string' && state.fontFamily ? state.fontFamily : 'sans';
   const validLineHeights = ['24', '28', '32', '36', '42', 'none'];
   state.lineHeight = validLineHeights.includes(String(state.lineHeight)) ? String(state.lineHeight) : '28';
-  const validPaperTones = ['cream', 'white', 'dark'];
+  const validPaperTones = ['cream', 'white', 'ivory', 'aged', 'mint', 'rose', 'lavender'];
   state.paperTone = validPaperTones.includes(String(state.paperTone)) ? String(state.paperTone) : 'cream';
+  const validPaperTextures = ['grain', 'smooth', 'kraft', 'linen', 'washi', 'vellum'];
+  state.paperTexture = validPaperTextures.includes(String(state.paperTexture)) ? String(state.paperTexture) : 'grain';
 
   const notebookIds = new Set();
   const pageIds = new Set();
@@ -96,8 +98,9 @@ export function normalizeState(rawState) {
         : createUniqueId('p', pageIds);
       pageIds.add(page.id);
       if (page.template === 'book') page.template = 'ruled';
-      if (!['cornell', 'work', 'ruled'].includes(page.template)) page.template = 'ruled';
-      ['title', 'topic', 'project', 'date', 'no', 'deadline', 'status', 'lang', 'cues', 'notes', 'summary', 'agenda', 'discussions', 'content']
+      if (!['cornell', 'work', 'ruled', 'vocab', 'charting', 'reading', 'dotgrid', 'grid', 'blank', 'quadrant'].includes(page.template)) page.template = 'ruled';
+      ['title', 'topic', 'project', 'date', 'no', 'deadline', 'status', 'lang', 'cues', 'notes', 'summary', 'agenda', 'discussions', 'content',
+       'vocabWord', 'vocabMeaning', 'vocabExample', 'vocabReview']
         .forEach(key => {
           if (page[key] != null && typeof page[key] !== 'string') page[key] = String(page[key]);
         });
@@ -106,6 +109,19 @@ export function normalizeState(rawState) {
           checked: Boolean(action && action.checked),
           text: String((action && action.text) || '')
         })) : [];
+      }
+      // Normalize quadrant data
+      if (page.quadrants != null) {
+        if (typeof page.quadrants === 'object' && !Array.isArray(page.quadrants)) {
+          page.quadrants = {
+            q1: String(page.quadrants.q1 || ''),
+            q2: String(page.quadrants.q2 || ''),
+            q3: String(page.quadrants.q3 || ''),
+            q4: String(page.quadrants.q4 || '')
+          };
+        } else {
+          page.quadrants = { q1: '', q2: '', q3: '', q4: '' };
+        }
       }
       if (page.textBoxes) delete page.textBoxes;
     });
@@ -276,6 +292,61 @@ export function extractTemplateDataFromSheet(sheetEl, page) {
   } else if (template === 'ruled') {
     const ruledText = sheetEl.querySelector('.ruled-canvas-text');
     if (ruledText) page.content = getEditableContent(ruledText);
+  } else if (template === 'vocab') {
+    const wordText = sheetEl.querySelector('.vocab-word-text');
+    const meaningText = sheetEl.querySelector('.vocab-meaning-text');
+    const exampleText = sheetEl.querySelector('.vocab-example-text');
+    const reviewText = sheetEl.querySelector('.vocab-review-text');
+    if (wordText) page.vocabWord = getEditableContent(wordText);
+    if (meaningText) page.vocabMeaning = getEditableContent(meaningText);
+    if (exampleText) {
+      page.vocabExample = getEditableContent(exampleText);
+      page.content = getEditableContent(exampleText);
+    }
+    if (reviewText) page.vocabReview = getEditableContent(reviewText);
+  } else if (template === 'charting') {
+    const col1 = sheetEl.querySelector('.charting-col1-text');
+    const col2 = sheetEl.querySelector('.charting-col2-text');
+    const col3 = sheetEl.querySelector('.charting-col3-text');
+    const notesText = sheetEl.querySelector('.charting-notes-text');
+    if (!page.chartData) page.chartData = { col1: '', col2: '', col3: '' };
+    if (col1) page.chartData.col1 = getEditableContent(col1);
+    if (col2) page.chartData.col2 = getEditableContent(col2);
+    if (col3) page.chartData.col3 = getEditableContent(col3);
+    if (notesText) {
+      page.summary = getEditableContent(notesText);
+      page.content = getEditableContent(notesText);
+    }
+  } else if (template === 'reading') {
+    const ideasText = sheetEl.querySelector('.reading-ideas-text');
+    const quotesText = sheetEl.querySelector('.reading-quotes-text');
+    const summaryText = sheetEl.querySelector('.reading-summary-text');
+    if (ideasText) page.cues = getEditableContent(ideasText);
+    if (quotesText) {
+      page.notes = getEditableContent(quotesText);
+      page.content = getEditableContent(quotesText);
+    }
+    if (summaryText) page.summary = getEditableContent(summaryText);
+  } else if (template === 'dotgrid') {
+    const dotText = sheetEl.querySelector('.dotgrid-canvas-text');
+    if (dotText) page.content = getEditableContent(dotText);
+  } else if (template === 'grid') {
+    const gridText = sheetEl.querySelector('.grid-canvas-text');
+    if (gridText) page.content = getEditableContent(gridText);
+  } else if (template === 'blank') {
+    const blankText = sheetEl.querySelector('.blank-canvas-text');
+    if (blankText) page.content = getEditableContent(blankText);
+  } else if (template === 'quadrant') {
+    const q1 = sheetEl.querySelector('.quadrant-q1-text');
+    const q2 = sheetEl.querySelector('.quadrant-q2-text');
+    const q3 = sheetEl.querySelector('.quadrant-q3-text');
+    const q4 = sheetEl.querySelector('.quadrant-q4-text');
+    if (!page.quadrants) page.quadrants = { q1: '', q2: '', q3: '', q4: '' };
+    if (q1) page.quadrants.q1 = getEditableContent(q1);
+    if (q2) page.quadrants.q2 = getEditableContent(q2);
+    if (q3) page.quadrants.q3 = getEditableContent(q3);
+    if (q4) page.quadrants.q4 = getEditableContent(q4);
+    page.content = [page.quadrants.q1, page.quadrants.q2, page.quadrants.q3, page.quadrants.q4].filter(Boolean).join('\n');
   }
 }
 

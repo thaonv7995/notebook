@@ -676,7 +676,7 @@
 }
 
 /* ========================================================
-   PAPER TONES (Cream Vintage / Clean White / Dark Paper)
+   PAPER TONES (Cream / White / Ivory / Aged / Mint / Rose / Lavender)
    ======================================================== */
 [data-paper-tone="cream"] {
   --paper-bg: #faf7f0;
@@ -714,62 +714,179 @@
   );
 }
 
-[data-paper-tone="dark"] {
-  --paper-bg: #151922;
-  --paper-cream: #151922;
-  --paper-border: #232b3b;
-  --ink-primary: #e2e8f0;
-  --ink-muted: #94a3b8;
-  --text-editor: #e2e8f0;
-  --text-heading: #f8fafc;
-  --rule-main: #2d3748;
-  --rule-accent: #64748b;
-  --punch-border: #2d3748;
-  --notebook-line-color: #263143;
+[data-paper-tone="ivory"] {
+  --paper-bg: #fdf8ef;
+  --paper-cream: #fdf8ef;
+  --ink-primary: #2c1810;
+  --ink-muted: #6b5745;
+  --rule-main: #e0d5c0;
+  --rule-accent: #3d2e1e;
+  --punch-border: #e0d5c0;
+  --notebook-line-color: #e8dcc8;
   --notebook-lines-display: repeating-linear-gradient(
     to bottom,
     transparent 0,
     transparent calc(var(--notebook-line-height, 28px) - 1px),
-    #263143 calc(var(--notebook-line-height, 28px) - 1px),
-    #263143 var(--notebook-line-height, 28px)
+    #e8dcc8 calc(var(--notebook-line-height, 28px) - 1px),
+    #e8dcc8 var(--notebook-line-height, 28px)
   );
 }
 
-[data-paper-tone="dark"] .a4-template-sheet,
-[data-paper-tone="dark"] .index-notch,
-[data-paper-tone="dark"] .signature-seal-cartouche,
-[data-paper-tone="dark"] .section-guide-badge,
-[data-paper-tone="dark"] .status-pill-btn,
-[data-paper-tone="dark"] .work-block-item-content,
-[data-paper-tone="dark"] .field-input,
-[data-paper-tone="dark"] .cues-field,
-[data-paper-tone="dark"] .summary-field,
-[data-paper-tone="dark"] .work-editor-cell,
-[data-paper-tone="dark"] .agenda-field,
-[data-paper-tone="dark"] .discussion-field {
-  background-color: var(--paper-bg) !important;
-  color: var(--ink-primary);
+[data-paper-tone="aged"] {
+  --paper-bg: #f0e6d2;
+  --paper-cream: #f0e6d2;
+  --ink-primary: #3b2415;
+  --ink-muted: #7a6048;
+  --rule-main: #c9b898;
+  --rule-accent: #5a4332;
+  --punch-border: #c9b898;
+  --notebook-line-color: #d4c4a8;
+  --notebook-lines-display: repeating-linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent calc(var(--notebook-line-height, 28px) - 1px),
+    #d4c4a8 calc(var(--notebook-line-height, 28px) - 1px),
+    #d4c4a8 var(--notebook-line-height, 28px)
+  );
 }
 
-[data-paper-tone="dark"] .content-corner-frame {
-  opacity: 0.3;
+[data-paper-tone="mint"] {
+  --paper-bg: #f0faf5;
+  --paper-cream: #f0faf5;
+  --ink-primary: #134e33;
+  --ink-muted: #4a7c63;
+  --rule-main: #b5dcc8;
+  --rule-accent: #1a6b45;
+  --punch-border: #b5dcc8;
+  --notebook-line-color: #c4e5d5;
+  --notebook-lines-display: repeating-linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent calc(var(--notebook-line-height, 28px) - 1px),
+    #c4e5d5 calc(var(--notebook-line-height, 28px) - 1px),
+    #c4e5d5 var(--notebook-line-height, 28px)
+  );
 }
 
-[data-paper-tone="dark"] .field-input,
-[data-paper-tone="dark"] .date-field-input,
-[data-paper-tone="dark"] .no-field-input,
-[data-paper-tone="dark"] .status-badge-input {
-  color: var(--ink-primary);
+[data-paper-tone="rose"] {
+  --paper-bg: #fdf2f4;
+  --paper-cream: #fdf2f4;
+  --ink-primary: #4a1525;
+  --ink-muted: #8b5066;
+  --rule-main: #e8c5ce;
+  --rule-accent: #6b2540;
+  --punch-border: #e8c5ce;
+  --notebook-line-color: #f0d3db;
+  --notebook-lines-display: repeating-linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent calc(var(--notebook-line-height, 28px) - 1px),
+    #f0d3db calc(var(--notebook-line-height, 28px) - 1px),
+    #f0d3db var(--notebook-line-height, 28px)
+  );
 }
 
-[data-paper-tone="dark"] .btn-add-right-page {
-  background: #1e2430;
-  color: #e2e8f0;
-  border-color: #3b4252;
+[data-paper-tone="lavender"] {
+  --paper-bg: #f5f0fa;
+  --paper-cream: #f5f0fa;
+  --ink-primary: #2d1b4e;
+  --ink-muted: #6b5585;
+  --rule-main: #d1c4e3;
+  --rule-accent: #4a2d6e;
+  --punch-border: #d1c4e3;
+  --notebook-line-color: #ddd0ec;
+  --notebook-lines-display: repeating-linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent calc(var(--notebook-line-height, 28px) - 1px),
+    #ddd0ec calc(var(--notebook-line-height, 28px) - 1px),
+    #ddd0ec var(--notebook-line-height, 28px)
+  );
 }
-[data-paper-tone="dark"] .empty-right-page {
-  background: #11141c;
+
+/* Aged paper has a subtle vintage gradient */
+[data-paper-tone="aged"] .a4-template-sheet {
+  background-image:
+    radial-gradient(ellipse at 20% 50%, rgba(160, 120, 60, 0.04) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 20%, rgba(140, 100, 40, 0.03) 0%, transparent 40%),
+    radial-gradient(ellipse at 50% 80%, rgba(120, 90, 50, 0.02) 0%, transparent 60%);
 }
+
+/* ========================================================
+   AUTHENTIC PHYSICAL PAPER TEXTURES (VÂN BỀ MẶT GIẤY)
+   Grain, Smooth, Kraft, Linen, Washi, Vellum
+   ======================================================== */
+.a4-template-sheet::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 25;
+  transition: opacity 0.25s ease;
+  mix-blend-mode: multiply;
+  opacity: 0;
+}
+
+/* 1. Fine Natural Paper Grain (Hạt sần tự nhiên) */
+[data-paper-texture="grain"] .a4-template-sheet::after {
+  opacity: 0.38;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 0.35 0 0 0 0 0.3 0 0 0 0 0.25 0 0 0 0.16 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+}
+
+/* 2. Ultra-Smooth Matte (Giấy mịn hiện đại) */
+[data-paper-texture="smooth"] .a4-template-sheet::after {
+  opacity: 0;
+}
+
+/* 3. Eco Kraft Flecked Fibers (Giấy tái chế mộc có dăm xơ sợi) */
+[data-paper-texture="kraft"] .a4-template-sheet::after {
+  opacity: 0.55;
+  background-image:
+    radial-gradient(circle at 18% 24%, rgba(90, 58, 22, 0.22) 0.8px, transparent 1.6px),
+    radial-gradient(circle at 72% 65%, rgba(100, 65, 25, 0.18) 1px, transparent 1.8px),
+    radial-gradient(circle at 43% 85%, rgba(80, 50, 20, 0.25) 0.9px, transparent 1.5px),
+    radial-gradient(circle at 88% 15%, rgba(110, 75, 30, 0.18) 1.2px, transparent 2px),
+    radial-gradient(circle at 35% 42%, rgba(95, 60, 25, 0.2) 0.8px, transparent 1.6px),
+    radial-gradient(circle at 62% 38%, rgba(85, 55, 20, 0.16) 1.1px, transparent 1.7px),
+    url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='kraftNoise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.7' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 0.45 0 0 0 0 0.35 0 0 0 0 0.2 0 0 0 0.2 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23kraftNoise)'/%3E%3C/svg%3E");
+  background-size: 110px 110px, 140px 140px, 125px 125px, 160px 160px, 135px 135px, 150px 150px, 200px 200px;
+}
+
+/* 4. Fine Woven Linen (Vải lanh dệt chéo cao cấp) */
+[data-paper-texture="linen"] .a4-template-sheet::after {
+  opacity: 0.42;
+  background-image:
+    repeating-linear-gradient(0deg, rgba(80, 65, 50, 0.09) 0px, rgba(80, 65, 50, 0.09) 1px, transparent 1px, transparent 4px),
+    repeating-linear-gradient(90deg, rgba(80, 65, 50, 0.09) 0px, rgba(80, 65, 50, 0.09) 1px, transparent 1px, transparent 4px),
+    url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='linenNoise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 0.3 0 0 0 0 0.25 0 0 0 0 0.2 0 0 0 0.08 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23linenNoise)'/%3E%3C/svg%3E");
+  background-size: 4px 4px, 4px 4px, 200px 200px;
+}
+
+/* 5. Japanese Washi Fiber (Sợi dó Washi thủ công Á Đông) */
+[data-paper-texture="washi"] .a4-template-sheet::after {
+  opacity: 0.45;
+  background-image:
+    linear-gradient(135deg, rgba(140, 115, 80, 0.06) 12%, transparent 12%, transparent 88%, rgba(140, 115, 80, 0.06) 88%),
+    linear-gradient(45deg, rgba(140, 115, 80, 0.05) 15%, transparent 15%, transparent 85%, rgba(140, 115, 80, 0.05) 85%),
+    radial-gradient(ellipse at 25% 45%, rgba(130, 100, 60, 0.06) 0%, transparent 65%),
+    radial-gradient(ellipse at 75% 70%, rgba(120, 95, 55, 0.05) 0%, transparent 60%),
+    url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='washiNoise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.6' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 0.35 0 0 0 0 0.3 0 0 0 0 0.22 0 0 0 0.12 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23washiNoise)'/%3E%3C/svg%3E");
+  background-size: 180px 180px, 220px 220px, 100% 100%, 100% 100%, 200px 200px;
+}
+
+/* 6. Antique Vellum / Parchment (Da dê cổ điển loang màu thời gian) */
+[data-paper-texture="vellum"] .a4-template-sheet::after {
+  opacity: 0.52;
+  background-image:
+    radial-gradient(ellipse at 20% 30%, rgba(150, 110, 50, 0.09) 0%, transparent 55%),
+    radial-gradient(ellipse at 80% 70%, rgba(135, 95, 45, 0.08) 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 85%, rgba(160, 120, 60, 0.07) 0%, transparent 60%),
+    radial-gradient(ellipse at 85% 15%, rgba(145, 105, 50, 0.08) 0%, transparent 45%),
+    radial-gradient(ellipse at 15% 80%, rgba(140, 100, 45, 0.08) 0%, transparent 50%),
+    url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='vellumNoise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.7' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 0.4 0 0 0 0 0.3 0 0 0 0 0.18 0 0 0 0.15 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23vellumNoise)'/%3E%3C/svg%3E");
+  background-size: 100% 100%, 100% 100%, 100% 100%, 100% 100%, 100% 100%, 200px 200px;
+}
+
 
 /* ========================================================
    PAGE NAVIGATION DRAWER (MỤC LỤC TRANG)
@@ -953,6 +1070,13 @@
 .page-nav-badge.tpl-cornell { background: rgba(168, 85, 247, 0.2); color: #c084fc; }
 .page-nav-badge.tpl-work { background: rgba(59, 130, 246, 0.2); color: #60a5fa; }
 .page-nav-badge.tpl-ruled { background: rgba(16, 185, 129, 0.2); color: #34d399; }
+.page-nav-badge.tpl-vocab { background: rgba(236, 72, 153, 0.2); color: #f472b6; }
+.page-nav-badge.tpl-charting { background: rgba(14, 165, 233, 0.2); color: #38bdf8; }
+.page-nav-badge.tpl-reading { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
+.page-nav-badge.tpl-quadrant { background: rgba(239, 68, 68, 0.2); color: #f87171; }
+.page-nav-badge.tpl-dotgrid { background: rgba(99, 102, 241, 0.2); color: #818cf8; }
+.page-nav-badge.tpl-grid { background: rgba(20, 184, 166, 0.2); color: #2dd4bf; }
+.page-nav-badge.tpl-blank { background: rgba(148, 163, 184, 0.2); color: #cbd5e1; }
 
 .page-nav-empty {
   text-align: center;

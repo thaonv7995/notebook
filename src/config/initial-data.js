@@ -130,6 +130,92 @@ export const INITIAL_LIBRARY_DATA = {
       ]
     },
     {
+      id: 'nb-vocab-lang',
+      title: 'Vocabulary Lab • Ngoại Ngữ',
+      author: 'Notebook Studio',
+      category: 'Ngoại ngữ',
+      lang: 'EN · JP · VI',
+      coverGradient: 'linear-gradient(135deg, #ec4899 0%, #be185d 100%)',
+      coverTextColor: '#ffffff',
+      pages: [
+        {
+          id: 'p-vocab-1',
+          lang: 'EN',
+          title: 'ADVANCED TECH & PRODUCT VOCABULARY',
+          topic: 'Business & Tech Idioms & Terminology',
+          date: '01/10/2026',
+          no: '01',
+          template: 'vocab',
+          vocabWord: '1. Resilient /rɪˈzɪl.jənt/ (adj)\n2. Pivot /ˈpɪv.ət/ (v, n)\n3. Benchmark /ˈbentʃ.mɑːk/ (n, v)\n4. Frictionless /ˈfrɪk.ʃən.ləs/ (adj)\n5. Serendipity /ˌser.ənˈdɪp.ə.ti/ (n)',
+          vocabMeaning: '1. Kiên cường, mau hồi phục sau sự cố\n2. Chuyển hướng chiến lược linh hoạt\n3. Tiêu chuẩn đánh giá, mốc so chuẩn\n4. Mượt mà, không gặp trở ngại\n5. Sự tình cờ may mắn, duyên kỳ ngộ',
+          vocabExample: '1. The distributed cluster proved resilient under peak holiday traffic.\n2. The startup decided to pivot from B2C to enterprise SaaS.\n3. We used international latency standards as our performance benchmark.\n4. Crafting a frictionless onboarding journey is key to user retention.\n5. Discovering this notebook tool was pure serendipity.',
+          vocabReview: '• Ôn tập kỹ các collocation: "remain resilient under pressure", "pivot business model", "benchmark against competitors".\n• Lặp lại theo phương pháp Spaced Repetition (sau 1 ngày, 3 ngày, 7 ngày).'
+        },
+        {
+          id: 'p-vocab-2',
+          lang: 'JP',
+          title: 'KANJI & BUSINESS JAPANESE',
+          topic: 'N2 Kanji & Keigo Văn Phòng',
+          date: '02/10/2026',
+          no: '02',
+          template: 'vocab',
+          vocabWord: '1. 改善 (かいぜん - Kaizen)\n2. 恐縮 (きょうしゅく - Kyōshuku)\n3. 迅速 (じんそく - Jinsoku)\n4. 把握 (はあく - Haaku)\n5. 承知 (しょうち - Shōchi)',
+          vocabMeaning: '1. Cải tiến liên tục quy trình làm việc\n2. Áy náy, biết ơn (dùng trong kính ngữ)\n3. Nhanh chóng, mau lẹ, tốc độ cao\n4. Nắm bắt tường tận, thấu hiểu\n5. Tiếp nhận, hiểu rõ (Shouchi shimashita)',
+          vocabExample: '1. 業務の無駄を省き、日々改善を重ねる。\n2. お忙しいところ大変恐縮でございます。\n3. お問い合わせには迅速に対応いたします。\n4. プロジェクトの進捗状況を正確に把握する。\n5. ご指示の件、かしこまりました。承知いたしました。',
+          vocabReview: '• Chú ý chữ Hán 改善 và 恐縮 thường dùng trong email giao tiếp đối tác Nhật Bản.\n• Luyện viết đúng thứ tự nét chữ Hán trên giấy ngà.'
+        }
+      ]
+    },
+    {
+      id: 'nb-eisenhower-planner',
+      title: 'Eisenhower Priority • Kế Hoạch Tuần',
+      author: 'Notebook Studio',
+      category: 'Kế hoạch',
+      lang: 'VI · EN',
+      coverGradient: 'linear-gradient(135deg, #e11d48 0%, #9f1239 100%)',
+      coverTextColor: '#ffffff',
+      pages: [
+        {
+          id: 'p-eisen-1',
+          lang: 'VI',
+          title: 'KẾ HOẠCH TUẦN CHIẾN LƯỢC',
+          topic: 'Quản trị thời gian & Ma trận Eisenhower',
+          date: '01/10/2026',
+          no: '01',
+          template: 'quadrant',
+          quadrants: {
+            q1: '• Xử lý issue server load cao trước 14:00\n• Nộp báo cáo tài chính quý 3 cho ban giám đốc\n• Vá lỗi bảo mật database theo cảnh báo\n• Phê duyệt bản phát hành v5 cho khách hàng',
+            q2: '• Thiết kế kiến trúc module đồng bộ dữ liệu đám mây\n• Học chuyên sâu khóa học System Design & AI Agents\n• Tập luyện thể thao chạy bộ 5km mỗi sáng\n• Lên kế hoạch roadmap sản phẩm 6 tháng tiếp theo',
+            q3: '• Trả lời các email khảo sát thông thường\n• Tham gia cuộc họp cập nhật trạng thái chung\n• Hỗ trợ tài liệu văn phòng định kỳ\n• Uỷ quyền phân bổ thiết bị cho trợ lý nhóm',
+            q4: '• Lướt mạng xã hội không mục đích\n• Tinh chỉnh giao diện không cần thiết\n• Xem các video giải trí trong giờ làm việc\n• Tham gia tranh luận không mang lại giá trị'
+          }
+        }
+      ]
+    },
+    {
+      id: 'nb-reading-journal',
+      title: 'Reading Journal • Sổ Tay Sách Hay',
+      author: 'Notebook Studio',
+      category: 'Đọc sách',
+      lang: 'VI · EN',
+      coverGradient: 'linear-gradient(135deg, #d97706 0%, #92400e 100%)',
+      coverTextColor: '#ffffff',
+      pages: [
+        {
+          id: 'p-reading-1',
+          lang: 'VI',
+          title: 'ATOMIC HABITS — JAMES CLEAR',
+          topic: 'Atomic Habits • Thay Đổi Tí Hon Hiệu Quả Bất Ngờ',
+          date: '01/10/2026',
+          no: '01',
+          template: 'reading',
+          cues: '• Nguyên lý 1% mỗi ngày (Compound Effect)\n• Chu trình thói quen 4 bước: Gợi ý -> Khao khát -> Phản hồi -> Phần thưởng\n• Thói quen dựa trên bản sắc (Identity-based habits)\n• Quy tắc 2 phút để bắt đầu thói quen mới\n• Thiết kế môi trường sống hỗ trợ mục tiêu',
+          notes: '"You do not rise to the level of your goals. You fall to the level of your systems."\n\n"Every action you take is a vote for the type of person you wish to become."\n\n"Be the designer of your world and not merely the consumer of it."',
+          summary: 'Thành công không đến từ những cú nhảy vọt ngoạn mục một sớm một chiều, mà tích lũy từ những thói quen vi mô được lặp đi lặp lại bền bỉ. Muốn thay đổi kết quả, hãy xây dựng một hệ thống tốt thay vì chỉ mải mê nhìn vào mục tiêu.'
+        }
+      ]
+    },
+    {
       id: 'nb-freeform-notes',
       title: 'Sổ Ghi Chú Tự Do • Freeform Notes',
       author: 'Thao NV',

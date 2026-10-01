@@ -14,6 +14,25 @@ import { wrapHanziInElement } from '../editor/hanzi-aligner.js';
 import { showStatus, showToast, openDeleteNotebookModal, showPromptModal, showConfirmModal, showAlertModal } from './modal.js';
 import { renderLibraryGrid, deleteBook } from './library.js';
 
+/**
+ * Maps template key to the CSS selector of its main writing area
+ */
+function getMainTextSelector(template) {
+  const map = {
+    cornell: '.cornell-notes-text',
+    work: '.work-notes-text',
+    ruled: '.ruled-canvas-text',
+    dotgrid: '.dotgrid-canvas-text',
+    grid: '.grid-canvas-text',
+    blank: '.blank-canvas-text',
+    quadrant: '.quadrant-q1-text',
+    vocab: '.vocab-word-text',
+    charting: '.charting-col1-text',
+    reading: '.reading-ideas-text'
+  };
+  return map[template] || '.ruled-canvas-text';
+}
+
 let currentPageMode = '2-page';
 let focusedPageSide = 'left';
 let isTurningPage = false;
@@ -246,6 +265,7 @@ export function renderBookPages() {
   applyFontSize(state.fontSize || 16);
   applyLineHeight((nb && nb.lineHeight) || state.lineHeight || '28');
   applyPaperTone(state.paperTone || 'cream', false);
+  applyPaperTexture(state.paperTexture || 'grain', false);
 
   // Render Left Page Sheet
   renderSheetContent(els.leftPageSheet, leftPage, curIdx + 1, true, attachTemplateInputListeners);
@@ -261,9 +281,7 @@ export function renderBookPages() {
         nb.updatedAt = newPage.updatedAt;
         persistState();
         renderBookPages();
-        const selector = newPage.template === 'cornell'
-          ? '.cornell-notes-text'
-          : newPage.template === 'work' ? '.work-notes-text' : '.ruled-canvas-text';
+        const selector = getMainTextSelector(newPage.template);
         placeCaretAtStart(els.rightPageSheet.querySelector(selector));
       });
     }
@@ -287,7 +305,7 @@ function escapeHTML(str) {
 
 export function applyPaperTone(tone, persistPreference = true) {
   const els = getEls();
-  const validTones = ['cream', 'white', 'dark'];
+  const validTones = ['cream', 'white', 'ivory', 'aged', 'mint', 'rose', 'lavender'];
   const safeTone = validTones.includes(tone) ? tone : 'cream';
   if (persistPreference) setState({ paperTone: safeTone });
   if (els.notebookView) {
@@ -301,6 +319,26 @@ export function applyPaperTone(tone, persistPreference = true) {
   }
   document.querySelectorAll('.fs-tone-pill').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.tone === safeTone);
+  });
+  if (persistPreference) persistState();
+}
+
+export function applyPaperTexture(texture, persistPreference = true) {
+  const els = getEls();
+  const validTextures = ['grain', 'smooth', 'kraft', 'linen', 'washi', 'vellum'];
+  const safeTexture = validTextures.includes(texture) ? texture : 'grain';
+  if (persistPreference) setState({ paperTexture: safeTexture });
+  if (els.notebookView) {
+    els.notebookView.setAttribute('data-paper-texture', safeTexture);
+  }
+  if (els.bookSpreadCasing) {
+    els.bookSpreadCasing.setAttribute('data-paper-texture', safeTexture);
+  }
+  if (els.readerTextureSelect) {
+    els.readerTextureSelect.value = safeTexture;
+  }
+  document.querySelectorAll('.fs-texture-pill').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.texture === safeTexture);
   });
   if (persistPreference) persistState();
 }
@@ -391,7 +429,19 @@ export function renderPageDrawerList(filter = '') {
     item.setAttribute('tabindex', '0');
 
     const displayTitle = page.topic || page.title || `Trang ${originalIndex + 1}`;
-    const tplName = page.template === 'cornell' ? 'Cornell' : (page.template === 'work' ? 'Work' : 'Normal');
+    const templateNames = {
+      cornell: 'Cornell',
+      work: 'Work',
+      ruled: 'Kẻ Ngang',
+      vocab: 'Từ Vựng',
+      charting: 'So Sánh',
+      reading: 'Đọc Sách',
+      dotgrid: 'Chấm Lưới',
+      grid: 'Ô Vuông',
+      blank: 'Tự Do',
+      quadrant: 'Eisenhower'
+    };
+    const tplName = templateNames[page.template] || 'Cornell';
     const tplClass = `tpl-${page.template || 'ruled'}`;
     const dateStr = page.date ? ` • ${page.date}` : '';
 
@@ -612,6 +662,21 @@ export function changePageTemplate(templateKey) {
   } else if (oldTemplate === 'work') {
     latestBody = curPage.discussions || curPage.content || '';
     latestSide = curPage.agenda || '';
+  } else if (oldTemplate === 'vocab') {
+    latestBody = curPage.vocabExample || curPage.content || '';
+    latestSide = curPage.vocabWord || '';
+    latestSummary = curPage.vocabReview || '';
+  } else if (oldTemplate === 'charting') {
+    latestBody = (curPage.chartData && curPage.chartData.col1) || curPage.content || '';
+    latestSide = (curPage.chartData && curPage.chartData.col2) || '';
+    latestSummary = curPage.summary || '';
+  } else if (oldTemplate === 'reading') {
+    latestBody = curPage.notes || curPage.content || '';
+    latestSide = curPage.cues || '';
+    latestSummary = curPage.summary || '';
+  } else if (oldTemplate === 'quadrant') {
+    latestBody = (curPage.quadrants && curPage.quadrants.q1) || curPage.content || '';
+    latestSide = (curPage.quadrants && curPage.quadrants.q2) || '';
   } else {
     latestBody = curPage.content || '';
   }
@@ -632,9 +697,33 @@ export function changePageTemplate(templateKey) {
       { checked: false, text: '' },
       { checked: false, text: '' }
     ];
+  } else if (templateKey === 'vocab') {
+    curPage.vocabWord = curPage.vocabWord || latestSide || '';
+    curPage.vocabMeaning = curPage.vocabMeaning || '';
+    curPage.vocabExample = latestBody;
+    curPage.vocabReview = curPage.vocabReview || latestSummary || '';
+    curPage.content = latestBody;
+  } else if (templateKey === 'charting') {
+    if (!curPage.chartData) curPage.chartData = { col1: '', col2: '', col3: '' };
+    curPage.chartData.col1 = curPage.chartData.col1 || latestBody;
+    curPage.chartData.col2 = curPage.chartData.col2 || latestSide;
+    curPage.summary = curPage.summary || latestSummary || '';
+    curPage.content = latestBody;
+  } else if (templateKey === 'reading') {
+    curPage.cues = curPage.cues || latestSide || '';
+    curPage.notes = latestBody;
+    curPage.summary = curPage.summary || latestSummary || '';
+    curPage.content = latestBody;
+  } else if (templateKey === 'quadrant') {
+    if (!curPage.quadrants) curPage.quadrants = { q1: '', q2: '', q3: '', q4: '' };
+    curPage.quadrants.q1 = curPage.quadrants.q1 || latestBody;
+    curPage.quadrants.q2 = curPage.quadrants.q2 || latestSide;
+    curPage.content = latestBody;
   } else {
     curPage.content = latestBody;
-    templateKey = 'ruled';
+    if (!['dotgrid', 'grid', 'blank', 'ruled'].includes(templateKey)) {
+      templateKey = 'ruled';
+    }
   }
 
   curPage.template = templateKey;
@@ -903,6 +992,13 @@ export function setupReaderListeners({ onCopyBookLink } = {}) {
   if (els.readerToneSelect) {
     els.readerToneSelect.addEventListener('change', (e) => {
       applyPaperTone(e.target.value);
+    });
+  }
+
+  // Paper Texture select
+  if (els.readerTextureSelect) {
+    els.readerTextureSelect.addEventListener('change', (e) => {
+      applyPaperTexture(e.target.value);
     });
   }
 

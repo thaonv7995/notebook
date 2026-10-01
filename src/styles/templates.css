@@ -6,7 +6,7 @@
 .a4-template-sheet {
   width: 100%;
   height: 100%;
-  background: #ffffff;
+  background: var(--paper-cream, #ffffff);
   position: relative;
   overflow: hidden;
   display: flex;
@@ -76,7 +76,7 @@
   border-top: 1px solid var(--rule-main);
   border-bottom: 1px solid var(--rule-main);
   border-left: 1px solid var(--rule-main);
-  background: #ffffff;
+  background: var(--paper-cream, #ffffff);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -154,7 +154,7 @@
   color: var(--ink-primary);
   border: 1px solid var(--rule-main);
   padding: 1.5px 6px;
-  background: #ffffff;
+  background: var(--paper-cream, #ffffff);
 }
 .signature-seal-cartouche {
   border: 1.2px solid var(--ink-primary);
@@ -163,7 +163,7 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: #ffffff;
+  background: var(--paper-cream, #ffffff);
   box-shadow: inset 0 0 0 0.5px #cbd5e1;
 }
 .seal-user-handle {
@@ -246,7 +246,7 @@
 }
 .status-pill-btn {
   border: 1px solid var(--rule-main);
-  background: #ffffff;
+  background: var(--paper-cream, #ffffff);
   font-size: 8.5px;
   font-weight: 700;
   padding: 1px 5px;
@@ -281,7 +281,7 @@
   letter-spacing: 1px;
   text-transform: uppercase;
   color: var(--ink-primary);
-  background: #ffffff;
+  background: var(--paper-cream, #ffffff);
   padding: 1px 5px;
   border: 1px solid var(--rule-main);
   line-height: 1.3;
@@ -296,7 +296,7 @@
   letter-spacing: 1px;
   text-transform: uppercase;
   color: var(--ink-primary);
-  background: #ffffff;
+  background: var(--paper-cream, #ffffff);
   padding: 1px 4px;
   border: 1px solid var(--rule-main);
   z-index: 4;
@@ -311,7 +311,7 @@
   flex: 1;
   min-height: 0;
   border: 1.5px solid var(--rule-accent);
-  background: #ffffff;
+  background: var(--paper-cream, #ffffff);
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
@@ -620,4 +620,371 @@
   text-align: center;
   font-family: 'JetBrains Mono', monospace;
   font-size: 8.5px;
+}
+
+/* ========================================================
+   DOT GRID TEMPLATE
+   ======================================================== */
+.dotgrid-full-canvas {
+  flex: 1;
+  min-height: 0;
+  border: 1.5px solid var(--rule-accent);
+  background: var(--paper-cream, #ffffff);
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  position: relative;
+}
+
+.dotgrid-canvas-text {
+  padding: 0 16px;
+  font-size: var(--notebook-font-size, 15px);
+  line-height: var(--notebook-line-height, 28px);
+  /* Dot grid pattern using radial-gradient */
+  background:
+    radial-gradient(circle, var(--notebook-line-color, #cbd5e1) 1px, transparent 1px);
+  background-size: var(--notebook-line-height, 28px) var(--notebook-line-height, 28px);
+  background-position: 8px 8px;
+  background-attachment: local;
+  overflow: hidden !important;
+}
+
+/* ========================================================
+   SQUARE GRID TEMPLATE
+   ======================================================== */
+.grid-full-canvas {
+  flex: 1;
+  min-height: 0;
+  border: 1.5px solid var(--rule-accent);
+  background: var(--paper-cream, #ffffff);
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  position: relative;
+}
+
+.grid-canvas-text {
+  padding: 0 16px;
+  font-size: var(--notebook-font-size, 15px);
+  line-height: var(--notebook-line-height, 28px);
+  /* Square grid pattern using repeating-linear-gradient */
+  background:
+    repeating-linear-gradient(
+      to right,
+      transparent 0,
+      transparent calc(var(--notebook-line-height, 28px) - 1px),
+      var(--notebook-line-color, #cbd5e1) calc(var(--notebook-line-height, 28px) - 1px),
+      var(--notebook-line-color, #cbd5e1) var(--notebook-line-height, 28px)
+    ),
+    repeating-linear-gradient(
+      to bottom,
+      transparent 0,
+      transparent calc(var(--notebook-line-height, 28px) - 1px),
+      var(--notebook-line-color, #cbd5e1) calc(var(--notebook-line-height, 28px) - 1px),
+      var(--notebook-line-color, #cbd5e1) var(--notebook-line-height, 28px)
+    );
+  background-size: var(--notebook-line-height, 28px) var(--notebook-line-height, 28px);
+  background-position: 0 -6px;
+  background-attachment: local;
+  overflow: hidden !important;
+}
+
+/* ========================================================
+   BLANK / FREEFORM TEMPLATE
+   ======================================================== */
+.blank-full-canvas {
+  flex: 1;
+  min-height: 0;
+  border: 1.5px solid var(--rule-accent);
+  background: var(--paper-cream, #ffffff);
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  position: relative;
+}
+
+.blank-canvas-text {
+  padding: 0 16px;
+  font-size: var(--notebook-font-size, 15px);
+  line-height: var(--notebook-line-height, 28px);
+  /* No background lines - clean canvas */
+  background: transparent;
+  overflow: hidden !important;
+}
+
+/* ========================================================
+   QUADRANT (4-ZONE) TEMPLATE
+   ======================================================== */
+.quadrant-container {
+  flex: 1;
+  min-height: 0;
+  border: 1.5px solid var(--rule-accent);
+  background: var(--paper-cream, #ffffff);
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  position: relative;
+}
+
+.quadrant-row {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+  box-sizing: border-box;
+}
+
+.quadrant-row:first-child {
+  border-bottom: 1.5px solid var(--rule-accent);
+}
+
+.quadrant-cell {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  position: relative;
+  min-height: 0;
+}
+
+.quadrant-tl,
+.quadrant-bl {
+  border-right: 1.5px solid var(--rule-accent);
+}
+
+.quadrant-text {
+  flex: 1;
+  min-height: 0;
+  font-size: var(--notebook-font-size, 15px);
+  line-height: var(--notebook-line-height, 28px);
+  background: var(--notebook-lines-display);
+  background-size: 100% var(--notebook-line-height, 28px);
+  background-position: 0 -6px;
+  background-attachment: local;
+  overflow: hidden !important;
+  padding: 0 8px;
+}
+
+/* ========================================================
+   EISENHOWER MATRIX (PRIORITY QUADRANT) ENHANCEMENTS
+   ======================================================== */
+.eisenhower-container {
+  display: flex;
+  flex-direction: column;
+}
+
+.eisenhower-axis-labels {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 3px 12px;
+  background: rgba(0, 0, 0, 0.03);
+  border-bottom: 1px dashed var(--rule-accent);
+  flex-shrink: 0;
+}
+
+.axis-label {
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  color: var(--ink-muted);
+}
+
+.eisenhower-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.eisenhower-badge {
+  border-radius: 3px;
+  font-size: 7.5px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  padding: 1px 6px;
+}
+
+.do-bar { background: rgba(239, 68, 68, 0.04); }
+.do-badge { color: #dc2626; border-color: rgba(239, 68, 68, 0.3); background: #fef2f2; }
+
+.schedule-bar { background: rgba(245, 158, 11, 0.04); }
+.schedule-badge { color: #d97706; border-color: rgba(245, 158, 11, 0.3); background: #fffbeb; }
+
+.delegate-bar { background: rgba(59, 130, 246, 0.04); }
+.delegate-badge { color: #2563eb; border-color: rgba(59, 130, 246, 0.3); background: #eff6ff; }
+
+.eliminate-bar { background: rgba(100, 116, 139, 0.04); }
+.eliminate-badge { color: #475569; border-color: rgba(100, 116, 139, 0.3); background: #f8fafc; }
+
+/* ========================================================
+   LANGUAGE VOCABULARY LEARNING TEMPLATE
+   ======================================================== */
+.vocab-container {
+  flex: 1;
+  min-height: 0;
+  border: 1.5px solid var(--rule-accent);
+  background: var(--paper-cream, #ffffff);
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  position: relative;
+}
+
+.vocab-body-split {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  border-bottom: 1.5px solid var(--rule-accent);
+  box-sizing: border-box;
+  position: relative;
+}
+
+.vocab-word-col {
+  width: 28%;
+  border-right: 1.5px solid var(--rule-accent);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+}
+
+.vocab-meaning-col {
+  width: 34%;
+  border-right: 1.5px solid var(--rule-accent);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+}
+
+.vocab-example-col {
+  width: 38%;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+}
+
+.vocab-review-area {
+  height: 110px;
+  flex-shrink: 0;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+}
+
+.vocab-word-text {
+  font-weight: 600;
+  color: var(--ink-primary);
+}
+
+.vocab-meaning-text {
+  color: var(--ink-primary);
+}
+
+.vocab-example-text {
+  font-style: italic;
+  color: var(--ink-primary);
+}
+
+.vocab-review-text {
+  color: var(--ink-primary);
+}
+
+/* ========================================================
+   CHARTING / COMPARISON METHOD TEMPLATE
+   ======================================================== */
+.charting-container {
+  flex: 1;
+  min-height: 0;
+  border: 1.5px solid var(--rule-accent);
+  background: var(--paper-cream, #ffffff);
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  position: relative;
+}
+
+.charting-columns {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  border-bottom: 1.5px solid var(--rule-accent);
+  box-sizing: border-box;
+  position: relative;
+}
+
+.charting-col {
+  flex: 1;
+  border-right: 1.5px solid var(--rule-accent);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+}
+
+.charting-col-last {
+  border-right: none;
+}
+
+.charting-notes-area {
+  height: 115px;
+  flex-shrink: 0;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+}
+
+/* ========================================================
+   READING NOTES / BOOK REVIEW TEMPLATE
+   ======================================================== */
+.reading-container {
+  flex: 1;
+  min-height: 0;
+  border: 1.5px solid var(--rule-accent);
+  background: var(--paper-cream, #ffffff);
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  position: relative;
+}
+
+.reading-body-split {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  border-bottom: 1.5px solid var(--rule-accent);
+  box-sizing: border-box;
+  position: relative;
+}
+
+.reading-ideas-col {
+  width: 50%;
+  border-right: 1.5px solid var(--rule-accent);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+}
+
+.reading-quotes-col {
+  width: 50%;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+}
+
+.reading-quotes-text {
+  font-style: italic;
+}
+
+.reading-summary-area {
+  height: 120px;
+  flex-shrink: 0;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
 }
