@@ -90,6 +90,7 @@ import {
   getPrimaryWritingArea
 } from './ai/notion-inline.js';
 import { formatContentToHtml } from './editor/sanitizer.js';
+import { initPageOverflowGuard } from './editor/page-overflow-guard.js';
 
 import {
   setupRouting,
@@ -411,6 +412,7 @@ async function init() {
   setupAiToolbarButtons();
   setupAiSelectionListener();
   setupNotionAiListeners();
+  initPageOverflowGuard();
 
   // Apply visual configurations from persisted state
   const state = getState();
