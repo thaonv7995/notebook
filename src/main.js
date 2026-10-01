@@ -40,7 +40,9 @@ import {
   resetZoom,
   handleFitPage,
   handleFitWidth,
-  saveActivePages
+  saveActivePages,
+  getActivePageInfo,
+  applyAiAutofillToCurrentPage
 } from './components/reader.js';
 
 import {
@@ -70,6 +72,24 @@ import {
   closeNewNotebookModal,
   closeChangePasswordModal
 } from './components/modal.js';
+
+import {
+  open as openAiBar,
+  close as closeAiBar,
+  isBarOpen as isAiBarOpen,
+  updatePageContext as updateAiPageContext
+} from './ai/floating-bar.js';
+
+import { setupSelectionListener as setupAiSelectionListener } from './ai/selection-bubble.js';
+import { toggleSettings as toggleAiSettings, closeSettings as closeAiSettings } from './ai/ai-settings.js';
+import { typewriteTextIntoElement } from './ai/typewriter.js';
+import {
+  openNotionAiBar,
+  closeNotionAiBar,
+  setupNotionAiListeners,
+  getPrimaryWritingArea
+} from './ai/notion-inline.js';
+import { formatContentToHtml } from './editor/sanitizer.js';
 
 import {
   setupRouting,
@@ -131,6 +151,11 @@ function setupGlobalKeyAndWindowListeners() {
   // Global keydown listeners
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
+      // Close AI bar first
+      if (isAiBarOpen()) {
+        closeAiBar();
+        return;
+      }
       if (els.changePasswordModal && els.changePasswordModal.classList.contains('open')) {
         closeChangePasswordModal();
         return;
@@ -160,6 +185,14 @@ function setupGlobalKeyAndWindowListeners() {
     }
 
     const isMod = e.ctrlKey || e.metaKey;
+
+    // Cmd+K / Ctrl+K — Open AI Command Bar
+    if (isMod && e.key === 'k') {
+      e.preventDefault();
+      openAiCommandBar();
+      return;
+    }
+
     if (isMod && e.key === '\\') {
       e.preventDefault();
       const state = getState();
@@ -374,6 +407,11 @@ async function init() {
   setupLoginForm();
   setupLogoutButton();
 
+  // ─── AI Co-pilot Setup ───
+  setupAiToolbarButtons();
+  setupAiSelectionListener();
+  setupNotionAiListeners();
+
   // Apply visual configurations from persisted state
   const state = getState();
   applyFontSize(state.fontSize || 16);
@@ -408,6 +446,163 @@ async function init() {
       console.warn('Không thể bật chế độ offline:', error);
     });
   }
+}
+
+// ─── AI Helper Functions ───
+
+function getCurrentPageContext() {
+  const pageInfo = getActivePageInfo();
+  const template = pageInfo?.template || 'ruled';
+
+  let context = '';
+  if (pageInfo?.page) {
+    const p = pageInfo.page;
+    if (p.topic || p.title) context += `Chủ đề: ${p.topic || p.title}\n`;
+    if (p.notes || p.content) context += `${p.notes || p.content}\n`;
+    if (p.cues) context += `Cues: ${p.cues}\n`;
+    if (p.summary) context += `Summary: ${p.summary}\n`;
+    if (p.agenda) context += `Agenda: ${p.agenda}\n`;
+    if (p.discussions) context += `Discussions: ${p.discussions}\n`;
+    if (p.vocabWord) context += `Vocab: ${p.vocabWord}\n`;
+  }
+  if (!context.trim()) {
+    const areas = document.querySelectorAll('.template-writing-area');
+    areas.forEach(a => {
+      const text = a.innerText?.trim();
+      if (text) context += text + '\n';
+    });
+  }
+
+  // Calculate physical page spatial constraints from active sheet & store
+  const state = getState();
+  const fontSize = state.fontSize || 16;
+  const lineHeight = parseInt(state.lineHeight || '28', 10) || 28;
+  const pageMode = state.pageMode || '2-page';
+  const sheetEl = pageInfo?.targetSheet;
+
+  let sheetWidth = 480;
+  let sheetHeight = 680;
+  if (sheetEl) {
+    const rect = sheetEl.getBoundingClientRect();
+    if (rect.width > 0) sheetWidth = Math.round(rect.width);
+    if (rect.height > 0) sheetHeight = Math.round(rect.height);
+  } else if (pageMode === '1-page') {
+    sheetWidth = 660;
+    sheetHeight = 820;
+  }
+
+  // Active or main writing area height and line capacity
+  const mainArea = sheetEl?.querySelector('.template-writing-area:focus') ||
+                   sheetEl?.querySelector('.template-writing-area') ||
+                   document.querySelector('.template-writing-area');
+
+  let areaHeight = pageMode === '1-page' ? 620 : 480;
+  let currentTextLines = 0;
+  if (mainArea) {
+    areaHeight = mainArea.clientHeight || areaHeight;
+    const existingText = mainArea.innerText || '';
+    if (existingText.trim()) {
+      currentTextLines = existingText.split('\n').filter(Boolean).length;
+    }
+  }
+
+  const totalLineCapacity = Math.max(10, Math.floor(areaHeight / lineHeight));
+  const remainingLines = Math.max(3, totalLineCapacity - currentTextLines);
+
+  const constraints = {
+    pageMode,
+    sheetSize: `${sheetWidth}x${sheetHeight}px`,
+    fontSize: `${fontSize}px`,
+    lineHeight: `${lineHeight}px`,
+    totalLineCapacity,
+    currentTextLines,
+    remainingLines,
+    template,
+  };
+
+  return {
+    template,
+    context: context.slice(0, 2000),
+    constraints
+  };
+}
+
+function handleAiPageInsert(mode, text, extra) {
+  // 1. Template Autofill Mode
+  if (mode === 'autofill' && extra?.parsedJson) {
+    applyAiAutofillToCurrentPage(extra.parsedJson);
+    return;
+  }
+
+  // 2. Intelligently find primary active area
+  const pageInfo = getActivePageInfo();
+  const targetSheet = pageInfo?.targetSheet;
+  const template = pageInfo?.template || 'ruled';
+  const activeArea = getPrimaryWritingArea(targetSheet, template);
+  if (!activeArea) return;
+
+  const formattedHtml = formatContentToHtml(text || '');
+
+  if (mode === 'typewriter') {
+    typewriteTextIntoElement(activeArea, text, {
+      mode: 'append',
+      speed: 15,
+      onComplete: () => {
+        saveActivePages();
+      }
+    });
+    return;
+  }
+
+  if (mode === 'replace') {
+    activeArea.innerHTML = formattedHtml;
+  } else {
+    // Insert at cursor or append
+    const existing = activeArea.innerHTML.trim();
+    if (!existing || existing === '<br>') {
+      activeArea.innerHTML = formattedHtml;
+    } else {
+      // Each line is already inside a <div>, so just concatenate
+      activeArea.innerHTML = existing + formattedHtml;
+    }
+  }
+  activeArea.dispatchEvent(new Event('input', { bubbles: true }));
+  saveActivePages();
+}
+
+function openAiCommandBar() {
+  // Open Notion AI inline prompt directly on the active page sheet
+  openNotionAiBar();
+}
+
+function setupAiToolbarButtons() {
+  const btnAi = document.getElementById('btnAiCommandBar');
+  const btnSettings = document.getElementById('btnAiSettings');
+
+  // Pre-bind context and insert handler to corner widget
+  const ctx = getCurrentPageContext();
+  openAiBar({
+    template: ctx.template,
+    context: ctx.context,
+    getContext: getCurrentPageContext,
+    onInsert: handleAiPageInsert
+  });
+  closeAiBar(); // Closed initially, ready for FAB or Cmd+K
+
+  if (btnAi) {
+    btnAi.addEventListener('click', () => openAiCommandBar());
+  }
+  if (btnSettings) {
+    btnSettings.addEventListener('click', () => toggleAiSettings());
+  }
+
+  // Keep AI corner widget synchronized when clicking between sheets or focusing areas
+  document.addEventListener('click', (e) => {
+    if (e.target.closest('.book-page-sheet')) {
+      const liveCtx = getCurrentPageContext();
+      updateAiPageContext(liveCtx);
+    }
+  });
 }
 
 // Launch application

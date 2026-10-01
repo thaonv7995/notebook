@@ -16,6 +16,7 @@ import { fileURLToPath } from 'url';
 
 import { ensureAdminUser, authRoutes } from './auth.js';
 import { apiRoutes } from './api.js';
+import { aiRoutes } from './ai.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PORT = parseInt(process.env.PORT, 10) || 27972;
@@ -30,6 +31,7 @@ app.use(cookieParser());
 // ─── API Routes ───
 authRoutes(app);
 apiRoutes(app);
+aiRoutes(app);
 
 // ─── Frontend Serving ───
 if (IS_DEV) {

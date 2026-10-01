@@ -88,7 +88,7 @@ export function formatContentToHtml(content) {
 
   let html = content;
 
-  // Convert unescaped or escaped badge pills & marks:
+  // ── Step 1: Convert escaped HTML tags back to real tags ──
   html = html.replace(/&lt;span class="pill-badge"&gt;(.*?)&lt;\/span&gt;/gi, '<span class="pill-badge">$1</span>');
   html = html.replace(/&lt;span class="badge-pill"&gt;(.*?)&lt;\/span&gt;/gi, '<span class="pill-badge">$1</span>');
   html = html.replace(/&lt;u&gt;(.*?)&lt;\/u&gt;/gi, '<u>$1</u>');
@@ -99,28 +99,55 @@ export function formatContentToHtml(content) {
   html = html.replace(/&lt;strong&gt;(.*?)&lt;\/strong&gt;/gi, '<strong>$1</strong>');
   html = html.replace(/&lt;em&gt;(.*?)&lt;\/em&gt;/gi, '<em>$1</em>');
 
-  // Convert markdown bold: **text** -> <strong>text</strong>
-  html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-  // Clean dangling ** (e.g. from user input like Horizontal Scaling):** or Mục số 1**)
-  html = html.replace(/\*\*/g, '');
-
-  // Convert markdown italic: *text* -> <em>text</em>
-  html = html.replace(/(^|[^\*])\*([^\*\n]+)\*([^\*]|$)/g, '$1<em>$2</em>$3');
-
-  // Convert markdown strike: ~~text~~ -> <s>$1</s>
-  html = html.replace(/~~(.+?)~~/g, '<s>$1</s>');
-
-  // Convert markdown inline code: `text` -> <code>$1</code>
-  html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
-
-  // Convert markdown quote line: > text -> <blockquote>text</blockquote>
-  html = html.replace(/(^|<br>)> (.*?)(?=<br>|$)/gi, '$1<blockquote>$2</blockquote>');
-
-  // If string has no block tags (div, p, blockquote, li, h1-h6), split by \n or <br> and wrap into <div>
-  if (!/<(p|div|blockquote|ul|ol|h[1-6])[^>]*>/i.test(html)) {
-    const rawLines = html.split(/<br\s*[\/]?>|\n/gi);
-    html = rawLines.map(line => `<div>${line || '<br>'}</div>`).join('');
+  // ── Step 2: If content already has block-level HTML, it's pre-formatted — just sanitize ──
+  if (/<(p|div|blockquote|ul|ol|h[1-6])[^>]*>/i.test(html)) {
+    html = wrapHanziInHtml(html);
+    return sanitizeRichHtml(html);
   }
+
+  // ── Step 3: Plain text / AI output — process LINE-BY-LINE ──
+  // Split by newlines (and <br>) FIRST, then apply markdown per line.
+  // This guarantees EVERY line ends up inside a block element (<div>, <h2>, <h3>, <blockquote>)
+  // so it aligns perfectly 1:1 with notebook ruled lines.
+  const rawLines = html.split(/<br\s*[\/]?>|\n/gi);
+
+  const processedLines = rawLines.map(rawLine => {
+    let line = rawLine;
+
+    // ── Inline markdown conversions (applied per-line) ──
+    // Bold
+    line = line.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    line = line.replace(/\*\*/g, '');
+    // Italic
+    line = line.replace(/(^|[^\*])\*([^\*\n]+)\*([^\*]|$)/g, '$1<em>$2</em>$3');
+    // Strikethrough
+    line = line.replace(/~~(.+?)~~/g, '<s>$1</s>');
+    // Inline code
+    line = line.replace(/`([^`]+)`/g, '<code>$1</code>');
+
+    // ── Block-level detection (per-line, mutually exclusive) ──
+    // Heading ### → <h3>
+    if (/^###\s+/.test(line)) return line.replace(/^###\s+(.*)$/, '<h3>$1</h3>');
+    // Heading ## → <h2>
+    if (/^##\s+/.test(line)) return line.replace(/^##\s+(.*)$/, '<h2>$1</h2>');
+    // Heading # → <h2>
+    if (/^#\s+/.test(line)) return line.replace(/^#\s+(.*)$/, '<h2>$1</h2>');
+
+    // Blockquote > text
+    if (/^>\s+/.test(line)) return line.replace(/^>\s+(.*)$/, '<blockquote>$1</blockquote>');
+
+    // Bullet points: - item, * item, • item
+    if (/^[-\*]\s+/.test(line)) return `<div>${line.replace(/^[-\*]\s+/, '• ')}</div>`;
+    if (/^•\s*/.test(line)) return `<div>${line}</div>`;
+
+    // Numbered list: 1. item, 2) item
+    if (/^\d+[\.\)]\s+/.test(line)) return `<div>${line}</div>`;
+
+    // ── Default: regular text → wrap in <div> ──
+    return `<div>${line || '<br>'}</div>`;
+  });
+
+  html = processedLines.join('');
 
   // Auto-elevate Chinese / Hanzi characters to float centered in notebook ruled lines
   html = wrapHanziInHtml(html);

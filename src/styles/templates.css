@@ -325,6 +325,7 @@
   border-bottom: 1.5px solid var(--rule-accent);
   box-sizing: border-box;
   position: relative;
+  overflow: hidden;
 }
 .cornell-cue-col {
   width: 30%;
@@ -333,6 +334,7 @@
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
+  overflow: hidden;
 }
 .cornell-notes-col {
   width: 70%;
@@ -340,6 +342,7 @@
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
+  overflow: hidden;
 }
 .cornell-summary-area {
   height: 98px;
@@ -511,15 +514,15 @@
   min-height: var(--notebook-line-height, 28px);
 }
 .template-writing-area h1 {
-  font-size: 1.2em;
+  font-size: calc(var(--notebook-font-size, 15px) + 2px);
   font-weight: 800;
 }
 .template-writing-area h2 {
-  font-size: 1.1em;
+  font-size: calc(var(--notebook-font-size, 15px) + 1px);
   font-weight: 700;
 }
 .template-writing-area h3 {
-  font-size: 1.05em;
+  font-size: var(--notebook-font-size, 15px);
   font-weight: 700;
 }
 .template-writing-area strong,
