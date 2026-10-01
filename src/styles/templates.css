@@ -316,6 +316,7 @@
   flex-direction: column;
   box-sizing: border-box;
   position: relative;
+  overflow: hidden; /* Prevent content from expanding beyond page */
 }
 .cornell-body-split,
 .work-body-split {
@@ -338,6 +339,7 @@
 }
 .cornell-notes-col {
   width: 70%;
+  min-height: 0; /* Prevent flex expansion */
   position: relative;
   display: flex;
   flex-direction: column;
@@ -438,6 +440,7 @@
 /* Ruled Writing Area (Fixed line height with flawless cursor baseline alignment) */
 .template-writing-area {
   flex: 1;
+  min-height: 0; /* Prevent flex child from expanding beyond page bounds */
   width: 100%;
   box-sizing: border-box;
   padding: 0 12px;
