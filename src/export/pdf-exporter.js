@@ -102,7 +102,7 @@ export function printFullNotebook(includeCover = false) {
   // Apply zoom to each sheet to match web view proportions exactly
   // Web page: 480×680px → A4: 210×297mm ≈ 794×1123px → zoom = 1.655
   printRoot.querySelectorAll('.book-page-sheet .a4-template-sheet').forEach(tpl => {
-    tpl.style.cssText += 'width:480px !important; height:680px !important; zoom:1.655 !important; transform:none !important;';
+    tpl.style.cssText += 'width:480px !important; height:680px !important; zoom:1.65 !important; transform:none !important;';
   });
 
   window.addEventListener('afterprint', cleanup, { once: true });

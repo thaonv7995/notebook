@@ -10,11 +10,13 @@
   display: none;
 }
 
+/* Force Chrome to use zero page margins (MUST be top-level, NOT inside @media print) */
+@page {
+  size: A4 portrait;
+  margin: 0;
+}
+
 @media print {
-  @page {
-    size: A4 portrait;
-    margin: 0;
-  }
 
   *, *:before, *:after {
     -webkit-print-color-adjust: exact !important;
@@ -209,7 +211,7 @@
   .book-page-sheet > .a4-template-sheet {
     width: 480px !important;
     height: 680px !important;
-    zoom: 1.655 !important;
+    zoom: 1.65 !important;
     transform: none !important;
   }
 
