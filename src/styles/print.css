@@ -166,12 +166,23 @@
 
   .book-spread-casing {
     display: block !important;
-    background: transparent !important;
+    background: #ffffff !important;
     box-shadow: none !important;
     padding: 0 !important;
+    margin: 0 !important;
     border-radius: 0 !important;
     border: none !important;
+    outline: none !important;
     transform: none !important;
+  }
+
+  /* Force all page containers to white with no visual chrome */
+  .book-page-left,
+  .book-page-right {
+    background: #ffffff !important;
+    box-shadow: none !important;
+    border: none !important;
+    outline: none !important;
   }
 
   .book-page-sheet {
@@ -182,11 +193,11 @@
     margin: 0 auto !important;
     box-shadow: none !important;
     border: none !important;
+    outline: none !important;
     background: #ffffff !important;
     page-break-after: always !important;
     page-break-inside: avoid !important;
     overflow: hidden !important;
-    /* Reset any border-radius from web view */
     border-radius: 0 !important;
   }
 
@@ -194,8 +205,6 @@
    * Scale inner content proportionally to fill A4.
    * Web: 480×680px → A4: 210mm×297mm (≈794×1123px at 96dpi)
    * Scale factor: 794/480 ≈ 1.654
-   * This scales ALL child elements (fonts, padding, borders, line-height)
-   * uniformly so the print looks identical to the web — just bigger.
    */
   .book-page-sheet > .a4-template-sheet {
     transform: scale(1.654) !important;
@@ -206,14 +215,9 @@
 
   /* 1-page mode: 660×820 → A4 */
   .book-spread-casing.mode-1-page .book-page-sheet > .a4-template-sheet {
-    /* 794/660 ≈ 1.203 */
     transform: scale(1.203) !important;
     width: 660px !important;
     height: 820px !important;
-  }
-
-  .template-writing-area {
-    background-attachment: scroll !important;
   }
 
   /* Ensure ruled-line backgrounds scroll properly in print */
@@ -225,18 +229,34 @@
     background-attachment: scroll !important;
   }
 
-  /* Hide interactive elements and decorative overlays in print */
+  /* ══════════════════════════════════════════════════════
+     HIDE ALL DECORATIVE & INTERACTIVE ELEMENTS IN PRINT
+     ══════════════════════════════════════════════════════ */
+
+  /* UI Controls */
   .status-pill-btn,
   .edge-index-markers,
-  #aiNotionInlineBar,
-  .ai-notion-bar-wrapper,
-  .ai-selection-bubble,
   .content-corner-frame,
-  .book-star-badge {
+  .book-star-badge,
+  .book-center-spine,
+  .book-center-ribbon {
     display: none !important;
   }
 
-  /* Remove 3D book spine shadow gradients (the dark vertical lines on both edges) */
+  /* AI Copilot: floating button, chat panel, settings, inline bar, selection bubble */
+  .ai-corner-copilot-container,
+  .ai-corner-fab,
+  .ai-corner-chat,
+  .ai-settings-container,
+  .ai-settings-backdrop,
+  .ai-notion-bar-wrapper,
+  #aiNotionInlineBar,
+  #aiCornerCopilotContainer,
+  .ai-selection-bubble {
+    display: none !important;
+  }
+
+  /* Remove 3D book spine shadow gradients (dark vertical edge lines) */
   .book-page-left::after,
   .book-page-right::after,
   .book-page-sheet::after,
@@ -245,7 +265,7 @@
     content: none !important;
   }
 
-  /* Remove paper texture overlay (::after on template sheet) */
+  /* Remove paper texture overlay */
   .a4-template-sheet::after {
     display: none !important;
     content: none !important;
