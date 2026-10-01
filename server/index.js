@@ -17,6 +17,7 @@ import { fileURLToPath } from 'url';
 import { ensureAdminUser, authRoutes } from './auth.js';
 import { apiRoutes } from './api.js';
 import { aiRoutes } from './ai.js';
+import { pdfRoutes } from './pdf.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PORT = parseInt(process.env.PORT, 10) || 27972;
@@ -32,6 +33,7 @@ app.use(cookieParser());
 authRoutes(app);
 apiRoutes(app);
 aiRoutes(app);
+pdfRoutes(app);
 
 // ─── Frontend Serving ───
 if (IS_DEV) {

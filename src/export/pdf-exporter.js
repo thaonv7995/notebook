@@ -1,13 +1,13 @@
 /**
  * PDF Exporter & Print Engine
  *
- * Generates an A4 print DOM tree with an optional royal cartouche cover,
- * sets print classes, and triggers the browser's high-fidelity print subsystem.
+ * Two export methods:
+ * 1. Server PDF (Puppeteer) — pixel-perfect, no Chrome print dialog
+ * 2. Browser Print (fallback) — uses window.print() with @media print CSS
  */
 
 import { getActiveNotebook } from '../state/store.js';
 import { saveActivePages } from '../components/reader.js';
-import { renderSheetContent } from '../templates/index.js';
 import { showToast } from '../components/modal.js';
 
 /**
@@ -52,7 +52,50 @@ export function createPrintCover(notebook) {
 }
 
 /**
- * Clones all pages and launches print dialog
+ * Export PDF via server-side Puppeteer rendering.
+ * Downloads a pixel-perfect PDF that matches the web view exactly.
+ */
+export async function exportPdfFromServer() {
+  if (!saveActivePages()) return;
+  const notebook = getActiveNotebook();
+  if (!notebook || !notebook.id) {
+    showToast('Không có sổ tay nào để xuất.');
+    return;
+  }
+
+  showToast('📄 Đang tạo PDF...', 3000);
+
+  try {
+    const response = await fetch(`/api/notebooks/${notebook.id}/pdf`, {
+      method: 'GET',
+      credentials: 'include',
+    });
+
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.error || `HTTP ${response.status}`);
+    }
+
+    // Download the PDF
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${notebook.title || 'notebook'}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    showToast('✅ PDF đã tải xuống!', 3000);
+  } catch (err) {
+    console.error('PDF export error:', err);
+    showToast(`❌ Lỗi tạo PDF: ${err.message}`, 5000);
+  }
+}
+
+/**
+ * Fallback: Browser print using window.print()
  * @param {boolean} includeCover
  */
 export function printFullNotebook(includeCover = false) {
@@ -63,84 +106,7 @@ export function printFullNotebook(includeCover = false) {
     return;
   }
 
-  document.querySelectorAll('.print-all-pages').forEach(node => node.remove());
-  const printRoot = document.createElement('main');
-  printRoot.className = 'print-all-pages';
-  printRoot.setAttribute('aria-hidden', 'true');
-
-  if (includeCover) {
-    printRoot.appendChild(createPrintCover(notebook));
-  }
-
-  notebook.pages.forEach((page, pageIndex) => {
-    // 1. A4 boundary wrapper — defines the printed page area
-    const wrapper = document.createElement('div');
-    wrapper.className = 'print-a4-wrapper';
-    wrapper.style.cssText = `
-      width: 210mm; height: 297mm;
-      overflow: hidden;
-      page-break-after: always;
-      page-break-inside: avoid;
-      position: relative;
-      background: #ffffff;
-    `;
-
-    // 2. Scale layer — transforms 480×680 content up to fill A4
-    //    transform:scale only affects visual rendering, NOT layout.
-    //    Content is laid out at exactly 480×680px = identical to web view.
-    const scaleLayer = document.createElement('div');
-    scaleLayer.className = 'print-scale-layer';
-    scaleLayer.style.cssText = `
-      transform: scale(1.65);
-      transform-origin: 0 0;
-      width: 480px;
-      height: 680px;
-    `;
-
-    // 3. The actual page content — rendered identically to web
-    const sheet = document.createElement('article');
-    sheet.className = 'book-page-sheet print-page-sheet';
-    sheet.style.cssText = `
-      width: 480px !important;
-      height: 680px !important;
-      min-height: 680px !important;
-      max-height: 680px !important;
-      box-shadow: none !important;
-      border: none !important;
-      border-radius: 0 !important;
-      overflow: hidden !important;
-    `;
-
-    renderSheetContent(sheet, JSON.parse(JSON.stringify(page)), pageIndex + 1, false);
-    sheet.querySelectorAll('[contenteditable]').forEach(el => el.setAttribute('contenteditable', 'false'));
-    sheet.querySelectorAll('input').forEach(input => input.setAttribute('readonly', 'readonly'));
-
-    scaleLayer.appendChild(sheet);
-    wrapper.appendChild(scaleLayer);
-    printRoot.appendChild(wrapper);
-  });
-
-  // Inject @page rule at top-level to force zero margins
-  const printStyle = document.createElement('style');
-  printStyle.id = 'print-margin-override';
-  printStyle.textContent = `@page { size: A4 portrait; margin: 0 !important; }`;
-  document.head.appendChild(printStyle);
-
-  const cleanup = () => {
-    document.body.classList.remove('is-printing-all');
-    printRoot.remove();
-    const overrideStyle = document.getElementById('print-margin-override');
-    if (overrideStyle) overrideStyle.remove();
-    window.removeEventListener('afterprint', cleanup);
-  };
-
-  document.body.appendChild(printRoot);
-  document.body.classList.add('is-printing-all');
-
-  window.addEventListener('afterprint', cleanup, { once: true });
-  showToast('⚠️ Trong Print dialog: chọn Margins → None để bản in y hệt web', 5000);
-  requestAnimationFrame(() => {
-    window.print();
-    setTimeout(cleanup, 2000);
-  });
+  // For browser print, just call window.print() — the @media print CSS handles the rest
+  showToast('💡 Chọn Margins: None + ✅ Background graphics để in đẹp nhất', 5000);
+  window.print();
 }

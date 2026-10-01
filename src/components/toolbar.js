@@ -18,7 +18,7 @@ import {
 } from '../editor/formatter.js';
 import { showToast } from './modal.js';
 import { handleFitPage } from './reader.js';
-import { printFullNotebook } from '../export/pdf-exporter.js';
+import { printFullNotebook, exportPdfFromServer } from '../export/pdf-exporter.js';
 
 export function applyToolbarCollapse(collapsed, save = true) {
   const els = getEls();
@@ -200,13 +200,13 @@ export function setupToolbarListeners() {
     if (els.exportPdfWithCoverBtn) {
       els.exportPdfWithCoverBtn.addEventListener('click', () => {
         closeAllPopoverMenus();
-        printFullNotebook(true);
+        exportPdfFromServer();
       });
     }
     if (els.exportPdfContentOnlyBtn) {
       els.exportPdfContentOnlyBtn.addEventListener('click', () => {
         closeAllPopoverMenus();
-        printFullNotebook(false);
+        exportPdfFromServer();
       });
     }
   }
