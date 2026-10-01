@@ -202,25 +202,144 @@
   }
 
   /*
-   * Scale inner content proportionally to fill A4.
-   * Web: 480×680px → A4: 210mm×297mm (≈794×1123px at 96dpi)
-   * Scale factor: 794/480 ≈ 1.654
+   * Let template fill A4 page naturally (no transform:scale).
+   * The flex-based layout expands to fill 210mm × 297mm.
+   * Scale up typography proportionally: 794/480 ≈ 1.65
    */
   .book-page-sheet > .a4-template-sheet {
-    transform: scale(1.654) !important;
-    transform-origin: top left !important;
-    width: 480px !important;
-    height: 680px !important;
+    width: 100% !important;
+    height: 100% !important;
+    transform: none !important;
+    /* Scale padding proportionally for A4 */
+    padding: 25px 23px 16px 46px !important;
   }
 
-  /* 1-page mode: 660×820 → A4 */
-  .book-spread-casing.mode-1-page .book-page-sheet > .a4-template-sheet {
-    transform: scale(1.203) !important;
-    width: 660px !important;
-    height: 820px !important;
+  .book-page-left .a4-template-sheet {
+    padding: 25px 46px 16px 23px !important;
   }
 
-  /* Ensure ruled-line backgrounds scroll properly in print */
+  /* Scale font sizes and line heights for A4 proportions */
+  .a4-template-sheet {
+    font-size: calc(var(--notebook-font-size, 15px) * 1.65) !important;
+  }
+
+  .template-writing-area {
+    font-size: calc(var(--notebook-font-size, 15px) * 1.65) !important;
+    line-height: calc(var(--notebook-line-height, 28px) * 1.65) !important;
+    background-size: 100% calc(var(--notebook-line-height, 28px) * 1.65) !important;
+    background-position: 0 -10px !important;
+  }
+
+  .template-writing-area div,
+  .template-writing-area p {
+    line-height: calc(var(--notebook-line-height, 28px) * 1.65) !important;
+    min-height: calc(var(--notebook-line-height, 28px) * 1.65) !important;
+  }
+
+  .template-writing-area blockquote {
+    line-height: calc(var(--notebook-line-height, 28px) * 1.65) !important;
+    min-height: calc(var(--notebook-line-height, 28px) * 1.65) !important;
+  }
+
+  .template-writing-area li {
+    line-height: calc(var(--notebook-line-height, 28px) * 1.65) !important;
+    min-height: calc(var(--notebook-line-height, 28px) * 1.65) !important;
+  }
+
+  .template-writing-area h1,
+  .template-writing-area h2,
+  .template-writing-area h3 {
+    line-height: calc(var(--notebook-line-height, 28px) * 1.65) !important;
+    min-height: calc(var(--notebook-line-height, 28px) * 1.65) !important;
+  }
+
+  /* Scale ruled-line backgrounds for other writing areas */
+  .ruled-canvas-text,
+  .quadrant-text {
+    font-size: calc(var(--notebook-font-size, 15px) * 1.65) !important;
+    line-height: calc(var(--notebook-line-height, 28px) * 1.65) !important;
+    background-size: 100% calc(var(--notebook-line-height, 28px) * 1.65) !important;
+    background-position: 0 -10px !important;
+  }
+
+  .dotgrid-canvas-text {
+    font-size: calc(var(--notebook-font-size, 15px) * 1.65) !important;
+    line-height: calc(var(--notebook-line-height, 28px) * 1.65) !important;
+    background-size: calc(var(--notebook-line-height, 28px) * 1.65) calc(var(--notebook-line-height, 28px) * 1.65) !important;
+  }
+
+  .grid-canvas-text {
+    font-size: calc(var(--notebook-font-size, 15px) * 1.65) !important;
+    line-height: calc(var(--notebook-line-height, 28px) * 1.65) !important;
+    background-size: calc(var(--notebook-line-height, 28px) * 1.65) calc(var(--notebook-line-height, 28px) * 1.65) !important;
+    background-position: 0 -10px !important;
+  }
+
+  /* Scale header elements */
+  .functional-header {
+    margin-bottom: 8px !important;
+  }
+
+  .field-label {
+    font-size: 21px !important;
+  }
+
+  .field-underline-input {
+    font-size: 20px !important;
+  }
+
+  .header-sub-fields {
+    font-size: 16px !important;
+  }
+
+  .sub-field-input {
+    font-size: 16px !important;
+  }
+
+  .header-purpose-badge {
+    font-size: 14px !important;
+  }
+
+  .seal-user-handle {
+    font-size: 13px !important;
+  }
+
+  /* Scale col-guide-bar section badges */
+  .col-guide-bar {
+    height: 36px !important;
+  }
+
+  .col-guide-bar .section-guide-badge,
+  .section-guide-badge {
+    font-size: 12px !important;
+    padding: 2px 8px !important;
+  }
+
+  /* Scale footer */
+  .scholar-footer {
+    font-size: 13px !important;
+    height: 30px !important;
+  }
+
+  .footer-page-line {
+    font-size: 14px !important;
+  }
+
+  /* Scale Cornell summary area */
+  .cornell-summary-area {
+    height: 162px !important;
+  }
+
+  /* Scale work action area */
+  .work-action-area {
+    height: 198px !important;
+  }
+
+  .action-line-input {
+    font-size: 19px !important;
+  }
+
+  /* Ensure ruled-line backgrounds render in print */
   .template-writing-area,
   .ruled-canvas-text,
   .dotgrid-canvas-text,
