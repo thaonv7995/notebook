@@ -204,15 +204,16 @@
   }
 
   /*
-   * For Cmd+P direct print: zoom up the 480×680 layout to fill A4.
-   * For JS exporter (printFullNotebook): inline styles override this.
-   * User should set Margins: None in print dialog for best match.
+   * For Cmd+P print: scale 480×680 content to fill A4 page.
+   * transform:scale affects visual rendering only (not layout),
+   * so content is laid out at web dimensions = identical text wrapping.
    */
   .book-page-sheet > .a4-template-sheet {
     width: 480px !important;
     height: 680px !important;
-    zoom: 1.65 !important;
-    transform: none !important;
+    transform: scale(1.65) !important;
+    transform-origin: 0 0 !important;
+    zoom: normal !important;
   }
 
   /* Ensure ruled-line backgrounds render in print */

@@ -73,16 +73,54 @@ export function printFullNotebook(includeCover = false) {
   }
 
   notebook.pages.forEach((page, pageIndex) => {
+    // 1. A4 boundary wrapper — defines the printed page area
+    const wrapper = document.createElement('div');
+    wrapper.className = 'print-a4-wrapper';
+    wrapper.style.cssText = `
+      width: 210mm; height: 297mm;
+      overflow: hidden;
+      page-break-after: always;
+      page-break-inside: avoid;
+      position: relative;
+      background: #ffffff;
+    `;
+
+    // 2. Scale layer — transforms 480×680 content up to fill A4
+    //    transform:scale only affects visual rendering, NOT layout.
+    //    Content is laid out at exactly 480×680px = identical to web view.
+    const scaleLayer = document.createElement('div');
+    scaleLayer.className = 'print-scale-layer';
+    scaleLayer.style.cssText = `
+      transform: scale(1.65);
+      transform-origin: 0 0;
+      width: 480px;
+      height: 680px;
+    `;
+
+    // 3. The actual page content — rendered identically to web
     const sheet = document.createElement('article');
     sheet.className = 'book-page-sheet print-page-sheet';
+    sheet.style.cssText = `
+      width: 480px !important;
+      height: 680px !important;
+      min-height: 680px !important;
+      max-height: 680px !important;
+      box-shadow: none !important;
+      border: none !important;
+      border-radius: 0 !important;
+      overflow: hidden !important;
+    `;
+
     renderSheetContent(sheet, JSON.parse(JSON.stringify(page)), pageIndex + 1, false);
     sheet.querySelectorAll('[contenteditable]').forEach(el => el.setAttribute('contenteditable', 'false'));
     sheet.querySelectorAll('input').forEach(input => input.setAttribute('readonly', 'readonly'));
-    printRoot.appendChild(sheet);
+
+    scaleLayer.appendChild(sheet);
+    wrapper.appendChild(scaleLayer);
+    printRoot.appendChild(wrapper);
   });
 
-  // Inject a high-priority style to force @page margin: 0
-  // This helps override the browser's "Default" margin setting
+  // Inject @page rule at top-level to force zero margins
   const printStyle = document.createElement('style');
   printStyle.id = 'print-margin-override';
   printStyle.textContent = `@page { size: A4 portrait; margin: 0 !important; }`;
@@ -99,14 +137,8 @@ export function printFullNotebook(includeCover = false) {
   document.body.appendChild(printRoot);
   document.body.classList.add('is-printing-all');
 
-  // Apply zoom to each sheet to match web view proportions exactly
-  // Web page: 480×680px → A4: 210×297mm ≈ 794×1123px → zoom = 1.655
-  printRoot.querySelectorAll('.book-page-sheet .a4-template-sheet').forEach(tpl => {
-    tpl.style.cssText += 'width:480px !important; height:680px !important; zoom:1.65 !important; transform:none !important;';
-  });
-
   window.addEventListener('afterprint', cleanup, { once: true });
-  showToast('⚠️ QUAN TRỌNG: Trong hộp thoại Print, đổi Margins thành "None" để bản PDF giống web!', 6000);
+  showToast('⚠️ Trong Print dialog: chọn Margins → None để bản in y hệt web', 5000);
   requestAnimationFrame(() => {
     window.print();
     setTimeout(cleanup, 2000);
