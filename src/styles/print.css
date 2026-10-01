@@ -186,9 +186,51 @@
     page-break-after: always !important;
     page-break-inside: avoid !important;
     overflow: hidden !important;
+    /* Reset any border-radius from web view */
+    border-radius: 0 !important;
+  }
+
+  /*
+   * Scale inner content proportionally to fill A4.
+   * Web: 480×680px → A4: 210mm×297mm (≈794×1123px at 96dpi)
+   * Scale factor: 794/480 ≈ 1.654
+   * This scales ALL child elements (fonts, padding, borders, line-height)
+   * uniformly so the print looks identical to the web — just bigger.
+   */
+  .book-page-sheet > .a4-template-sheet {
+    transform: scale(1.654) !important;
+    transform-origin: top left !important;
+    width: 480px !important;
+    height: 680px !important;
+  }
+
+  /* 1-page mode: 660×820 → A4 */
+  .book-spread-casing.mode-1-page .book-page-sheet > .a4-template-sheet {
+    /* 794/660 ≈ 1.203 */
+    transform: scale(1.203) !important;
+    width: 660px !important;
+    height: 820px !important;
   }
 
   .template-writing-area {
     background-attachment: scroll !important;
+  }
+
+  /* Ensure ruled-line backgrounds scroll properly in print */
+  .template-writing-area,
+  .ruled-canvas-text,
+  .dotgrid-canvas-text,
+  .grid-canvas-text,
+  .quadrant-text {
+    background-attachment: scroll !important;
+  }
+
+  /* Hide interactive elements in print */
+  .status-pill-btn,
+  .edge-index-markers,
+  #aiNotionInlineBar,
+  .ai-notion-bar-wrapper,
+  .ai-selection-bubble {
+    display: none !important;
   }
 }
