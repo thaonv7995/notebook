@@ -225,12 +225,35 @@
     background-attachment: scroll !important;
   }
 
-  /* Hide interactive elements in print */
+  /* Hide interactive elements and decorative overlays in print */
   .status-pill-btn,
   .edge-index-markers,
   #aiNotionInlineBar,
   .ai-notion-bar-wrapper,
-  .ai-selection-bubble {
+  .ai-selection-bubble,
+  .content-corner-frame,
+  .book-star-badge {
+    display: none !important;
+  }
+
+  /* Remove 3D book spine shadow gradients (the dark vertical lines on both edges) */
+  .book-page-left::after,
+  .book-page-right::after,
+  .book-page-sheet::after,
+  .book-page-sheet::before {
+    display: none !important;
+    content: none !important;
+  }
+
+  /* Remove paper texture overlay (::after on template sheet) */
+  .a4-template-sheet::after {
+    display: none !important;
+    content: none !important;
+    opacity: 0 !important;
+  }
+
+  /* Hide punch margin dashed line */
+  .punch-margin-line {
     display: none !important;
   }
 }
