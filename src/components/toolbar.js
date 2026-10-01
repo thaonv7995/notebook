@@ -200,13 +200,13 @@ export function setupToolbarListeners() {
     if (els.exportPdfWithCoverBtn) {
       els.exportPdfWithCoverBtn.addEventListener('click', () => {
         closeAllPopoverMenus();
-        exportPdfFromServer();
+        exportPdfFromServer(true);
       });
     }
     if (els.exportPdfContentOnlyBtn) {
       els.exportPdfContentOnlyBtn.addEventListener('click', () => {
         closeAllPopoverMenus();
-        exportPdfFromServer();
+        exportPdfFromServer(false);
       });
     }
   }

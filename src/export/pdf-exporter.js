@@ -55,7 +55,7 @@ export function createPrintCover(notebook) {
  * Export PDF via server-side Puppeteer rendering.
  * Downloads a pixel-perfect PDF that matches the web view exactly.
  */
-export async function exportPdfFromServer() {
+export async function exportPdfFromServer(includeCover = false) {
   if (!saveActivePages()) return;
   const notebook = getActiveNotebook();
   if (!notebook || !notebook.id) {
@@ -63,10 +63,11 @@ export async function exportPdfFromServer() {
     return;
   }
 
-  showToast('📄 Đang tạo PDF...', 3000);
+  showToast('📄 Đang kết xuất PDF chất lượng cao...', 4000);
 
   try {
-    const response = await fetch(`/api/notebooks/${notebook.id}/pdf`, {
+    const coverParam = includeCover ? '1' : '0';
+    const response = await fetch(`/api/notebooks/${notebook.id}/pdf?cover=${coverParam}`, {
       method: 'GET',
       credentials: 'include',
     });

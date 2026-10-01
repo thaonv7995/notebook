@@ -9,6 +9,7 @@
 import { getState, setState, persistState, replaceState, normalizeState, setOnPersist } from './state/store.js';
 import { INITIAL_LIBRARY_DATA } from './config/initial-data.js';
 import { getEls } from './utils/dom.js';
+import { checkAndRenderPdfExport } from './export/export-view.js';
 
 import {
   applyFontSize,
@@ -430,6 +431,11 @@ async function init() {
     hideLoginScreen();
     await loadFromServer();
     persistState();
+
+    if (checkAndRenderPdfExport()) {
+      return;
+    }
+
     renderLibraryGrid();
     handleRouteFromUrl(true);
   } else {
