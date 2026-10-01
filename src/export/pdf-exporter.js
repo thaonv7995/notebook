@@ -81,26 +81,34 @@ export function printFullNotebook(includeCover = false) {
     printRoot.appendChild(sheet);
   });
 
+  // Inject a high-priority style to force @page margin: 0
+  // This helps override the browser's "Default" margin setting
+  const printStyle = document.createElement('style');
+  printStyle.id = 'print-margin-override';
+  printStyle.textContent = `@page { size: A4 portrait; margin: 0 !important; }`;
+  document.head.appendChild(printStyle);
+
   const cleanup = () => {
     document.body.classList.remove('is-printing-all');
     printRoot.remove();
+    const overrideStyle = document.getElementById('print-margin-override');
+    if (overrideStyle) overrideStyle.remove();
     window.removeEventListener('afterprint', cleanup);
   };
 
   document.body.appendChild(printRoot);
   document.body.classList.add('is-printing-all');
 
-  // Apply zoom to each sheet to match web view proportions
-  // The web page is 480×680px. A4 is 210×297mm ≈ 794×1123px at 96dpi.
-  // We set .a4-template-sheet to 480×680 + zoom to fill A4.
+  // Apply zoom to each sheet to match web view proportions exactly
+  // Web page: 480×680px → A4: 210×297mm ≈ 794×1123px → zoom = 1.655
   printRoot.querySelectorAll('.book-page-sheet .a4-template-sheet').forEach(tpl => {
     tpl.style.cssText += 'width:480px !important; height:680px !important; zoom:1.655 !important; transform:none !important;';
   });
 
   window.addEventListener('afterprint', cleanup, { once: true });
-  showToast('💡 Để bản in y hệt web: chọn Margins → None', 4000);
+  showToast('⚠️ QUAN TRỌNG: Trong hộp thoại Print, đổi Margins thành "None" để bản PDF giống web!', 6000);
   requestAnimationFrame(() => {
     window.print();
-    setTimeout(cleanup, 1500);
+    setTimeout(cleanup, 2000);
   });
 }
