@@ -59,8 +59,8 @@ export async function fetchNotebooks() {
   return request('GET', '/notebooks');
 }
 
-export async function syncNotebooks(notebooks) {
-  return request('PUT', '/notebooks/sync', { notebooks });
+export async function syncNotebooks(notebooks, lastSyncedAt = null) {
+  return request('PUT', '/notebooks/sync', { notebooks, lastSyncedAt });
 }
 
 export async function deleteNotebookRemote(notebookId) {

@@ -269,6 +269,8 @@ import { login, logout, checkSession, fetchNotebooks, syncNotebooks } from './ap
 
 let isAuthenticated = false;
 let syncTimer = null;
+let lastSyncedAt = null;      // Tracks server's last sync timestamp
+let serverLoadComplete = false; // Prevents push before first pull completes
 const SYNC_DEBOUNCE_MS = 2000;
 
 // ─── Auth UI helpers ───
@@ -331,6 +333,8 @@ function setupLogoutButton() {
       await logout();
     } catch {}
     isAuthenticated = false;
+    serverLoadComplete = false;
+    lastSyncedAt = null;
     showLoginScreen();
     showToast('Đã đăng xuất');
   });
@@ -338,30 +342,121 @@ function setupLogoutButton() {
 
 // ─── Server Sync ───
 
+/**
+ * Load notebooks from server and perform smart per-notebook merge
+ * using updatedAt timestamps. Prevents server data from being lost
+ * when a stale client connects.
+ */
 async function loadFromServer() {
   try {
     const data = await fetchNotebooks();
-    if (data.ok && Array.isArray(data.notebooks) && data.notebooks.length > 0) {
+    if (data.ok && Array.isArray(data.notebooks)) {
+      // Track server's sync timestamp
+      if (data.lastSyncedAt) lastSyncedAt = data.lastSyncedAt;
+
+      const serverNotebooks = data.notebooks;
+      const localState = getState();
+      const localNotebooks = localState.notebooks || [];
+
+      let mergedNotebooks;
+
+      if (localNotebooks.length === 0) {
+        // No local data — use server data as-is
+        mergedNotebooks = serverNotebooks;
+      } else if (serverNotebooks.length === 0) {
+        // No server data — keep local data (will be pushed on next sync)
+        mergedNotebooks = localNotebooks;
+      } else {
+        // Both sides have data — merge per-notebook by updatedAt
+        const serverMap = new Map();
+        serverNotebooks.forEach(nb => serverMap.set(nb.id, nb));
+
+        const localMap = new Map();
+        localNotebooks.forEach(nb => localMap.set(nb.id, nb));
+
+        const allIds = new Set([...serverMap.keys(), ...localMap.keys()]);
+        mergedNotebooks = [];
+
+        for (const id of allIds) {
+          const serverNb = serverMap.get(id);
+          const localNb = localMap.get(id);
+
+          if (serverNb && localNb) {
+            // Both exist — keep the one with newer updatedAt
+            const serverTime = serverNb.updatedAt || '';
+            const localTime = localNb.updatedAt || '';
+            mergedNotebooks.push(localTime >= serverTime ? localNb : serverNb);
+          } else if (serverNb) {
+            // Only on server — include it
+            mergedNotebooks.push(serverNb);
+          } else if (localNb) {
+            // Only on local — include it (new notebook created locally)
+            mergedNotebooks.push(localNb);
+          }
+        }
+      }
+
       const normalized = normalizeState({
-        ...getState(),
-        notebooks: data.notebooks
+        ...localState,
+        notebooks: mergedNotebooks
       });
       replaceState(normalized);
+      serverLoadComplete = true;
     }
   } catch (err) {
     console.warn('Could not load from server, using local data:', err.message);
+    // Still mark as complete so we don't block sync forever
+    serverLoadComplete = true;
   }
 }
 
+/**
+ * Push local state to server with smart merge.
+ * Guards against pushing empty/stale data.
+ */
 function scheduleSyncToServer() {
   if (!isAuthenticated) return;
+  // Block push until first pull is complete
+  if (!serverLoadComplete) return;
+
   clearTimeout(syncTimer);
   syncTimer = setTimeout(async () => {
     try {
       const state = getState();
-      await syncNotebooks(state.notebooks);
+
+      // Safety: never push empty notebooks if there was server data
+      if (!state.notebooks || state.notebooks.length === 0) {
+        console.warn('Sync skipped: local notebooks are empty');
+        return;
+      }
+
+      const result = await syncNotebooks(state.notebooks, lastSyncedAt);
+
+      // Update lastSyncedAt from server response
+      if (result.savedAt) lastSyncedAt = result.savedAt;
+
+      // If server returned merged notebooks, apply them locally
+      // (server may have kept notebooks from other devices)
+      if (result.notebooks && Array.isArray(result.notebooks)) {
+        const currentState = getState();
+        const normalized = normalizeState({
+          ...currentState,
+          notebooks: result.notebooks
+        });
+        // Only replace if different to avoid unnecessary re-renders
+        if (JSON.stringify(normalized.notebooks) !== JSON.stringify(currentState.notebooks)) {
+          replaceState(normalized);
+        }
+      }
     } catch (err) {
-      console.warn('Sync to server failed:', err.message);
+      // If server blocked empty sync, force reload from server
+      if (err.message && err.message.includes('EMPTY_SYNC_BLOCKED')) {
+        console.warn('Server blocked empty sync, reloading from server...');
+        await loadFromServer();
+        renderLibraryGrid();
+      } else {
+        console.warn('Sync to server failed:', err.message);
+      }
     }
   }, SYNC_DEBOUNCE_MS);
 }

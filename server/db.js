@@ -88,8 +88,67 @@ export function loadFullState(userId) {
   return db.notebooks[userId] || [];
 }
 
+export function getLastSyncedAt(userId) {
+  if (!db.syncMeta) db.syncMeta = {};
+  return db.syncMeta[userId]?.lastSyncedAt || null;
+}
+
+/**
+ * Smart merge: for each notebook, keep the version with the newer updatedAt.
+ * New notebooks from either side are always preserved.
+ * Notebooks deleted on one side (missing from incoming) are kept if they
+ * were updated on server after the client's last known sync.
+ */
+export function mergeAndSaveState(userId, incomingNotebooks, clientLastSyncedAt) {
+  const existing = db.notebooks[userId] || [];
+  const now = new Date().toISOString();
+
+  // Build maps keyed by notebook id
+  const serverMap = new Map();
+  existing.forEach(nb => serverMap.set(nb.id, nb));
+
+  const incomingMap = new Map();
+  incomingNotebooks.forEach(nb => incomingMap.set(nb.id, nb));
+
+  const merged = [];
+  const allIds = new Set([...serverMap.keys(), ...incomingMap.keys()]);
+
+  for (const id of allIds) {
+    const serverNb = serverMap.get(id);
+    const clientNb = incomingMap.get(id);
+
+    if (serverNb && clientNb) {
+      // Both exist — keep the one with newer updatedAt
+      const serverTime = serverNb.updatedAt || '';
+      const clientTime = clientNb.updatedAt || '';
+      merged.push(clientTime >= serverTime ? clientNb : serverNb);
+    } else if (clientNb && !serverNb) {
+      // Only on client — new notebook, add it
+      merged.push(clientNb);
+    } else if (serverNb && !clientNb) {
+      // Only on server — client may have deleted it, or client never had it
+      // If client provided a lastSyncedAt and the server notebook was updated
+      // AFTER that timestamp, keep it (client didn't know about the update).
+      // Otherwise, the client intentionally deleted it.
+      if (clientLastSyncedAt && serverNb.updatedAt && serverNb.updatedAt > clientLastSyncedAt) {
+        merged.push(serverNb);
+      }
+      // else: client explicitly deleted it — omit from merged result
+    }
+  }
+
+  db.notebooks[userId] = merged;
+  if (!db.syncMeta) db.syncMeta = {};
+  db.syncMeta[userId] = { lastSyncedAt: now };
+  persist();
+
+  return { merged, savedAt: now };
+}
+
 export function saveFullState(userId, notebooks) {
   db.notebooks[userId] = notebooks;
+  if (!db.syncMeta) db.syncMeta = {};
+  db.syncMeta[userId] = { lastSyncedAt: new Date().toISOString() };
   persist();
 }
 
