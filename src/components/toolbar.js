@@ -82,13 +82,20 @@ export function setupToolbarListeners() {
     });
   });
 
-  // Formatting actions
-  if (els.fmtBold) els.fmtBold.addEventListener('click', () => applyFormattingToActiveTarget('bold'));
-  if (els.fmtItalic) els.fmtItalic.addEventListener('click', () => applyFormattingToActiveTarget('italic'));
-  if (els.fmtUnderline) els.fmtUnderline.addEventListener('click', () => applyFormattingToActiveTarget('underline'));
-  if (els.fmtStrike) els.fmtStrike.addEventListener('click', () => applyFormattingToActiveTarget('strike'));
+  // Formatting actions — with active state update after each click
+  const fmtClick = (el, type) => {
+    if (!el) return;
+    el.addEventListener('click', () => {
+      applyFormattingToActiveTarget(type);
+      updateToolbarActiveStates();
+    });
+  };
+  fmtClick(els.fmtBold, 'bold');
+  fmtClick(els.fmtItalic, 'italic');
+  fmtClick(els.fmtUnderline, 'underline');
+  fmtClick(els.fmtStrike, 'strike');
   if (els.fmtBadgeBtn) els.fmtBadgeBtn.addEventListener('click', () => applyFormattingToActiveTarget('badge'));
-  if (els.fmtClear) els.fmtClear.addEventListener('click', () => applyFormattingToActiveTarget('clear'));
+  if (els.fmtClear) els.fmtClear.addEventListener('click', () => { applyFormattingToActiveTarget('clear'); updateToolbarActiveStates(); });
 
   if (els.fmtH1) els.fmtH1.addEventListener('click', () => applyFormattingToActiveTarget('h1'));
   if (els.fmtH2) els.fmtH2.addEventListener('click', () => applyFormattingToActiveTarget('h2'));
@@ -261,4 +268,60 @@ export function setupToolbarListeners() {
       closeAllPopoverMenus();
     }
   });
+
+  // ─── Active State Tracking ───
+  // Update toolbar button states when the text cursor or selection changes
+  document.addEventListener('selectionchange', () => {
+    const act = document.activeElement;
+    if (act && act.classList && act.classList.contains('template-writing-area')) {
+      updateToolbarActiveStates();
+    }
+  });
+}
+
+// ─── Toolbar Active State Detection ───
+
+function rgbToHex(rgb) {
+  if (!rgb || rgb === 'transparent' || rgb === 'inherit') return null;
+  const m = rgb.match(/^rgb\((\d+),\s*(\d+),\s*(\d+)\)$/i);
+  if (!m) return rgb;
+  return `#${((1 << 24) + (parseInt(m[1]) << 16) + (parseInt(m[2]) << 8) + parseInt(m[3])).toString(16).slice(1)}`;
+}
+
+function updateToolbarActiveStates() {
+  const els = getEls();
+
+  // Bold / Italic / Underline / Strikethrough
+  const stateMap = [
+    [els.fmtBold, 'bold'],
+    [els.fmtItalic, 'italic'],
+    [els.fmtUnderline, 'underline'],
+    [els.fmtStrike, 'strikeThrough'],
+  ];
+  for (const [btn, cmd] of stateMap) {
+    if (!btn) continue;
+    try {
+      btn.classList.toggle('is-active', document.queryCommandState(cmd));
+    } catch (e) { /* ignore */ }
+  }
+
+  // Text color indicator bar
+  if (els.currentColorBar) {
+    try {
+      const val = document.queryCommandValue('foreColor');
+      const hex = rgbToHex(val);
+      if (hex) els.currentColorBar.style.backgroundColor = hex;
+    } catch (e) { /* ignore */ }
+  }
+
+  // Background highlight indicator bar
+  if (els.currentBgBar) {
+    try {
+      const val = document.queryCommandValue('hiliteColor') || document.queryCommandValue('backColor');
+      const hex = rgbToHex(val);
+      if (hex && hex !== '#000000' && val !== 'transparent') {
+        els.currentBgBar.style.backgroundColor = hex;
+      }
+    } catch (e) { /* ignore */ }
+  }
 }
