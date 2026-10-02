@@ -102,16 +102,26 @@ function mergeNotebookPages(localNb, serverNb) {
   const localTime = localNb.updatedAt || '';
   const serverTime = serverNb.updatedAt || '';
 
+  // Merge tombstones from both sides
+  const deletedPageIds = new Set([
+    ...(Array.isArray(localNb.deletedPageIds) ? localNb.deletedPageIds : []),
+    ...(Array.isArray(serverNb.deletedPageIds) ? serverNb.deletedPageIds : [])
+  ]);
+
   // Base metadata from whichever notebook is newer
   const base = serverTime > localTime
     ? JSON.parse(JSON.stringify(serverNb))
     : JSON.parse(JSON.stringify(localNb));
 
   const localPages = new Map();
-  (localNb.pages || []).forEach(p => localPages.set(p.id, p));
+  (localNb.pages || []).forEach(p => {
+    if (p && p.id && !deletedPageIds.has(p.id)) localPages.set(p.id, p);
+  });
 
   const serverPages = new Map();
-  (serverNb.pages || []).forEach(p => serverPages.set(p.id, p));
+  (serverNb.pages || []).forEach(p => {
+    if (p && p.id && !deletedPageIds.has(p.id)) serverPages.set(p.id, p);
+  });
 
   const allPageIds = new Set([...localPages.keys(), ...serverPages.keys()]);
   const mergedPages = [];
@@ -132,6 +142,7 @@ function mergeNotebookPages(localNb, serverNb) {
   }
 
   base.pages = mergedPages;
+  base.deletedPageIds = Array.from(deletedPageIds).slice(-200);
 
   // Update notebook updatedAt to the latest page time
   const latestPage = mergedPages.reduce((latest, p) => {

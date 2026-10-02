@@ -1,5 +1,5 @@
 // Notebook Studio - offline application shell
-const CACHE_NAME = 'notebook-studio-v7';
+const CACHE_NAME = 'notebook-studio-v8';
 const APP_SHELL = [
   './',
   './index.html',
@@ -10,7 +10,11 @@ const APP_SHELL = [
 ];
 
 self.addEventListener('install', (e) => {
-  e.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(APP_SHELL)).then(() => self.skipWaiting()));
+  e.waitUntil(
+    caches.open(CACHE_NAME)
+      .then(cache => cache.addAll(APP_SHELL).catch(err => console.warn('[SW] Caching shell partial:', err)))
+      .then(() => self.skipWaiting())
+  );
 });
 
 self.addEventListener('activate', (e) => {
@@ -22,7 +26,12 @@ self.addEventListener('activate', (e) => {
 });
 
 self.addEventListener('fetch', (e) => {
-  if (e.request.method !== 'GET' || new URL(e.request.url).origin !== self.location.origin) return;
+  if (e.request.method !== 'GET') return;
+  const url = new URL(e.request.url);
+  if (url.origin !== self.location.origin) return;
+  // NEVER cache or intercept /api/ requests (auth, sync, ai, pdf)
+  if (url.pathname.startsWith('/api/')) return;
+
   e.respondWith(
     fetch(e.request).then(response => {
         if (response && response.ok) {

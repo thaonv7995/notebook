@@ -53,7 +53,9 @@ export function normalizeState(rawState) {
       ? requestedNotebookId
       : createUniqueId('nb', notebookIds);
     notebookIds.add(nb.id);
-    nb.pages = Array.isArray(nb.pages) ? nb.pages : [];
+    nb.deletedPageIds = Array.isArray(nb.deletedPageIds) ? nb.deletedPageIds.slice(-200) : [];
+    const tombstoneSet = new Set(nb.deletedPageIds);
+    nb.pages = (Array.isArray(nb.pages) ? nb.pages : []).filter(p => p && p.id && !tombstoneSet.has(p.id));
     nb.title = String(nb.title || 'Cuốn sổ chưa đặt tên')
       .replace(/\s*•\s*Sổ\s+Kẻ\s+Ngang\s+A4\s*—\s*Bản\s+sao/gi, '')
       .replace(/\s*Sổ\s+Kẻ\s+Ngang\s+A4\s*—\s*Bản\s+sao\s*/gi, '')
@@ -190,8 +192,39 @@ export function persistState() {
     }
     return true;
   } catch (e) {
-    console.error('Error saving state:', e);
-    return false;
+    const isQuota = e && (
+      e.name === 'QuotaExceededError' ||
+      e.name === 'NS_ERROR_DOM_QUOTA_REACHED' ||
+      e.code === 22 ||
+      e.code === 1014
+    );
+    if (isQuota) {
+      console.warn('[Storage] LocalStorage quota exceeded. Saving compact cache...');
+      try {
+        // Build a compact representation for localStorage:
+        // Keep active notebook full, for other notebooks keep up to 3 pages
+        const compactState = {
+          ...state,
+          notebooks: (state.notebooks || []).map(nb => {
+            if (nb.id === state.activeNotebookId) return nb;
+            return {
+              ...nb,
+              pages: (nb.pages || []).slice(0, 3)
+            };
+          })
+        };
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(compactState));
+      } catch (compactErr) {
+        console.warn('[Storage] Even compact cache failed:', compactErr);
+      }
+    } else {
+      console.error('Error saving state:', e);
+    }
+    // CRITICAL: Always trigger server sync with FULL state even if localStorage quota failed!
+    if (onPersistCallback) {
+      try { onPersistCallback(state); } catch {}
+    }
+    return true;
   }
 }
 

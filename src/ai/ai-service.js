@@ -106,6 +106,97 @@ export async function processAI(opts = {}) {
   return data;
 }
 
+/**
+ * Stream an AI processing request via SSE (Server-Sent Events)
+ *
+ * @param {Object} opts
+ * @param {function(string, string): void} [onToken] - Callback for each token (delta, accumulated)
+ * @param {function(string): void} [onComplete] - Callback when generation completes
+ * @param {function(Error): void} [onError] - Callback on error
+ * @returns {Promise<{ok: boolean, result: string}>}
+ */
+export async function streamAI(opts = {}, onToken, onComplete, onError) {
+  const apiKey = getSavedApiKey();
+  const model = opts.model || getPreferredModel();
+  const baseUrl = opts.baseUrl || getSavedBaseUrl();
+
+  const body = {
+    action: opts.action || 'write',
+    prompt: opts.prompt || '',
+    selectedText: opts.selectedText || '',
+    fullContext: opts.fullContext || '',
+    template: opts.template || 'ruled',
+    targetLang: opts.targetLang || '',
+    model,
+    baseUrl,
+    constraints: opts.constraints || null,
+  };
+
+  if (apiKey) {
+    body.apiKey = apiKey;
+  }
+
+  try {
+    const res = await fetch(`${AI_API_BASE}/stream`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'same-origin',
+      body: JSON.stringify(body),
+    });
+
+    if (res.status === 401) {
+      window.dispatchEvent(new CustomEvent('auth:required'));
+      throw new Error('Phiên đăng nhập đã hết hạn');
+    }
+
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData.error || `Lỗi AI (HTTP ${res.status})`);
+    }
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder('utf-8');
+    let buffer = '';
+    let fullText = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop() || '';
+
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed || !trimmed.startsWith('data:')) continue;
+        const payload = trimmed.slice(5).trim();
+
+        if (payload === '[DONE]') {
+          break;
+        }
+
+        try {
+          const parsed = JSON.parse(payload);
+          if (parsed.error) throw new Error(parsed.error);
+          if (parsed.delta) {
+            fullText += parsed.delta;
+            if (onToken) onToken(parsed.delta, fullText);
+          }
+        } catch (e) {
+          if (e.message && !e.message.startsWith('Unexpected')) throw e;
+        }
+      }
+    }
+
+    if (onComplete) onComplete(fullText);
+    return { ok: true, result: fullText };
+  } catch (err) {
+    if (onError) onError(err);
+    throw err;
+  }
+}
+
 // ─── Test API Key & Base URL ───
 
 export async function testApiKey(key, baseUrl, model) {

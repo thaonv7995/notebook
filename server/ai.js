@@ -280,6 +280,121 @@ export function aiRoutes(app) {
     }
   });
 
+  // ─── POST /api/ai/stream — Stream AI output via Server-Sent Events (SSE) ───
+  app.post('/api/ai/stream', requireAuth, async (req, res) => {
+    try {
+      const apiKey = resolveApiKey(req);
+      const chatUrl = resolveEndpointUrl(req, '/chat/completions');
+      const isLocal = chatUrl.includes('localhost') || chatUrl.includes('127.0.0.1');
+
+      if (!apiKey && !isLocal) {
+        return res.status(400).json({
+          ok: false,
+          error: 'Chưa có API Key. Hãy cấu hình OPENAI_API_KEY trong file .env hoặc bấm nút Cài đặt AI ⚙️ để nhập Key cá nhân.'
+        });
+      }
+
+      const {
+        prompt = '',
+        selectedText = '',
+        fullContext = '',
+        action = 'write',
+        template = 'ruled',
+        targetLang = '',
+        model = 'gpt-4o-mini',
+        constraints = {}
+      } = req.body || {};
+
+      const targetModel = (typeof model === 'string' && model.trim()) ? model.trim() : 'gpt-4o-mini';
+      const systemPrompt = buildSystemPrompt(action, template, targetLang, constraints);
+
+      let userContent = '';
+      if (selectedText) {
+        userContent = `Văn bản gốc cần xử lý:\n"""\n${selectedText}\n"""\n${prompt ? `Yêu cầu cụ thể: ${prompt}` : ''}`;
+      } else {
+        userContent = prompt || 'Hãy viết tiếp nội dung hữu ích cho trang sổ này.';
+        if (fullContext) {
+          userContent += `\n\n(Ngữ cảnh trang sổ: ${fullContext.slice(0, 1000)})`;
+        }
+      }
+
+      const headers = { 'Content-Type': 'application/json' };
+      if (apiKey) headers['Authorization'] = `Bearer ${apiKey}`;
+
+      const requestBody = {
+        model: targetModel,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userContent }
+        ],
+        temperature: action === 'grammar' ? 0.2 : 0.7,
+        max_tokens: 2000,
+        stream: true
+      };
+
+      const aiResponse = await fetch(chatUrl, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(requestBody)
+      });
+
+      if (!aiResponse.ok) {
+        const errBody = await aiResponse.json().catch(() => ({}));
+        const errMsg = (errBody.error && errBody.error.message) || `Máy chủ AI trả về HTTP ${aiResponse.status}`;
+        return res.status(aiResponse.status).json({ ok: false, error: errMsg });
+      }
+
+      res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
+      res.setHeader('Cache-Control', 'no-cache, no-transform');
+      res.setHeader('Connection', 'keep-alive');
+      res.setHeader('X-Accel-Buffering', 'no');
+      res.flushHeaders?.();
+
+      const reader = aiResponse.body.getReader();
+      const decoder = new TextDecoder('utf-8');
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed || !trimmed.startsWith('data:')) continue;
+          const payload = trimmed.slice(5).trim();
+
+          if (payload === '[DONE]') {
+            res.write('data: [DONE]\n\n');
+            continue;
+          }
+
+          try {
+            const parsed = JSON.parse(payload);
+            const delta = parsed.choices?.[0]?.delta?.content || '';
+            if (delta) {
+              res.write(`data: ${JSON.stringify({ delta })}\n\n`);
+            }
+          } catch {}
+        }
+      }
+
+      res.write('data: [DONE]\n\n');
+      res.end();
+    } catch (err) {
+      console.error('AI Stream Error:', err);
+      if (!res.headersSent) {
+        res.status(500).json({ ok: false, error: err.message || String(err) });
+      } else {
+        res.write(`data: ${JSON.stringify({ error: err.message || String(err) })}\n\n`);
+        res.end();
+      }
+    }
+  });
+
   // ─── POST /api/ai/process — Execute AI prompt / transform ───
   app.post('/api/ai/process', requireAuth, async (req, res) => {
     try {

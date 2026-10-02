@@ -35,6 +35,14 @@ apiRoutes(app);
 aiRoutes(app);
 pdfRoutes(app);
 
+// ─── 404 Guard for API Routes (prevents HTML fallback) ───
+app.all('/api/{*path}', (req, res) => {
+  res.status(404).json({ ok: false, error: 'Endpoint không tồn tại' });
+});
+app.all('/api', (req, res) => {
+  res.status(404).json({ ok: false, error: 'Endpoint không tồn tại' });
+});
+
 // ─── Frontend Serving ───
 if (IS_DEV) {
   // In dev mode, proxy to Vite dev server on a different port

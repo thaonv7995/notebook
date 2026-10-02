@@ -9,7 +9,7 @@
   "lang": "vi",
   "icons": [
     {
-      "src": "public/notebook-icon.svg",
+      "src": "notebook-icon.svg",
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any maskable"

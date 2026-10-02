@@ -352,6 +352,20 @@
   display: block;
 }
 
+.btn-header-icon .icon-sound-off {
+  display: none;
+}
+.btn-header-icon.is-muted .icon-sound-on {
+  display: none;
+}
+.btn-header-icon.is-muted .icon-sound-off {
+  display: block;
+}
+.btn-header-icon.is-muted {
+  opacity: 0.45;
+  filter: grayscale(1);
+}
+
 .btn-add-page-reader {
   background: rgba(56, 189, 248, 0.15);
   border: 1px solid rgba(56, 189, 248, 0.3);

@@ -43,6 +43,7 @@ export function getEls() {
     readerToneSelect: document.querySelector('#readerToneSelect'),
     readerTextureSelect: document.querySelector('#readerTextureSelect'),
     btnAddPage: document.querySelector('#btnAddPage'),
+    btnToggleSound: document.querySelector('#btnToggleSound'),
     btnToggleFormatToolbar: document.querySelector('#btnToggleFormatToolbar'),
     btnToggleFullscreen: document.querySelector('#btnToggleFullscreen'),
     saveStatus: document.querySelector('#save-status'),

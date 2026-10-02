@@ -10,7 +10,7 @@
  * - Intelligent element targeting: never dumps notes into Cornell cues column
  */
 
-import { processAI, getPreferredModel } from './ai-service.js';
+import { processAI, streamAI, getPreferredModel } from './ai-service.js';
 import { formatContentToHtml } from '../editor/sanitizer.js';
 import { getActivePageInfo, applyAiAutofillToCurrentPage, saveActivePages, applyPaperTone, applyPaperTexture } from '../components/reader.js';
 import { applyFontSize, applyFontFamily, applyLineHeight } from '../editor/formatter.js';
@@ -499,38 +499,69 @@ async function handleExecutePrompt(promptText, actionType = 'write') {
   }
 
   try {
-    const res = await processAI({
-      action: actionType,
-      prompt: promptText,
-      selectedText: '',
-      fullContext: currentContext.slice(0, 1200),
-      template,
-      constraints
-    });
+    if (actionType === 'autofill') {
+      const res = await processAI({
+        action: actionType,
+        prompt: promptText,
+        selectedText: '',
+        fullContext: currentContext.slice(0, 1200),
+        template,
+        constraints
+      });
 
-    if (!res.ok) {
-      throw new Error(res.error || 'Lỗi khi gọi AI');
-    }
+      if (!res.ok) {
+        throw new Error(res.error || 'Lỗi khi gọi AI');
+      }
 
-    // 1. If Autofill JSON returned
-    if (res.parsedJson && actionType === 'autofill') {
-      applyAiAutofillToCurrentPage(res.parsedJson);
-    } else if (res.parsedJson?.type !== 'style_update') {
-      const rawText = res.result || '';
+      if (res.parsedJson) {
+        applyAiAutofillToCurrentPage(res.parsedJson);
+      }
+    } else {
+      // ── Real-time SSE Token Streaming ──
+      const existingHtml = currentTargetEditable ? currentTargetEditable.innerHTML.trim() : '';
+      const basePrefix = (!existingHtml || existingHtml === '<br>') ? '' : existingHtml;
+      let rawText = '';
 
-      // ── Auto-fit font size BEFORE insertion ──
-      // If content would overflow page at current font size, auto-reduce
+      await streamAI(
+        {
+          action: actionType,
+          prompt: promptText,
+          selectedText: '',
+          fullContext: currentContext.slice(0, 1200),
+          template,
+          constraints
+        },
+        (delta, full) => {
+          rawText = full;
+          // Clean embedded styles JSON during live stream preview
+          let liveClean = full;
+          const liveMatch = full.match(/\{[\s\S]*"styles"\s*:\s*\{[^}]+\}[\s\S]*\}\s*$/);
+          if (liveMatch) liveClean = full.replace(liveMatch[0], '').trim();
+
+          const formattedHtml = formatContentToHtml(liveClean);
+          if (currentTargetEditable) {
+            currentTargetEditable.innerHTML = basePrefix ? (basePrefix + formattedHtml) : formattedHtml;
+            currentTargetEditable.dispatchEvent(new Event('input', { bubbles: true }));
+          }
+        },
+        (finalText) => {
+          rawText = finalText;
+        },
+        (streamErr) => {
+          throw streamErr;
+        }
+      );
+
+      // ── Auto-fit font size BEFORE finalizing insertion ──
       const fittedSize = autoFitFontSize(rawText, constraints, currentTargetEditable);
       if (fittedSize !== null) {
         const autoStyles = { fontSize: fittedSize };
-        // Track for discard rollback
         if (!currentAppliedStyles) currentAppliedStyles = {};
         currentAppliedStyles.fontSize = fittedSize;
         applyPageStyles(autoStyles, false);
       }
 
       // ── Try to extract inline styles JSON from AI text ──
-      // Some models embed {"styles": {...}} at the end of their response
       let cleanedText = rawText;
       const stylesMatch = rawText.match(/\{[\s\S]*"styles"\s*:\s*\{[^}]+\}[\s\S]*\}\s*$/);
       if (stylesMatch) {
@@ -541,22 +572,14 @@ async function handleExecutePrompt(promptText, actionType = 'write') {
             Object.assign(currentAppliedStyles, extracted.styles);
             applyPageStyles(extracted.styles, false);
           }
-          // Remove the JSON block from content text
           cleanedText = rawText.replace(stylesMatch[0], '').trim();
         } catch { /* ignore parse errors */ }
       }
 
-      // 2. Direct text insertion formatted as clean HTML
+      // Final formatted HTML sync
       const formattedHtml = formatContentToHtml(cleanedText);
       if (currentTargetEditable) {
-        const existingHtml = currentTargetEditable.innerHTML.trim();
-        if (!existingHtml || existingHtml === '<br>') {
-          currentTargetEditable.innerHTML = formattedHtml;
-        } else {
-          // Each line is already inside a <div> from formatContentToHtml,
-          // so just concatenate — no bare <br> that would break grid alignment
-          currentTargetEditable.innerHTML = existingHtml + formattedHtml;
-        }
+        currentTargetEditable.innerHTML = basePrefix ? (basePrefix + formattedHtml) : formattedHtml;
         currentTargetEditable.dispatchEvent(new Event('input', { bubbles: true }));
       }
     }

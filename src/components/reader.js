@@ -13,6 +13,7 @@ import { placeCaretAtStart } from '../editor/caret.js';
 import { wrapHanziInElement } from '../editor/hanzi-aligner.js';
 import { showStatus, showToast, openDeleteNotebookModal, showPromptModal, showConfirmModal, showAlertModal } from './modal.js';
 import { renderLibraryGrid, deleteBook } from './library.js';
+import { playPaperFlipSound, isSoundEnabled, toggleSound } from '../utils/audio.js';
 
 /**
  * Maps template key to the CSS selector of its main writing area
@@ -564,6 +565,7 @@ export function turnPageForward() {
 
   saveActivePages();
   isTurningPage = true;
+  playPaperFlipSound();
 
   const els = getEls();
   const targetSheet = currentPageMode === '2-page' ? els.rightPageSheet : els.leftPageSheet;
@@ -586,6 +588,7 @@ export function turnPageBackward() {
 
   saveActivePages();
   isTurningPage = true;
+  playPaperFlipSound();
 
   const els = getEls();
   const targetSheet = els.leftPageSheet;
@@ -603,6 +606,7 @@ export function jumpToPage(pageNum) {
   const nb = getActiveNotebook();
   if (!nb) return;
   saveActivePages();
+  playPaperFlipSound();
   let idx = Math.max(0, Math.min(pageNum - 1, nb.pages.length - 1));
   if (currentPageMode === '2-page') {
     if (idx % 2 === 1) {
@@ -885,7 +889,14 @@ export async function deleteCurrentPage() {
     { confirmText: 'Xóa trang', danger: true }
   );
   if (confirmed) {
-    nb.pages.splice(state.activePageIndex, 1);
+    const [removedPage] = nb.pages.splice(state.activePageIndex, 1);
+    if (!Array.isArray(nb.deletedPageIds)) nb.deletedPageIds = [];
+    if (removedPage && removedPage.id) {
+      nb.deletedPageIds.push(removedPage.id);
+      if (nb.deletedPageIds.length > 200) {
+        nb.deletedPageIds = nb.deletedPageIds.slice(-200);
+      }
+    }
     let nextIdx = state.activePageIndex;
     if (nextIdx >= nb.pages.length) {
       nextIdx = Math.max(0, nb.pages.length - 1);
@@ -1003,6 +1014,23 @@ export function setupReaderListeners({ onCopyBookLink } = {}) {
   // Navigation
   if (els.btnPrevPage) els.btnPrevPage.addEventListener('click', turnPageBackward);
   if (els.btnNextPage) els.btnNextPage.addEventListener('click', turnPageForward);
+
+  // Sound Toggle
+  function updateSoundButtonState() {
+    if (!els.btnToggleSound) return;
+    const on = isSoundEnabled();
+    els.btnToggleSound.classList.toggle('is-muted', !on);
+    els.btnToggleSound.setAttribute('title', on ? 'Âm thanh lật trang: Đang bật (Bấm để tắt)' : 'Âm thanh lật trang: Đang tắt (Bấm để bật)');
+    els.btnToggleSound.setAttribute('aria-pressed', String(on));
+  }
+  if (els.btnToggleSound) {
+    updateSoundButtonState();
+    els.btnToggleSound.addEventListener('click', () => {
+      const active = toggleSound();
+      updateSoundButtonState();
+      showToast(active ? 'Đã bật âm thanh lật trang 🔊' : 'Đã tắt âm thanh 🔇');
+    });
+  }
 
   const handlePageInputJump = (e) => {
     const nb = getActiveNotebook();
