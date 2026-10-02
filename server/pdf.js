@@ -12,10 +12,42 @@
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
+import { execSync } from 'child_process';
 import { requireAuth } from './auth.js';
 import { loadFullState } from './db.js';
 
 const PORT = parseInt(process.env.PORT, 10) || 27972;
+
+/**
+ * Detect system-installed Chrome/Chromium if available
+ */
+function findChromeExecutable() {
+  if (process.env.PUPPETEER_EXECUTABLE_PATH && fs.existsSync(process.env.PUPPETEER_EXECUTABLE_PATH)) {
+    return process.env.PUPPETEER_EXECUTABLE_PATH;
+  }
+  if (process.env.CHROME_BIN && fs.existsSync(process.env.CHROME_BIN)) {
+    return process.env.CHROME_BIN;
+  }
+
+  const systemCandidates = [
+    '/usr/bin/google-chrome-stable',
+    '/usr/bin/google-chrome',
+    '/usr/bin/chromium',
+    '/usr/bin/chromium-browser',
+    '/snap/bin/chromium',
+    '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+  ];
+
+  for (const cand of systemCandidates) {
+    try {
+      if (fs.existsSync(cand)) {
+        return cand;
+      }
+    } catch {}
+  }
+
+  return undefined;
+}
 
 /**
  * Register the PDF export API route
@@ -54,7 +86,8 @@ export function pdfRoutes(app) {
       );
       fs.mkdirSync(tempProfileDir, { recursive: true });
 
-      browser = await puppeteer.default.launch({
+      const executablePath = findChromeExecutable();
+      const launchOptions = {
         headless: true,
         userDataDir: tempProfileDir,
         args: [
@@ -64,7 +97,30 @@ export function pdfRoutes(app) {
           '--disable-dev-shm-usage',
           '--disable-gpu',
         ],
-      });
+      };
+      if (executablePath) {
+        launchOptions.executablePath = executablePath;
+      }
+
+      try {
+        browser = await puppeteer.default.launch(launchOptions);
+      } catch (launchErr) {
+        if (launchErr.message.includes('Could not find Chrome')) {
+          console.warn('  ⚠ Chrome missing for Puppeteer. Attempting auto-install...');
+          try {
+            execSync('npx puppeteer browsers install chrome', {
+              stdio: 'inherit',
+              env: { ...process.env, HOME: os.homedir() },
+              timeout: 180000,
+            });
+            browser = await puppeteer.default.launch(launchOptions);
+          } catch {
+            throw new Error('Chưa cài đặt Chrome trên server. Vui lòng chạy lệnh: npx puppeteer browsers install chrome');
+          }
+        } else {
+          throw launchErr;
+        }
+      }
 
       const browserPage = await browser.newPage();
       // Set viewport matching standard A4 at 96 DPI with retina 2x density for ultra-sharp rendering

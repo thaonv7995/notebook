@@ -164,6 +164,8 @@ ExecStart=${node_bin} server/index.js
 Restart=always
 RestartSec=5
 Environment=NODE_ENV=production
+Environment=HOME=/home/${run_user}
+Environment=PUPPETEER_CACHE_DIR=/home/${run_user}/.cache/puppeteer
 EnvironmentFile=${INSTALL_DIR}/.env
 
 # Logging
@@ -174,7 +176,7 @@ StandardError=append:${INSTALL_DIR}/logs/stderr.log
 NoNewPrivileges=true
 ProtectSystem=strict
 PrivateTmp=true
-ReadWritePaths=${INSTALL_DIR} /tmp /var/tmp
+ReadWritePaths=${INSTALL_DIR} /tmp /var/tmp /home/${run_user}/.cache
 
 [Install]
 WantedBy=multi-user.target"
@@ -383,6 +385,11 @@ do_install() {
   npm install --omit=dev --ignore-scripts 2>/dev/null
   ok "Dependencies installed."
 
+  # Install Chrome for Puppeteer PDF export
+  info "Installing Chrome for PDF export..."
+  mkdir -p "$HOME/.cache" 2>/dev/null || true
+  npx puppeteer browsers install chrome 2>&1 | tail -n 2 || warn "Could not auto-download Chrome. You can run 'npx puppeteer browsers install chrome' manually."
+
   # Generate credentials
   ADMIN_PASS=$(LC_ALL=C tr -dc 'A-Za-z0-9!@#$%' </dev/urandom | head -c 16 || true)
   JWT_SECRET=$(LC_ALL=C tr -dc 'A-Za-z0-9' </dev/urandom | head -c 48 || true)
@@ -503,6 +510,11 @@ do_update() {
   cd "$INSTALL_DIR"
   npm install --omit=dev --ignore-scripts 2>/dev/null
   ok "Dependencies updated."
+
+  # Ensure Chrome is installed for Puppeteer PDF export
+  info "Ensuring Chrome is installed for PDF export..."
+  mkdir -p "$HOME/.cache" 2>/dev/null || true
+  npx puppeteer browsers install chrome 2>&1 | tail -n 2 || warn "Could not auto-download Chrome. You can run 'npx puppeteer browsers install chrome' manually."
 
   # Save new version
   echo "$TAG" > "$INSTALL_DIR/.version"
