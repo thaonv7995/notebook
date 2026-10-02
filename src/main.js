@@ -439,11 +439,23 @@ async function loadFromServer() {
         mergedNotebooks = localNotebooks;
       } else {
         // Both sides have data — merge per-notebook, then per-page
+        // IMPORTANT: Strip sample/built-in notebooks from local data before merging.
+        // These are from INITIAL_LIBRARY_DATA and have hardcoded IDs starting with
+        // "nb-cornell-", "nb-work-", "nb-ruled-", etc. They should NOT be treated
+        // as "new notebooks created locally" when the server already has real data.
+        const sampleNotebookIds = new Set(
+          INITIAL_LIBRARY_DATA.notebooks.map(nb => nb.id)
+        );
+        const realLocalNotebooks = localNotebooks.filter(nb => {
+          // Keep it if: (a) it exists on server too, or (b) it's NOT a sample notebook
+          return !sampleNotebookIds.has(nb.id);
+        });
+
         const serverMap = new Map();
         serverNotebooks.forEach(nb => serverMap.set(nb.id, nb));
 
         const localMap = new Map();
-        localNotebooks.forEach(nb => localMap.set(nb.id, nb));
+        realLocalNotebooks.forEach(nb => localMap.set(nb.id, nb));
 
         const allIds = new Set([...serverMap.keys(), ...localMap.keys()]);
         mergedNotebooks = [];
@@ -459,7 +471,7 @@ async function loadFromServer() {
             // Only on server — include it
             mergedNotebooks.push(serverNb);
           } else if (localNb) {
-            // Only on local — include it (new notebook created locally)
+            // Only on local — include it (genuinely new notebook created locally)
             mergedNotebooks.push(localNb);
           }
         }
@@ -502,12 +514,21 @@ async function pullFromServer() {
     const localJson = JSON.stringify(localNotebooks);
     if (serverJson === localJson) return false;
 
-    // Deep merge at page level
+    // Deep merge at page level — exclude sample notebooks from local
+    const sampleNotebookIds = new Set(
+      INITIAL_LIBRARY_DATA.notebooks.map(nb => nb.id)
+    );
+
     const serverMap = new Map();
     serverNotebooks.forEach(nb => serverMap.set(nb.id, nb));
 
     const localMap = new Map();
-    localNotebooks.forEach(nb => localMap.set(nb.id, nb));
+    localNotebooks.forEach(nb => {
+      // Only include non-sample notebooks in local merge set
+      if (!sampleNotebookIds.has(nb.id)) {
+        localMap.set(nb.id, nb);
+      }
+    });
 
     const allIds = new Set([...serverMap.keys(), ...localMap.keys()]);
     const mergedNotebooks = [];
