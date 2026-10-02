@@ -248,6 +248,7 @@
   .ai-notion-bar-wrapper,
   #aiNotionInlineBar,
   #aiCornerCopilotContainer,
+  .ai-running-corner-badge,
   .ai-selection-bubble {
     display: none !important;
   }

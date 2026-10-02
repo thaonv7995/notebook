@@ -17,6 +17,8 @@ import { applyFontSize, applyFontFamily, applyLineHeight } from '../editor/forma
 import { getState, setState, persistState, getActiveNotebook } from '../state/store.js';
 
 let inlineContainerEl = null;
+let cornerBadgeEl = null;
+let activeAbortController = null;
 let currentTargetEditable = null;
 let currentTargetSheet = null;
 let snapshotHtml = null;
@@ -202,6 +204,86 @@ function getSheetConstraints(sheetEl, template) {
     remainingLines,
     template
   };
+}
+
+/**
+ * Creates the floating circular AI running corner badge
+ */
+function ensureCornerBadge() {
+  if (cornerBadgeEl) return cornerBadgeEl;
+
+  cornerBadgeEl = document.createElement('div');
+  cornerBadgeEl.id = 'aiRunningCornerBadge';
+  cornerBadgeEl.className = 'ai-running-corner-badge';
+  cornerBadgeEl.hidden = true;
+  cornerBadgeEl.setAttribute('role', 'status');
+  cornerBadgeEl.setAttribute('aria-live', 'polite');
+
+  cornerBadgeEl.innerHTML = `
+    <div class="ai-running-aura-ring"></div>
+    <button type="button" class="ai-running-btn-circle" id="aiRunningStopBtn" title="AI đang viết vào trang... Bấm để dừng (Esc)">
+      <div class="ai-running-spinner-track">
+        <svg class="ai-running-spinner-svg" viewBox="0 0 36 36">
+          <circle class="ai-spinner-path-bg" cx="18" cy="18" r="15" fill="none" stroke-width="2.5" />
+          <circle class="ai-spinner-path" cx="18" cy="18" r="15" fill="none" stroke-width="2.5" />
+        </svg>
+      </div>
+      <span class="ai-running-sparkle-center">✨</span>
+      <span class="ai-running-stop-icon">⏹</span>
+      <div class="ai-running-pill-label">
+        <span class="ai-running-pill-text">AI đang viết...</span>
+        <span class="ai-running-pill-action">Dừng</span>
+      </div>
+    </button>
+  `;
+
+  document.body.appendChild(cornerBadgeEl);
+
+  const stopBtn = cornerBadgeEl.querySelector('#aiRunningStopBtn');
+  stopBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    handleStopGeneration();
+  });
+
+  return cornerBadgeEl;
+}
+
+function showCornerRunningBadge() {
+  const badge = ensureCornerBadge();
+  badge.classList.remove('is-leaving');
+  badge.hidden = false;
+}
+
+function hideCornerRunningBadge() {
+  if (!cornerBadgeEl || cornerBadgeEl.hidden) return;
+  cornerBadgeEl.classList.add('is-leaving');
+  setTimeout(() => {
+    if (cornerBadgeEl && cornerBadgeEl.classList.contains('is-leaving')) {
+      cornerBadgeEl.hidden = true;
+      cornerBadgeEl.classList.remove('is-leaving');
+    }
+  }, 220);
+}
+
+function handleStopGeneration() {
+  if (activeAbortController) {
+    activeAbortController.abort();
+    activeAbortController = null;
+  }
+  hideCornerRunningBadge();
+  isGenerating = false;
+  saveActivePages();
+  if (inlineContainerEl) {
+    inlineContainerEl.querySelector('#aiNotionInputSection').hidden = true;
+    inlineContainerEl.querySelector('#aiNotionGeneratingSection').hidden = true;
+    inlineContainerEl.querySelector('#aiNotionReviewSection').hidden = false;
+    inlineContainerEl.hidden = false;
+    const hint = inlineContainerEl.querySelector('.ai-notion-review-hint');
+    if (hint) {
+      hint.textContent = 'Đã dừng sinh văn bản. Bạn có muốn giữ lại phần nội dung này?';
+    }
+    positionInlineBar(currentTargetEditable, currentTargetSheet);
+  }
 }
 
 /**
@@ -467,6 +549,11 @@ export function openNotionAiBar(opts = {}) {
  * Closes Notion AI inline bar
  */
 export function closeNotionAiBar() {
+  hideCornerRunningBadge();
+  if (activeAbortController) {
+    activeAbortController.abort();
+    activeAbortController = null;
+  }
   if (!inlineContainerEl) return;
   inlineContainerEl.hidden = true;
   inlineContainerEl.classList.remove('is-active');
@@ -481,11 +568,13 @@ async function handleExecutePrompt(promptText, actionType = 'write') {
   isGenerating = true;
   lastPromptText = promptText;
   lastActionType = actionType;
+  activeAbortController = new AbortController();
 
-  // Show generating UI
-  inlineContainerEl.querySelector('#aiNotionInputSection').hidden = true;
-  inlineContainerEl.querySelector('#aiNotionGeneratingSection').hidden = false;
-  inlineContainerEl.querySelector('#aiNotionReviewSection').hidden = true;
+  // Hide inline bar from paper sheet completely so it doesn't block writing!
+  if (inlineContainerEl) {
+    inlineContainerEl.hidden = true;
+  }
+  showCornerRunningBadge();
 
   const pageInfo = getActivePageInfo();
   const template = pageInfo?.template || 'ruled';
@@ -531,7 +620,8 @@ async function handleExecutePrompt(promptText, actionType = 'write') {
           selectedText: '',
           fullContext: currentContext.slice(0, 1200),
           template,
-          constraints
+          constraints,
+          signal: activeAbortController ? activeAbortController.signal : null
         },
         (delta, full) => {
           rawText = full;
@@ -611,16 +701,23 @@ async function handleExecutePrompt(promptText, actionType = 'write') {
       }
     }
 
-    // Move to Review State
+    // Move to Review State: hide corner badge and show review bar neatly positioned
+    hideCornerRunningBadge();
     isGenerating = false;
-    inlineContainerEl.querySelector('#aiNotionGeneratingSection').hidden = true;
-    inlineContainerEl.querySelector('#aiNotionReviewSection').hidden = false;
+    activeAbortController = null;
 
-    // Reposition bar right below the newly inserted content
-    positionInlineBar(currentTargetEditable, currentTargetSheet);
+    if (inlineContainerEl) {
+      inlineContainerEl.querySelector('#aiNotionInputSection').hidden = true;
+      inlineContainerEl.querySelector('#aiNotionGeneratingSection').hidden = true;
+      inlineContainerEl.querySelector('#aiNotionReviewSection').hidden = false;
+      inlineContainerEl.hidden = false;
+      positionInlineBar(currentTargetEditable, currentTargetSheet);
+    }
   } catch (err) {
     console.error('Notion AI execution error:', err);
+    hideCornerRunningBadge();
     isGenerating = false;
+    activeAbortController = null;
     alert(`Không thể hoàn thành yêu cầu: ${err.message}`);
     // If no text was inserted/streamed, revert cleanly
     if (!currentTargetEditable || currentTargetEditable.innerHTML === snapshotHtml) {
@@ -629,8 +726,10 @@ async function handleExecutePrompt(promptText, actionType = 'write') {
       // Keep text on page and allow user to review or discard manually
       saveActivePages();
       if (inlineContainerEl) {
+        inlineContainerEl.querySelector('#aiNotionInputSection').hidden = true;
         inlineContainerEl.querySelector('#aiNotionGeneratingSection').hidden = true;
         inlineContainerEl.querySelector('#aiNotionReviewSection').hidden = false;
+        inlineContainerEl.hidden = false;
         const hint = inlineContainerEl.querySelector('.ai-notion-review-hint');
         if (hint) {
           hint.textContent = `Quá trình sinh bị gián đoạn (${err.message}). Bạn có muốn giữ lại nội dung đã tạo?`;
@@ -722,6 +821,21 @@ export function setupNotionAiListeners() {
       if (!inlineContainerEl || inlineContainerEl.hidden) {
         openNotionAiBar();
       } else {
+        closeNotionAiBar();
+      }
+    }
+  });
+
+  // Global Escape handling: stop AI if running, or close bar
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      if (isGenerating) {
+        e.preventDefault();
+        handleStopGeneration();
+        return;
+      }
+      if (inlineContainerEl && !inlineContainerEl.hidden) {
+        e.preventDefault();
         closeNotionAiBar();
       }
     }

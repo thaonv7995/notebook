@@ -41,7 +41,7 @@ export function checkAndRenderPdfExport() {
         '.fullscreen-rail, .fullscreen-tools-panel, .edge-turn-btn, ' +
         '.modal-overlay, #save-status, .open-book-workspace, ' +
         '.ai-corner-copilot-container, .ai-corner-fab, .ai-corner-chat, ' +
-        '.ai-notion-bar-wrapper, #aiNotionInlineBar, .ai-selection-bubble'
+        '.ai-notion-bar-wrapper, #aiNotionInlineBar, .ai-running-corner-badge, .ai-selection-bubble'
       ).forEach(el => el.style.setProperty('display', 'none', 'important'));
 
       document.body.classList.add('pdf-export-mode');

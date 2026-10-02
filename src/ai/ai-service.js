@@ -136,12 +136,15 @@ export async function streamAI(opts = {}, onToken, onComplete, onError) {
     body.apiKey = apiKey;
   }
 
+  let fullText = '';
+
   try {
     const res = await fetch(`${AI_API_BASE}/stream`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'same-origin',
       body: JSON.stringify(body),
+      signal: opts.signal,
     });
 
     if (res.status === 401) {
@@ -157,7 +160,6 @@ export async function streamAI(opts = {}, onToken, onComplete, onError) {
     const reader = res.body.getReader();
     const decoder = new TextDecoder('utf-8');
     let buffer = '';
-    let fullText = '';
 
     while (true) {
       const { done, value } = await reader.read();
@@ -192,6 +194,10 @@ export async function streamAI(opts = {}, onToken, onComplete, onError) {
     if (onComplete) onComplete(fullText);
     return { ok: true, result: fullText };
   } catch (err) {
+    if (err.name === 'AbortError') {
+      if (onComplete) onComplete(fullText);
+      return { ok: true, result: fullText, aborted: true };
+    }
     if (onError) onError(err);
     throw err;
   }
