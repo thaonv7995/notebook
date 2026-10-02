@@ -9,8 +9,8 @@
 
 let fabEl = null;
 
-function ensureFab() {
-  if (fabEl) return;
+export function ensureFab() {
+  if (fabEl) return fabEl;
   fabEl = document.createElement('button');
   fabEl.id = 'aiCornerFab';
   fabEl.className = 'ai-corner-fab';
@@ -20,10 +20,29 @@ function ensureFab() {
   document.body.appendChild(fabEl);
 
   fabEl.addEventListener('click', () => {
-    // Import dynamically to avoid circular deps
+    if (fabEl.classList.contains('is-generating')) {
+      window.dispatchEvent(new CustomEvent('ai:stop-generation'));
+      return;
+    }
     const event = new CustomEvent('ai:open-inline');
     window.dispatchEvent(event);
   });
+
+  return fabEl;
+}
+
+export function setCornerFabGenerating(isGenerating) {
+  const el = ensureFab();
+  if (!el) return;
+  if (isGenerating) {
+    el.classList.add('is-generating');
+    el.title = 'AI đang viết vào trang... Bấm để dừng (Esc)';
+    el.setAttribute('aria-label', 'AI đang viết. Bấm để dừng');
+  } else {
+    el.classList.remove('is-generating');
+    el.title = 'AI Copilot (⌘K)';
+    el.setAttribute('aria-label', 'Mở Trợ lý AI');
+  }
 }
 
 // ─── Public API (kept for backward compat) ───

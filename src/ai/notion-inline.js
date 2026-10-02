@@ -15,9 +15,9 @@ import { formatContentToHtml } from '../editor/sanitizer.js';
 import { getActivePageInfo, applyAiAutofillToCurrentPage, saveActivePages, applyPaperTone, applyPaperTexture } from '../components/reader.js';
 import { applyFontSize, applyFontFamily, applyLineHeight } from '../editor/formatter.js';
 import { getState, setState, persistState, getActiveNotebook } from '../state/store.js';
+import { setCornerFabGenerating } from './floating-bar.js';
 
 let inlineContainerEl = null;
-let cornerBadgeEl = null;
 let activeAbortController = null;
 let currentTargetEditable = null;
 let currentTargetSheet = null;
@@ -207,70 +207,14 @@ function getSheetConstraints(sheetEl, template) {
 }
 
 /**
- * Creates the floating circular AI running corner badge
+ * Stops ongoing AI generation cleanly, keeping all streamed text on page
  */
-function ensureCornerBadge() {
-  if (cornerBadgeEl) return cornerBadgeEl;
-
-  cornerBadgeEl = document.createElement('div');
-  cornerBadgeEl.id = 'aiRunningCornerBadge';
-  cornerBadgeEl.className = 'ai-running-corner-badge';
-  cornerBadgeEl.hidden = true;
-  cornerBadgeEl.setAttribute('role', 'status');
-  cornerBadgeEl.setAttribute('aria-live', 'polite');
-
-  cornerBadgeEl.innerHTML = `
-    <div class="ai-running-aura-ring"></div>
-    <button type="button" class="ai-running-btn-circle" id="aiRunningStopBtn" title="AI đang viết vào trang... Bấm để dừng (Esc)">
-      <div class="ai-running-spinner-track">
-        <svg class="ai-running-spinner-svg" viewBox="0 0 36 36">
-          <circle class="ai-spinner-path-bg" cx="18" cy="18" r="15" fill="none" stroke-width="2.5" />
-          <circle class="ai-spinner-path" cx="18" cy="18" r="15" fill="none" stroke-width="2.5" />
-        </svg>
-      </div>
-      <span class="ai-running-sparkle-center">✨</span>
-      <span class="ai-running-stop-icon">⏹</span>
-      <div class="ai-running-pill-label">
-        <span class="ai-running-pill-text">AI đang viết...</span>
-        <span class="ai-running-pill-action">Dừng</span>
-      </div>
-    </button>
-  `;
-
-  document.body.appendChild(cornerBadgeEl);
-
-  const stopBtn = cornerBadgeEl.querySelector('#aiRunningStopBtn');
-  stopBtn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    handleStopGeneration();
-  });
-
-  return cornerBadgeEl;
-}
-
-function showCornerRunningBadge() {
-  const badge = ensureCornerBadge();
-  badge.classList.remove('is-leaving');
-  badge.hidden = false;
-}
-
-function hideCornerRunningBadge() {
-  if (!cornerBadgeEl || cornerBadgeEl.hidden) return;
-  cornerBadgeEl.classList.add('is-leaving');
-  setTimeout(() => {
-    if (cornerBadgeEl && cornerBadgeEl.classList.contains('is-leaving')) {
-      cornerBadgeEl.hidden = true;
-      cornerBadgeEl.classList.remove('is-leaving');
-    }
-  }, 220);
-}
-
 function handleStopGeneration() {
   if (activeAbortController) {
     activeAbortController.abort();
     activeAbortController = null;
   }
-  hideCornerRunningBadge();
+  setCornerFabGenerating(false);
   isGenerating = false;
   saveActivePages();
   if (inlineContainerEl) {
@@ -549,7 +493,7 @@ export function openNotionAiBar(opts = {}) {
  * Closes Notion AI inline bar
  */
 export function closeNotionAiBar() {
-  hideCornerRunningBadge();
+  setCornerFabGenerating(false);
   if (activeAbortController) {
     activeAbortController.abort();
     activeAbortController = null;
@@ -574,7 +518,7 @@ async function handleExecutePrompt(promptText, actionType = 'write') {
   if (inlineContainerEl) {
     inlineContainerEl.hidden = true;
   }
-  showCornerRunningBadge();
+  setCornerFabGenerating(true);
 
   const pageInfo = getActivePageInfo();
   const template = pageInfo?.template || 'ruled';
@@ -701,8 +645,8 @@ async function handleExecutePrompt(promptText, actionType = 'write') {
       }
     }
 
-    // Move to Review State: hide corner badge and show review bar neatly positioned
-    hideCornerRunningBadge();
+    // Move to Review State: restore corner fab and show review bar neatly positioned
+    setCornerFabGenerating(false);
     isGenerating = false;
     activeAbortController = null;
 
@@ -715,7 +659,7 @@ async function handleExecutePrompt(promptText, actionType = 'write') {
     }
   } catch (err) {
     console.error('Notion AI execution error:', err);
-    hideCornerRunningBadge();
+    setCornerFabGenerating(false);
     isGenerating = false;
     activeAbortController = null;
     alert(`Không thể hoàn thành yêu cầu: ${err.message}`);
@@ -823,6 +767,13 @@ export function setupNotionAiListeners() {
       } else {
         closeNotionAiBar();
       }
+    }
+  });
+
+  // Listen to corner fab stop action when clicked during generation
+  window.addEventListener('ai:stop-generation', () => {
+    if (isGenerating) {
+      handleStopGeneration();
     }
   });
 
