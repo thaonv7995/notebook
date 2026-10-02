@@ -161,6 +161,8 @@ function bindBubbleEvents() {
         currentEditable.focus();
         document.execCommand(fmt, false, null);
         currentEditable.dispatchEvent(new Event('input', { bubbles: true }));
+        // Update active states after toggling
+        updateActiveStates();
       }
     });
   });
@@ -340,6 +342,55 @@ function hideResult() {
   if (container) container.hidden = true;
 }
 
+// ─── Active State Detection ───
+
+function rgbToHex(rgb) {
+  if (!rgb || rgb === 'transparent' || rgb === 'inherit') return null;
+  const match = rgb.match(/^rgb\((\d+),\s*(\d+),\s*(\d+)\)$/i);
+  if (!match) return rgb; // Already hex or keyword
+  const r = parseInt(match[1]);
+  const g = parseInt(match[2]);
+  const b = parseInt(match[3]);
+  return `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
+}
+
+function updateActiveStates() {
+  if (!bubbleEl) return;
+
+  // Format button active states
+  const fmtMap = { bold: 'bold', italic: 'italic', underline: 'underline', strikethrough: 'strikeThrough' };
+  bubbleEl.querySelectorAll('[data-fmt]').forEach(btn => {
+    const fmt = btn.dataset.fmt;
+    const cmd = fmtMap[fmt] || fmt;
+    try {
+      const active = document.queryCommandState(cmd);
+      btn.classList.toggle('is-active', active);
+    } catch (e) {
+      // queryCommandState can throw for some commands
+    }
+  });
+
+  // Text color dot
+  try {
+    const colorVal = document.queryCommandValue('foreColor');
+    const hex = rgbToHex(colorVal);
+    const dot = bubbleEl.querySelector('#selColorDot');
+    if (dot && hex) {
+      dot.style.background = hex;
+    }
+  } catch (e) {}
+
+  // Highlight color dot
+  try {
+    const bgVal = document.queryCommandValue('hiliteColor') || document.queryCommandValue('backColor');
+    const hex = rgbToHex(bgVal);
+    const dot = bubbleEl.querySelector('#selHighlightDot');
+    if (dot && hex && hex !== '#000000' && bgVal !== 'transparent') {
+      dot.style.background = hex;
+    }
+  } catch (e) {}
+}
+
 // ─── Position and Show ───
 
 function positionBubble(rect) {
@@ -406,6 +457,9 @@ export function showBubble(editable, template) {
   if (aiMenu) { aiMenu.hidden = true; aiMenuOpen = false; }
   hideResult();
   hideLoading();
+
+  // Detect current formatting state of selected text
+  updateActiveStates();
 
   bubbleEl.classList.add('is-visible');
   isVisible = true;
