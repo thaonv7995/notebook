@@ -376,11 +376,11 @@ function positionInlineBar(targetEl, sheetEl) {
 
   let top = sheetRect.top + 60;
   let left = sheetRect.left + 24;
-  let width = Math.min(sheetRect.width - 48, 520);
+  let width = Math.min(sheetRect.width - 48, 420);
 
   if (targetEl) {
     const targetRect = targetEl.getBoundingClientRect();
-    width = Math.min(targetRect.width, 520);
+    width = Math.min(targetRect.width, 420);
     left = targetRect.left;
 
     // Check if caret has active position inside targetEl

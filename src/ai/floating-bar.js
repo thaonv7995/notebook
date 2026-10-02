@@ -24,6 +24,19 @@ let getContextCallback = null;
 let currentTemplate = 'ruled';
 let currentContext = '';
 
+// Track mouse position for cursor-relative popup placement
+let lastMouseX = window.innerWidth - 200;
+let lastMouseY = window.innerHeight / 2;
+
+function trackMouse(e) {
+  lastMouseX = e.clientX;
+  lastMouseY = e.clientY;
+}
+
+if (typeof document !== 'undefined') {
+  document.addEventListener('mousemove', trackMouse, { passive: true });
+}
+
 // Chat history state
 const messages = [];
 
@@ -37,11 +50,9 @@ const QUICK_ACTIONS = [
 
 function createWidgetHTML() {
   return `
-    <!-- Floating Corner Button (FAB) -->
-    <button class="ai-corner-fab" id="aiCornerFab" title="Trợ lý AI Copilot (⌘K)" aria-label="Mở Trợ lý AI">
+    <!-- Floating Corner Icon (tiny) -->
+    <button class="ai-corner-fab" id="aiCornerFab" title="AI Copilot (⌘K)" aria-label="Mở Trợ lý AI">
       <span class="ai-fab-icon">✨</span>
-      <span class="ai-fab-label">AI Copilot</span>
-      <span class="ai-fab-badge"></span>
     </button>
 
     <!-- Corner Chat Box Window -->
@@ -484,6 +495,9 @@ export function open(opts = {}) {
   updatePageHint(currentTemplate, constraints);
   if (modelLabel) modelLabel.textContent = getPreferredModel();
 
+  // Position chat at mouse cursor
+  positionChatAtCursor(chat);
+
   chat.hidden = false;
   chat.classList.add('is-open');
   fab.classList.add('is-active');
@@ -518,6 +532,34 @@ export function toggle(opts = {}) {
 
 export function isBarOpen() {
   return isOpen;
+}
+
+/**
+ * Position chat window near the mouse cursor, keeping it within viewport.
+ */
+function positionChatAtCursor(chatEl) {
+  if (!chatEl) return;
+  const chatW = 390;
+  const chatH = 480;
+  const pad = 12;
+
+  let left = lastMouseX - chatW / 2;
+  let top = lastMouseY - chatH - 20;
+
+  // Keep within viewport
+  if (left < pad) left = pad;
+  if (left + chatW > window.innerWidth - pad) left = window.innerWidth - chatW - pad;
+  if (top < pad) {
+    top = lastMouseY + 20; // below cursor if no room above
+  }
+  if (top + chatH > window.innerHeight - pad) {
+    top = window.innerHeight - chatH - pad;
+  }
+
+  chatEl.style.bottom = 'auto';
+  chatEl.style.right = 'auto';
+  chatEl.style.top = `${Math.round(top)}px`;
+  chatEl.style.left = `${Math.round(left)}px`;
 }
 
 // Auto mount corner FAB on load
