@@ -40,18 +40,19 @@ jobs:
           cp    package.json  "$RELEASE_DIR/"
           cp    package-lock.json "$RELEASE_DIR/"
           cp    install.sh    "$RELEASE_DIR/"
+          # Copy manifest and service worker
           cp    sw.js         "$RELEASE_DIR/"
+          cp    sw.js         "$RELEASE_DIR/dist/" 2>/dev/null || true
+          if [ -f "manifest.webmanifest" ]; then
+            cp manifest.webmanifest "$RELEASE_DIR/"
+            cp manifest.webmanifest "$RELEASE_DIR/dist/" 2>/dev/null || true
+          fi
           cp    README.md     "$RELEASE_DIR/"
           cp    FEATURES.md   "$RELEASE_DIR/"
 
           # Copy public assets if any
           if [ -d "public" ]; then
             cp -r public/ "$RELEASE_DIR/"
-          fi
-
-          # Copy manifest
-          if [ -f "manifest.webmanifest" ]; then
-            cp manifest.webmanifest "$RELEASE_DIR/"
           fi
 
           # Create tarball

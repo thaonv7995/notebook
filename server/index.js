@@ -62,6 +62,63 @@ app.all('/api', (req, res) => {
   res.status(404).json({ ok: false, error: 'Endpoint không tồn tại' });
 });
 
+// ─── PWA & Asset Handlers (guarantees correct MIME types in dev & prod) ───
+const distPath = join(__dirname, '..', 'dist');
+const publicPath = join(__dirname, '..', 'public');
+const rootPath = join(__dirname, '..');
+
+// Service Worker: always application/javascript with Service-Worker-Allowed header
+app.get('/sw.js', (req, res) => {
+  const candidatePaths = [
+    join(distPath, 'sw.js'),
+    join(publicPath, 'sw.js'),
+    join(rootPath, 'sw.js')
+  ];
+  for (const p of candidatePaths) {
+    if (existsSync(p)) {
+      res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
+      res.setHeader('Service-Worker-Allowed', '/');
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      return res.sendFile(p);
+    }
+  }
+  res.status(404).type('text/plain').send('Service Worker not found');
+});
+
+// Web App Manifest
+app.get(['/manifest.webmanifest', '/manifest.json'], (req, res) => {
+  const candidatePaths = [
+    join(distPath, 'manifest.webmanifest'),
+    join(publicPath, 'manifest.webmanifest'),
+    join(rootPath, 'manifest.webmanifest')
+  ];
+  for (const p of candidatePaths) {
+    if (existsSync(p)) {
+      res.setHeader('Content-Type', 'application/manifest+json; charset=utf-8');
+      return res.sendFile(p);
+    }
+  }
+  res.status(404).end();
+});
+
+// App Icons (handles both /notebook-icon.svg and /assets/notebook-icon.svg)
+app.get(['/notebook-icon.svg', '/assets/notebook-icon.svg'], (req, res) => {
+  const candidatePaths = [
+    join(distPath, 'notebook-icon.svg'),
+    join(distPath, 'assets', 'notebook-icon.svg'),
+    join(publicPath, 'notebook-icon.svg'),
+    join(publicPath, 'assets', 'notebook-icon.svg'),
+    join(rootPath, 'public', 'notebook-icon.svg')
+  ];
+  for (const p of candidatePaths) {
+    if (existsSync(p)) {
+      res.setHeader('Content-Type', 'image/svg+xml');
+      return res.sendFile(p);
+    }
+  }
+  res.status(404).end();
+});
+
 // ─── Frontend Serving ───
 if (IS_DEV) {
   // In dev mode, proxy to Vite dev server on a different port
@@ -75,7 +132,6 @@ if (IS_DEV) {
   console.log(`  → Vite dev proxy → http://localhost:${VITE_PORT}`);
 } else {
   // In production, serve static files from dist/
-  const distPath = join(__dirname, '..', 'dist');
   if (existsSync(distPath)) {
     app.use(express.static(distPath));
     app.get('{*path}', (req, res) => {
