@@ -498,9 +498,11 @@ async function handleExecutePrompt(promptText, actionType = 'write') {
     currentContext = currentTargetEditable.innerText || '';
   }
 
+  let res = null;
+
   try {
     if (actionType === 'autofill') {
-      const res = await processAI({
+      res = await processAI({
         action: actionType,
         prompt: promptText,
         selectedText: '',
@@ -576,16 +578,17 @@ async function handleExecutePrompt(promptText, actionType = 'write') {
         } catch { /* ignore parse errors */ }
       }
 
-      // Final formatted HTML sync
+      // Final formatted HTML sync & immediate page persistence
       const formattedHtml = formatContentToHtml(cleanedText);
       if (currentTargetEditable) {
         currentTargetEditable.innerHTML = basePrefix ? (basePrefix + formattedHtml) : formattedHtml;
         currentTargetEditable.dispatchEvent(new Event('input', { bubbles: true }));
       }
+      saveActivePages();
     }
 
     // 3. Apply style updates if suggested or requested
-    if (res.parsedJson?.styles) {
+    if (res?.parsedJson?.styles) {
       if (!currentAppliedStyles) currentAppliedStyles = {};
       Object.assign(currentAppliedStyles, res.parsedJson.styles);
       applyPageStyles(res.parsedJson.styles, false);
@@ -597,7 +600,7 @@ async function handleExecutePrompt(promptText, actionType = 'write') {
         if (res.parsedJson.styles.paperTone) parts.push(`Giấy ${res.parsedJson.styles.paperTone}`);
         hint.textContent = `Đã tự chỉnh style: ${parts.join(' · ')}. Bạn có muốn giữ lại?`;
       }
-    } else if (res.parsedJson?.type === 'style_update') {
+    } else if (res?.parsedJson?.type === 'style_update') {
       const hint = inlineContainerEl.querySelector('.ai-notion-review-hint');
       if (hint) hint.textContent = res.parsedJson.message || 'Đã áp dụng các điều chỉnh giao diện.';
     } else if (currentAppliedStyles?.fontSize) {
@@ -617,8 +620,24 @@ async function handleExecutePrompt(promptText, actionType = 'write') {
     positionInlineBar(currentTargetEditable, currentTargetSheet);
   } catch (err) {
     console.error('Notion AI execution error:', err);
+    isGenerating = false;
     alert(`Không thể hoàn thành yêu cầu: ${err.message}`);
-    handleDiscard();
+    // If no text was inserted/streamed, revert cleanly
+    if (!currentTargetEditable || currentTargetEditable.innerHTML === snapshotHtml) {
+      handleDiscard();
+    } else {
+      // Keep text on page and allow user to review or discard manually
+      saveActivePages();
+      if (inlineContainerEl) {
+        inlineContainerEl.querySelector('#aiNotionGeneratingSection').hidden = true;
+        inlineContainerEl.querySelector('#aiNotionReviewSection').hidden = false;
+        const hint = inlineContainerEl.querySelector('.ai-notion-review-hint');
+        if (hint) {
+          hint.textContent = `Quá trình sinh bị gián đoạn (${err.message}). Bạn có muốn giữ lại nội dung đã tạo?`;
+        }
+        positionInlineBar(currentTargetEditable, currentTargetSheet);
+      }
+    }
   }
 }
 
@@ -630,6 +649,9 @@ function handleAccept() {
     applyPageStyles(currentAppliedStyles, true);
     currentAppliedStyles = null;
     snapshotStyles = null;
+  }
+  if (currentTargetEditable) {
+    currentTargetEditable.dispatchEvent(new Event('input', { bubbles: true }));
   }
   saveActivePages();
   closeNotionAiBar();
