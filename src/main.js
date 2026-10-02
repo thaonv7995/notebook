@@ -271,7 +271,7 @@ let isAuthenticated = false;
 let syncTimer = null;
 let lastSyncedAt = null;      // Tracks server's last sync timestamp
 let serverLoadComplete = false; // Prevents push before first pull completes
-const SYNC_DEBOUNCE_MS = 2000;
+const SYNC_DEBOUNCE_MS = 800;
 
 // ─── Auth UI helpers ───
 
@@ -313,6 +313,7 @@ function setupLoginForm() {
       hideLoginScreen();
       renderLibraryGrid();
       handleRouteFromUrl(true);
+      startSyncListeners();  // Enable cross-device sync
       showToast('Đăng nhập thành công');
     } catch (err) {
       if (errorEl) {
@@ -342,8 +343,65 @@ function setupLogoutButton() {
 
 // ─── Server Sync ───
 
+let pullTimer = null;                 // Periodic background pull
+const PULL_INTERVAL_MS = 15_000;      // Poll server every 15 seconds
+let isPulling = false;                // Guard against concurrent pulls
+
 /**
- * Load notebooks from server and perform smart per-notebook merge
+ * Deep-merge two notebooks at the PAGE level.
+ * For pages that exist on both sides, keeps the one with newer updatedAt.
+ * Pages only on one side are always preserved.
+ * Notebook-level metadata (title, cover, etc.) comes from whichever side
+ * has the newer top-level updatedAt.
+ */
+function mergeNotebookPages(localNb, serverNb) {
+  const localTime = localNb.updatedAt || '';
+  const serverTime = serverNb.updatedAt || '';
+
+  // Start from the notebook shell with newer metadata
+  const base = serverTime > localTime
+    ? JSON.parse(JSON.stringify(serverNb))
+    : JSON.parse(JSON.stringify(localNb));
+
+  // Build page maps
+  const localPages = new Map();
+  (localNb.pages || []).forEach(p => localPages.set(p.id, p));
+
+  const serverPages = new Map();
+  (serverNb.pages || []).forEach(p => serverPages.set(p.id, p));
+
+  const allPageIds = new Set([...localPages.keys(), ...serverPages.keys()]);
+  const mergedPages = [];
+
+  for (const pid of allPageIds) {
+    const lp = localPages.get(pid);
+    const sp = serverPages.get(pid);
+
+    if (lp && sp) {
+      // Both sides have this page — keep the newer one
+      const lpTime = lp.updatedAt || '';
+      const spTime = sp.updatedAt || '';
+      mergedPages.push(spTime > lpTime ? sp : lp);
+    } else if (sp) {
+      mergedPages.push(sp);
+    } else if (lp) {
+      mergedPages.push(lp);
+    }
+  }
+
+  base.pages = mergedPages;
+
+  // Update the notebook's updatedAt to be the latest of any page
+  const latestPage = mergedPages.reduce((latest, p) => {
+    return (p.updatedAt && p.updatedAt > latest) ? p.updatedAt : latest;
+  }, base.updatedAt || '');
+  if (latestPage) base.updatedAt = latestPage;
+
+  return base;
+}
+
+/**
+ * Load notebooks from server and perform smart per-PAGE merge
  * using updatedAt timestamps. Prevents server data from being lost
  * when a stale client connects.
  */
@@ -367,7 +425,7 @@ async function loadFromServer() {
         // No server data — keep local data (will be pushed on next sync)
         mergedNotebooks = localNotebooks;
       } else {
-        // Both sides have data — merge per-notebook by updatedAt
+        // Both sides have data — merge per-notebook, then per-page
         const serverMap = new Map();
         serverNotebooks.forEach(nb => serverMap.set(nb.id, nb));
 
@@ -382,10 +440,8 @@ async function loadFromServer() {
           const localNb = localMap.get(id);
 
           if (serverNb && localNb) {
-            // Both exist — keep the one with newer updatedAt
-            const serverTime = serverNb.updatedAt || '';
-            const localTime = localNb.updatedAt || '';
-            mergedNotebooks.push(localTime >= serverTime ? localNb : serverNb);
+            // Both exist — deep-merge at page level
+            mergedNotebooks.push(mergeNotebookPages(localNb, serverNb));
           } else if (serverNb) {
             // Only on server — include it
             mergedNotebooks.push(serverNb);
@@ -411,55 +467,231 @@ async function loadFromServer() {
 }
 
 /**
- * Push local state to server with smart merge.
- * Guards against pushing empty/stale data.
+ * Pull latest data from server (used by visibility change & polling).
+ * Only updates UI if data actually changed. Returns true if changes were applied.
  */
-function scheduleSyncToServer() {
-  if (!isAuthenticated) return;
-  // Block push until first pull is complete
-  if (!serverLoadComplete) return;
+async function pullFromServer() {
+  if (!isAuthenticated || isPulling) return false;
+  isPulling = true;
 
-  clearTimeout(syncTimer);
-  syncTimer = setTimeout(async () => {
-    try {
-      const state = getState();
+  try {
+    const data = await fetchNotebooks();
+    if (!data.ok || !Array.isArray(data.notebooks)) return false;
 
-      // Safety: never push empty notebooks if there was server data
-      if (!state.notebooks || state.notebooks.length === 0) {
-        console.warn('Sync skipped: local notebooks are empty');
-        return;
-      }
+    if (data.lastSyncedAt) lastSyncedAt = data.lastSyncedAt;
 
-      const result = await syncNotebooks(state.notebooks, lastSyncedAt);
+    const serverNotebooks = data.notebooks;
+    const currentState = getState();
+    const localNotebooks = currentState.notebooks || [];
 
-      // Update lastSyncedAt from server response
-      if (result.savedAt) lastSyncedAt = result.savedAt;
+    // Quick check — if server data is identical to local, skip
+    const serverJson = JSON.stringify(serverNotebooks);
+    const localJson = JSON.stringify(localNotebooks);
+    if (serverJson === localJson) return false;
 
-      // If server returned merged notebooks, apply them locally
-      // (server may have kept notebooks from other devices)
-      if (result.notebooks && Array.isArray(result.notebooks)) {
-        const currentState = getState();
-        const normalized = normalizeState({
-          ...currentState,
-          notebooks: result.notebooks
-        });
-        // Only replace if different to avoid unnecessary re-renders
-        if (JSON.stringify(normalized.notebooks) !== JSON.stringify(currentState.notebooks)) {
-          replaceState(normalized);
-        }
-      }
-    } catch (err) {
-      // If server blocked empty sync, force reload from server
-      if (err.message && err.message.includes('EMPTY_SYNC_BLOCKED')) {
-        console.warn('Server blocked empty sync, reloading from server...');
-        await loadFromServer();
-        renderLibraryGrid();
-      } else {
-        console.warn('Sync to server failed:', err.message);
+    // Deep merge at page level
+    const serverMap = new Map();
+    serverNotebooks.forEach(nb => serverMap.set(nb.id, nb));
+
+    const localMap = new Map();
+    localNotebooks.forEach(nb => localMap.set(nb.id, nb));
+
+    const allIds = new Set([...serverMap.keys(), ...localMap.keys()]);
+    const mergedNotebooks = [];
+
+    for (const id of allIds) {
+      const serverNb = serverMap.get(id);
+      const localNb = localMap.get(id);
+
+      if (serverNb && localNb) {
+        mergedNotebooks.push(mergeNotebookPages(localNb, serverNb));
+      } else if (serverNb) {
+        mergedNotebooks.push(serverNb);
+      } else if (localNb) {
+        mergedNotebooks.push(localNb);
       }
     }
-  }, SYNC_DEBOUNCE_MS);
+
+    const mergedJson = JSON.stringify(mergedNotebooks);
+    if (mergedJson === localJson) return false;
+
+    // Apply merged data
+    const normalized = normalizeState({
+      ...currentState,
+      notebooks: mergedNotebooks
+    });
+    replaceState(normalized);
+
+    // Refresh visible UI
+    const libraryView = document.getElementById('libraryView');
+    const notebookView = document.getElementById('notebookView');
+
+    if (libraryView && !libraryView.classList.contains('hidden')) {
+      renderLibraryGrid();
+    }
+    if (notebookView && !notebookView.classList.contains('hidden')) {
+      // Re-render the currently open notebook
+      const activeNb = currentState.activeNotebookId;
+      if (activeNb) {
+        renderBookPages();
+      }
+    }
+
+    console.log('📥 Synced changes from server');
+    return true;
+  } catch (err) {
+    console.warn('Pull from server failed:', err.message);
+    return false;
+  } finally {
+    isPulling = false;
+  }
 }
+
+/**
+ * Push local state to server with smart merge.
+ * Guards against pushing empty/stale data.
+ * Skips push if data hasn't changed since last successful push.
+ */
+let lastPushedJson = '';   // Track last pushed data to avoid duplicate pushes
+let isSyncing = false;     // Prevent concurrent pushes
+
+async function doSyncToServer() {
+  if (!isAuthenticated || !serverLoadComplete || isSyncing) return;
+
+  const state = getState();
+
+  // Safety: never push empty notebooks if there was server data
+  if (!state.notebooks || state.notebooks.length === 0) {
+    console.warn('Sync skipped: local notebooks are empty');
+    return;
+  }
+
+  // Skip if data hasn't changed since last push
+  const currentJson = JSON.stringify(state.notebooks);
+  if (currentJson === lastPushedJson) return;
+
+  isSyncing = true;
+  try {
+    const result = await syncNotebooks(state.notebooks, lastSyncedAt);
+
+    // Update lastSyncedAt from server response
+    if (result.savedAt) lastSyncedAt = result.savedAt;
+
+    // Mark as pushed
+    lastPushedJson = currentJson;
+
+    // If server returned merged notebooks, apply them locally
+    // (server may have kept notebooks from other devices)
+    if (result.notebooks && Array.isArray(result.notebooks)) {
+      const currentState = getState();
+      const normalized = normalizeState({
+        ...currentState,
+        notebooks: result.notebooks
+      });
+      // Only replace if different to avoid unnecessary re-renders
+      const mergedJson = JSON.stringify(normalized.notebooks);
+      if (mergedJson !== JSON.stringify(currentState.notebooks)) {
+        replaceState(normalized);
+        lastPushedJson = mergedJson;
+      }
+    }
+  } catch (err) {
+    // If server blocked empty sync, force reload from server
+    if (err.message && err.message.includes('EMPTY_SYNC_BLOCKED')) {
+      console.warn('Server blocked empty sync, reloading from server...');
+      await loadFromServer();
+      renderLibraryGrid();
+    } else {
+      console.warn('Sync to server failed:', err.message);
+    }
+  } finally {
+    isSyncing = false;
+  }
+}
+
+function scheduleSyncToServer() {
+  if (!isAuthenticated || !serverLoadComplete) return;
+
+  clearTimeout(syncTimer);
+  syncTimer = setTimeout(() => doSyncToServer(), SYNC_DEBOUNCE_MS);
+}
+
+/**
+ * Push to server immediately (no debounce).
+ * Used when leaving the tab or closing the page.
+ */
+function pushToServerNow() {
+  clearTimeout(syncTimer);
+  doSyncToServer();
+}
+
+/**
+ * Start periodic background polling and visibility-change listener
+ * to keep data in sync across devices (iPad ↔ Web).
+ *
+ * Strategy:
+ *  - On tab hide  → save + push immediately (so other devices get it fast)
+ *  - On tab show  → save + pull (to get changes from other devices)
+ *  - On focus     → pull (covers mobile Safari/Chrome edge cases)
+ *  - beforeunload → save + push via sendBeacon as last resort
+ *  - Every 15s    → pull if tab is visible
+ */
+function startSyncListeners() {
+  document.addEventListener('visibilitychange', () => {
+    if (!isAuthenticated) return;
+
+    if (document.visibilityState === 'hidden') {
+      // Leaving tab → save current work and push to server immediately
+      saveActivePages();
+      pushToServerNow();
+    } else {
+      // Returning to tab → save any local edits, then pull latest from server
+      saveActivePages();
+      pullFromServer();
+    }
+  });
+
+  // Also pull on window focus (covers more cases on mobile)
+  window.addEventListener('focus', () => {
+    if (isAuthenticated) {
+      pullFromServer();
+    }
+  });
+
+  // Last-resort: push on page close via sendBeacon
+  window.addEventListener('beforeunload', () => {
+    if (!isAuthenticated || !serverLoadComplete) return;
+
+    saveActivePages();
+
+    const state = getState();
+    if (!state.notebooks || state.notebooks.length === 0) return;
+
+    const currentJson = JSON.stringify(state.notebooks);
+    if (currentJson === lastPushedJson) return;
+
+    // sendBeacon is fire-and-forget — guaranteed to be sent even if page closes
+    try {
+      const payload = JSON.stringify({
+        notebooks: state.notebooks,
+        lastSyncedAt
+      });
+      navigator.sendBeacon('/api/notebooks/sync-beacon', payload);
+    } catch {
+      // Fallback: try regular push (may be killed by browser)
+      pushToServerNow();
+    }
+  });
+
+  // Periodic polling every 15 seconds
+  clearInterval(pullTimer);
+  pullTimer = setInterval(() => {
+    if (isAuthenticated && document.visibilityState === 'visible') {
+      pullFromServer();
+    }
+  }, PULL_INTERVAL_MS);
+}
+
 
 async function init() {
   // Register server sync on every persistState call
@@ -526,6 +758,7 @@ async function init() {
     hideLoginScreen();
     await loadFromServer();
     persistState();
+    startSyncListeners();  // Enable cross-device sync (polling + visibility)
 
     if (checkAndRenderPdfExport()) {
       return;

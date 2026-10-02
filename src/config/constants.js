@@ -5,21 +5,21 @@
 export const STORAGE_KEY = 'thao_digital_notebooks_v7';
 export const BACKUP_STORAGE_KEY = 'thao_digital_notebooks_v7_previous';
 export const STATE_VERSION = 3;
-export const SAVE_DEBOUNCE_MS = 600;
+export const SAVE_DEBOUNCE_MS = 400;
 
 export const FONT_SIZES = [11, 12, 13, 14, 15, 16, 18, 20, 22, 24, 28];
 
 export const FONT_FAMILIES = {
-  sans: "'CJK-Smart-Enlarged', 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
-  vietnam: "'CJK-Smart-Enlarged', 'Be Vietnam Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
-  serif: "'CJK-Smart-Enlarged', 'Cormorant Garamond', 'Noto Serif SC', Georgia, serif",
+  sans: "'CJK-Smart-Enlarged', 'Noto Serif SC', 'Ma Shan Zheng', 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+  vietnam: "'CJK-Smart-Enlarged', 'Noto Serif SC', 'Ma Shan Zheng', 'Be Vietnam Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+  serif: "'CJK-Smart-Enlarged', 'Noto Serif SC', 'Ma Shan Zheng', 'Cormorant Garamond', Georgia, serif",
   kaiti: "'CJK-Smart-Enlarged', 'Kaiti SC', 'STKaiti', 'KaiTi', 'SimKai', 'Ma Shan Zheng', 'ZCOOL XiaoWei', 'Noto Serif SC', serif",
-  mono: "'JetBrains Mono', 'Courier New', monospace",
-  dancing: "'Dancing Script', 'CJK-Smart-Enlarged', cursive",
-  caveat: "'Caveat', 'CJK-Smart-Enlarged', cursive",
-  patrickhand: "'Patrick Hand', 'CJK-Smart-Enlarged', cursive",
-  kalam: "'Kalam', 'CJK-Smart-Enlarged', cursive",
-  indieflower: "'Indie Flower', 'CJK-Smart-Enlarged', cursive"
+  mono: "'JetBrains Mono', 'Noto Serif SC', 'Courier New', monospace",
+  dancing: "'Dancing Script', 'CJK-Smart-Enlarged', 'Noto Serif SC', cursive",
+  caveat: "'Caveat', 'CJK-Smart-Enlarged', 'Noto Serif SC', cursive",
+  patrickhand: "'Patrick Hand', 'CJK-Smart-Enlarged', 'Noto Serif SC', cursive",
+  kalam: "'Kalam', 'CJK-Smart-Enlarged', 'Noto Serif SC', cursive",
+  indieflower: "'Indie Flower', 'CJK-Smart-Enlarged', 'Noto Serif SC', cursive"
 };
 
 export const LINE_HEIGHT_MAP = {

@@ -3,12 +3,14 @@
  * 
  * All routes require authentication via requireAuth middleware.
  * 
- * GET  /api/notebooks          — Load full library
- * GET  /api/notebooks/sync-meta — Get server sync timestamp
- * PUT  /api/notebooks/sync     — Smart merge sync (per-notebook conflict resolution)
- * DELETE /api/notebooks/:id    — Delete a notebook
+ * GET  /api/notebooks              — Load full library
+ * GET  /api/notebooks/sync-meta    — Get server sync timestamp
+ * PUT  /api/notebooks/sync         — Smart merge sync (per-page conflict resolution)
+ * POST /api/notebooks/sync-beacon  — Fire-and-forget sync via sendBeacon (tab close)
+ * DELETE /api/notebooks/:id        — Delete a notebook
  */
 
+import express from 'express';
 import { requireAuth } from './auth.js';
 import { loadFullState, saveFullState, deleteNotebookById, mergeAndSaveState, getLastSyncedAt } from './db.js';
 
@@ -64,6 +66,26 @@ export function apiRoutes(app) {
     } catch (err) {
       console.error('Error syncing notebooks:', err);
       res.status(500).json({ error: 'Lỗi lưu dữ liệu' });
+    }
+  });
+
+  // ─── POST /api/notebooks/sync-beacon — Fire-and-forget sync via sendBeacon ───
+  // sendBeacon sends text/plain by default, so we use express.text() middleware
+  app.post('/api/notebooks/sync-beacon', express.text({ type: '*/*', limit: '50mb' }), requireAuth, (req, res) => {
+    try {
+      // Parse the text body as JSON
+      const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+      const { notebooks, lastSyncedAt: clientLastSyncedAt } = body;
+
+      if (!Array.isArray(notebooks) || notebooks.length === 0) {
+        return res.status(204).end();
+      }
+
+      mergeAndSaveState(req.user.id, notebooks, clientLastSyncedAt);
+      res.status(204).end();  // No response body needed for beacon
+    } catch (err) {
+      console.error('Error in sync-beacon:', err);
+      res.status(204).end();  // Still 204 — beacon can't read response anyway
     }
   });
 

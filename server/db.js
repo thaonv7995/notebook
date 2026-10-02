@@ -94,7 +94,58 @@ export function getLastSyncedAt(userId) {
 }
 
 /**
- * Smart merge: for each notebook, keep the version with the newer updatedAt.
+ * Deep-merge two notebooks at the PAGE level.
+ * For pages on both sides, keeps the one with newer updatedAt.
+ * Pages only on one side are always preserved.
+ */
+function mergeNotebookPages(localNb, serverNb) {
+  const localTime = localNb.updatedAt || '';
+  const serverTime = serverNb.updatedAt || '';
+
+  // Base metadata from whichever notebook is newer
+  const base = serverTime > localTime
+    ? JSON.parse(JSON.stringify(serverNb))
+    : JSON.parse(JSON.stringify(localNb));
+
+  const localPages = new Map();
+  (localNb.pages || []).forEach(p => localPages.set(p.id, p));
+
+  const serverPages = new Map();
+  (serverNb.pages || []).forEach(p => serverPages.set(p.id, p));
+
+  const allPageIds = new Set([...localPages.keys(), ...serverPages.keys()]);
+  const mergedPages = [];
+
+  for (const pid of allPageIds) {
+    const lp = localPages.get(pid);
+    const sp = serverPages.get(pid);
+
+    if (lp && sp) {
+      const lpTime = lp.updatedAt || '';
+      const spTime = sp.updatedAt || '';
+      mergedPages.push(spTime > lpTime ? sp : lp);
+    } else if (sp) {
+      mergedPages.push(sp);
+    } else if (lp) {
+      mergedPages.push(lp);
+    }
+  }
+
+  base.pages = mergedPages;
+
+  // Update notebook updatedAt to the latest page time
+  const latestPage = mergedPages.reduce((latest, p) => {
+    return (p.updatedAt && p.updatedAt > latest) ? p.updatedAt : latest;
+  }, base.updatedAt || '');
+  if (latestPage) base.updatedAt = latestPage;
+
+  return base;
+}
+
+/**
+ * Smart merge: for each notebook, deep-merge at the PAGE level using
+ * updatedAt timestamps. Individual page edits from different devices
+ * are preserved instead of one device overwriting the other.
  * New notebooks from either side are always preserved.
  * Notebooks deleted on one side (missing from incoming) are kept if they
  * were updated on server after the client's last known sync.
@@ -118,18 +169,13 @@ export function mergeAndSaveState(userId, incomingNotebooks, clientLastSyncedAt)
     const clientNb = incomingMap.get(id);
 
     if (serverNb && clientNb) {
-      // Both exist — keep the one with newer updatedAt
-      const serverTime = serverNb.updatedAt || '';
-      const clientTime = clientNb.updatedAt || '';
-      merged.push(clientTime >= serverTime ? clientNb : serverNb);
+      // Both exist — deep-merge at page level
+      merged.push(mergeNotebookPages(clientNb, serverNb));
     } else if (clientNb && !serverNb) {
       // Only on client — new notebook, add it
       merged.push(clientNb);
     } else if (serverNb && !clientNb) {
       // Only on server — client may have deleted it, or client never had it
-      // If client provided a lastSyncedAt and the server notebook was updated
-      // AFTER that timestamp, keep it (client didn't know about the update).
-      // Otherwise, the client intentionally deleted it.
       if (clientLastSyncedAt && serverNb.updatedAt && serverNb.updatedAt > clientLastSyncedAt) {
         merged.push(serverNb);
       }
