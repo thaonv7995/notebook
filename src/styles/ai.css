@@ -165,7 +165,8 @@
 }
 
 /* Highlight button dot */
-.sel-tb-btn--highlight {
+.sel-tb-btn--highlight,
+.sel-tb-btn--color {
   position: relative;
 }
 .sel-tb-highlight-dot {
@@ -176,6 +177,16 @@
   height: 6px;
   border-radius: 50%;
   background: #fef08a;
+  border: 1px solid rgba(0,0,0,0.2);
+}
+.sel-tb-color-dot {
+  position: absolute;
+  bottom: 2px;
+  right: 3px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #e4e0ec;
   border: 1px solid rgba(0,0,0,0.2);
 }
 

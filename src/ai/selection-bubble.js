@@ -36,6 +36,17 @@ const HIGHLIGHT_COLORS = [
   { color: 'transparent', label: 'Xóa' },
 ];
 
+const TEXT_COLORS = [
+  { color: '#ef4444', label: 'Đỏ' },
+  { color: '#f97316', label: 'Cam' },
+  { color: '#eab308', label: 'Vàng' },
+  { color: '#22c55e', label: 'Xanh lá' },
+  { color: '#3b82f6', label: 'Xanh dương' },
+  { color: '#8b5cf6', label: 'Tím' },
+  { color: '#ec4899', label: 'Hồng' },
+  { color: 'inherit', label: 'Mặc định' },
+];
+
 function createBubbleHTML() {
   return `
     <div class="sel-toolbar" id="selToolbar" role="toolbar" aria-label="Selection Toolbar">
@@ -58,6 +69,12 @@ function createBubbleHTML() {
 
         <span class="sel-tb-sep"></span>
 
+        <!-- Text color picker toggle -->
+        <button class="sel-tb-btn sel-tb-btn--color" data-action="text-color" title="Màu chữ">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h16"/><path d="M7 16L12 4l5 12"/><path d="M9.5 12h5"/></svg>
+          <span class="sel-tb-color-dot" id="selColorDot"></span>
+        </button>
+
         <!-- Highlight picker toggle -->
         <button class="sel-tb-btn sel-tb-btn--highlight" data-action="highlight" title="Bôi màu nền">
           <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
@@ -70,6 +87,15 @@ function createBubbleHTML() {
         <button class="sel-tb-btn sel-tb-btn--ai" data-action="ai-toggle" title="AI ✨">
           <span style="font-size:13px">✨</span>
         </button>
+      </div>
+
+      <!-- Text color row (hidden by default) -->
+      <div class="sel-toolbar-row sel-toolbar-colors" id="selTextColorRow" hidden>
+        ${TEXT_COLORS.map(c => `
+          <button class="sel-hl-swatch" data-text-color="${c.color}" title="${c.label}" style="background:${c.color === 'inherit' ? 'repeating-conic-gradient(#ccc 0% 25%, transparent 0% 50%) 50% / 8px 8px' : c.color}">
+            ${c.color === 'inherit' ? '✕' : ''}
+          </button>
+        `).join('')}
       </div>
 
       <!-- Highlight color row (hidden by default) -->
@@ -139,17 +165,56 @@ function bindBubbleEvents() {
     });
   });
 
+  // Close all sub-panels helper
+  function closeAllPanels() {
+    const hlRow = bubbleEl.querySelector('#selHighlightRow');
+    const tcRow = bubbleEl.querySelector('#selTextColorRow');
+    const aiMenu = bubbleEl.querySelector('#selAiMenu');
+    if (hlRow) hlRow.hidden = true;
+    if (tcRow) tcRow.hidden = true;
+    if (aiMenu) { aiMenu.hidden = true; aiMenuOpen = false; }
+  }
+
+  // Text color toggle
+  bubbleEl.querySelector('[data-action="text-color"]')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    const row = bubbleEl.querySelector('#selTextColorRow');
+    const wasHidden = row?.hidden;
+    closeAllPanels();
+    if (row && wasHidden) row.hidden = false;
+  });
+
+  // Text color swatches
+  bubbleEl.querySelectorAll('[data-text-color]').forEach(swatch => {
+    swatch.addEventListener('click', (e) => {
+      e.preventDefault();
+      const color = swatch.dataset.textColor;
+      if (currentEditable) {
+        currentEditable.focus();
+        if (color === 'inherit') {
+          document.execCommand('removeFormat', false, null);
+        } else {
+          document.execCommand('foreColor', false, color);
+        }
+        currentEditable.dispatchEvent(new Event('input', { bubbles: true }));
+        const dot = bubbleEl.querySelector('#selColorDot');
+        if (dot) dot.style.background = color === 'inherit' ? '#e4e0ec' : color;
+      }
+      bubbleEl.querySelector('#selTextColorRow').hidden = true;
+    });
+  });
+
   // Highlight toggle
   bubbleEl.querySelector('[data-action="highlight"]')?.addEventListener('click', (e) => {
     e.preventDefault();
     const row = bubbleEl.querySelector('#selHighlightRow');
-    const aiMenu = bubbleEl.querySelector('#selAiMenu');
-    if (aiMenu) { aiMenu.hidden = true; aiMenuOpen = false; }
-    if (row) row.hidden = !row.hidden;
+    const wasHidden = row?.hidden;
+    closeAllPanels();
+    if (row && wasHidden) row.hidden = false;
   });
 
   // Highlight color swatches
-  bubbleEl.querySelectorAll('.sel-hl-swatch').forEach(swatch => {
+  bubbleEl.querySelectorAll('.sel-hl-swatch[data-hl-color]').forEach(swatch => {
     swatch.addEventListener('click', (e) => {
       e.preventDefault();
       const color = swatch.dataset.hlColor;
@@ -161,7 +226,6 @@ function bindBubbleEvents() {
           document.execCommand('hiliteColor', false, color);
         }
         currentEditable.dispatchEvent(new Event('input', { bubbles: true }));
-        // Update dot color
         const dot = bubbleEl.querySelector('#selHighlightDot');
         if (dot) dot.style.background = color === 'transparent' ? '#fef08a' : color;
       }
@@ -169,15 +233,14 @@ function bindBubbleEvents() {
     });
   });
 
-  // AI toggle
   bubbleEl.querySelector('[data-action="ai-toggle"]')?.addEventListener('click', (e) => {
     e.preventDefault();
     const menu = bubbleEl.querySelector('#selAiMenu');
-    const hlRow = bubbleEl.querySelector('#selHighlightRow');
-    if (hlRow) hlRow.hidden = true;
-    if (menu) {
-      aiMenuOpen = !aiMenuOpen;
-      menu.hidden = !aiMenuOpen;
+    const wasHidden = menu?.hidden;
+    closeAllPanels();
+    if (menu && wasHidden) {
+      aiMenuOpen = true;
+      menu.hidden = false;
     }
   });
 
@@ -283,12 +346,24 @@ function positionBubble(rect) {
   const toolbar = bubbleEl.querySelector('#selToolbar');
   if (!toolbar) return;
 
-  const toolbarWidth = 280;
-  let left = rect.left + (rect.width / 2) - (toolbarWidth / 2);
-  let top = rect.top - 10; // Above selection
+  // Temporarily show to measure height
+  toolbar.style.visibility = 'hidden';
+  toolbar.style.display = 'block';
+  const toolbarRect = toolbar.getBoundingClientRect();
+  const toolbarWidth = toolbarRect.width || 280;
+  const toolbarHeight = toolbarRect.height || 40;
+  toolbar.style.visibility = '';
+  toolbar.style.display = '';
 
+  let left = rect.left + (rect.width / 2) - (toolbarWidth / 2);
+  // Position above the selection with 8px gap
+  let top = rect.top - toolbarHeight - 8;
+
+  // Keep within viewport horizontally
   if (left < 8) left = 8;
   if (left + toolbarWidth > window.innerWidth - 8) left = window.innerWidth - toolbarWidth - 8;
+
+  // If not enough room above, show below
   if (top < 8) {
     top = rect.bottom + 8;
     toolbar.classList.add('sel-toolbar--below');
@@ -324,8 +399,10 @@ export function showBubble(editable, template) {
 
   // Reset sub-panels
   const hlRow = bubbleEl.querySelector('#selHighlightRow');
+  const tcRow = bubbleEl.querySelector('#selTextColorRow');
   const aiMenu = bubbleEl.querySelector('#selAiMenu');
   if (hlRow) hlRow.hidden = true;
+  if (tcRow) tcRow.hidden = true;
   if (aiMenu) { aiMenu.hidden = true; aiMenuOpen = false; }
   hideResult();
   hideLoading();
