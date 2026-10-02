@@ -153,21 +153,13 @@ export function setupToolbarListeners() {
     });
   }
 
-  // Font family selector
+  // Font family selector — per-selection, not global
   if (els.fmtFontFamily) {
     els.fmtFontFamily.addEventListener('change', (e) => {
       const chosen = e.target.value;
       const editable = getActiveEditableArea();
-      const sel = window.getSelection();
-      if (editable && sel && !sel.isCollapsed && editable.contains(sel.anchorNode)) {
+      if (editable) {
         applyFontFamilyToSelection(editable, chosen);
-      } else {
-        const nb = getActiveNotebook();
-        if (nb) nb.fontFamily = chosen;
-        setState({ fontFamily: chosen });
-        applyFontFamily(chosen);
-        persistState();
-        showToast('Đã đổi phông chữ cho sổ.');
       }
     });
   }

@@ -519,6 +519,7 @@ export function applyFontFamilyToSelection(editable, fontValue) {
   const cssFont = FONT_FAMILIES[fontValue] || fontValue;
 
   if (!sel.isCollapsed) {
+    // Apply font to selected text
     try {
       const range = sel.getRangeAt(0);
       const span = document.createElement('span');
@@ -532,14 +533,20 @@ export function applyFontFamilyToSelection(editable, fontValue) {
       document.execCommand('fontName', false, cssFont);
     }
   } else {
-    const nb = getActiveNotebook();
-    if (nb) {
-      nb.fontFamily = fontValue;
-    }
-    setState({ fontFamily: fontValue });
-    applyFontFamily(fontValue);
-    persistState();
-    showToast(`Đã đổi phông chữ cho sổ.`);
+    // No selection — insert a zero-width space in a span with the new font
+    // so that subsequent typing uses this font without affecting existing text
+    const range = sel.getRangeAt(0);
+    const span = document.createElement('span');
+    span.style.fontFamily = cssFont;
+    span.textContent = '\u200B'; // zero-width space
+    range.insertNode(span);
+
+    // Move cursor inside the span, after the zero-width space
+    const newRange = document.createRange();
+    newRange.setStart(span.firstChild, 1);
+    newRange.collapse(true);
+    sel.removeAllRanges();
+    sel.addRange(newRange);
   }
   editable.dispatchEvent(new Event('input', { bubbles: true }));
   scheduleSave();
