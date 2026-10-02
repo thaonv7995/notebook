@@ -74,12 +74,7 @@ import {
   closeChangePasswordModal
 } from './components/modal.js';
 
-import {
-  open as openAiBar,
-  close as closeAiBar,
-  isBarOpen as isAiBarOpen,
-  updatePageContext as updateAiPageContext
-} from './ai/floating-bar.js';
+import './ai/floating-bar.js'; // Mounts tiny corner FAB
 
 import { setupSelectionListener as setupAiSelectionListener } from './ai/selection-bubble.js';
 import { toggleSettings as toggleAiSettings, closeSettings as closeAiSettings } from './ai/ai-settings.js';
@@ -153,9 +148,9 @@ function setupGlobalKeyAndWindowListeners() {
   // Global keydown listeners
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
-      // Close AI bar first
-      if (isAiBarOpen()) {
-        closeAiBar();
+      // Close AI inline bar first
+      if (document.getElementById('aiNotionInlineBar') && !document.getElementById('aiNotionInlineBar').hidden) {
+        closeNotionAiBar();
         return;
       }
       if (els.changePasswordModal && els.changePasswordModal.classList.contains('open')) {
@@ -674,23 +669,12 @@ function handleAiPageInsert(mode, text, extra) {
 }
 
 function openAiCommandBar() {
-  // Open Notion AI inline prompt directly on the active page sheet
   openNotionAiBar();
 }
 
 function setupAiToolbarButtons() {
   const btnAi = document.getElementById('btnAiCommandBar');
   const btnSettings = document.getElementById('btnAiSettings');
-
-  // Pre-bind context and insert handler to corner widget
-  const ctx = getCurrentPageContext();
-  openAiBar({
-    template: ctx.template,
-    context: ctx.context,
-    getContext: getCurrentPageContext,
-    onInsert: handleAiPageInsert
-  });
-  closeAiBar(); // Closed initially, ready for FAB or Cmd+K
 
   if (btnAi) {
     btnAi.addEventListener('click', () => openAiCommandBar());
@@ -699,13 +683,8 @@ function setupAiToolbarButtons() {
     btnSettings.addEventListener('click', () => toggleAiSettings());
   }
 
-  // Keep AI corner widget synchronized when clicking between sheets or focusing areas
-  document.addEventListener('click', (e) => {
-    if (e.target.closest('.book-page-sheet')) {
-      const liveCtx = getCurrentPageContext();
-      updateAiPageContext(liveCtx);
-    }
-  });
+  // Wire up corner FAB event to open inline bar
+  window.addEventListener('ai:open-inline', () => openAiCommandBar());
 }
 
 // Launch application
