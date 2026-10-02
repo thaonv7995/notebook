@@ -26,22 +26,11 @@ const BASE_URL_PRESETS = [
   { name: 'Ollama (Local)', url: 'http://localhost:11434/v1', hint: 'Chạy offline máy tính' },
 ];
 
-const MODEL_PRESETS = [
-  { id: 'gpt-4o-mini', name: 'GPT-4o Mini', desc: 'Nhanh, thông minh, tiết kiệm', badge: 'Khuyên dùng', badgeClass: 'recommended' },
-  { id: 'gpt-4o', name: 'GPT-4o', desc: 'Mạnh nhất OpenAI, suy luận sâu', badge: 'Pro', badgeClass: 'pro' },
-  { id: 'deepseek-chat', name: 'DeepSeek-V3', desc: 'Mô hình chat thông minh, giá cực rẻ', badge: 'Tiết kiệm', badgeClass: 'value' },
-  { id: 'deepseek-reasoner', name: 'DeepSeek-R1', desc: 'Mô hình suy luận chuyên sâu Reasoning', badge: 'Reasoning', badgeClass: 'pro' },
-  { id: 'anthropic/claude-3.5-sonnet', name: 'Claude 3.5 Sonnet', desc: 'Văn phong tự nhiên (qua OpenRouter)', badge: 'Viết hay', badgeClass: 'pro' },
-  { id: 'meta-llama/llama-3.3-70b-instruct', name: 'Llama 3.3 70B', desc: 'Mã nguồn mở mạnh nhất Meta (Groq/OpenRouter)', badge: 'Open', badgeClass: 'value' },
-];
-
 function createPanelHTML() {
   const currentKey = getSavedApiKey();
   const currentBaseUrl = getSavedBaseUrl();
   const currentModel = getPreferredModel();
   const maskedKey = currentKey ? `${currentKey.slice(0, 7)}${'•'.repeat(Math.max(8, currentKey.length - 11))}${currentKey.slice(-4)}` : '';
-
-  const isPresetModel = MODEL_PRESETS.some(m => m.id === currentModel);
 
   return `
     <div class="ai-settings-backdrop" id="aiSettingsBackdrop"></div>
@@ -99,36 +88,18 @@ function createPanelHTML() {
 
         <div class="ai-settings-divider"></div>
 
-        <!-- 3. MODEL SELECTION -->
+        <!-- 3. MODEL SELECTION (CUSTOM ONLY) -->
         <div class="ai-settings-section">
-          <label class="ai-settings-label">
-            🤖 Mô hình AI
-            <span class="ai-settings-sublabel">Chọn mô hình gợi ý sẵn hoặc tự nhập bất kỳ model ID nào</span>
+          <label class="ai-settings-label" for="aiCustomModelInput">
+            🤖 Mô hình AI (Model ID)
+            <span class="ai-settings-sublabel">Nhập tên model ID bất kỳ (ví dụ: gpt-4o-mini, deepseek-chat, claude-3-5-sonnet, gemini-2.0-flash, llama-3.3-70b, qwen-2.5-coder...)</span>
           </label>
-          <div class="ai-model-options" id="aiModelPresetsList">
-            ${MODEL_PRESETS.map(m => `
-              <label class="ai-model-option ${currentModel === m.id ? 'is-active' : ''}">
-                <input type="radio" name="aiModel" value="${m.id}" ${currentModel === m.id ? 'checked' : ''} />
-                <div class="ai-model-card">
-                  <span class="ai-model-name">${m.name}</span>
-                  <span class="ai-model-badge ai-model-badge--${m.badgeClass}">${m.badge}</span>
-                  <span class="ai-model-desc">${m.desc}</span>
-                </div>
-              </label>
-            `).join('')}
+          <div class="ai-settings-key-row">
+            <input type="text" id="aiCustomModelInput" class="ai-settings-input"
+                   placeholder="vd: gpt-4o-mini, deepseek-chat, claude-3.5-sonnet..."
+                   value="${currentModel}" autocomplete="off" spellcheck="false" />
           </div>
-
-          <!-- Custom Model ID Input -->
-          <div class="ai-custom-model-box">
-            <label class="ai-settings-sublabel" for="aiCustomModelInput">Hoặc nhập tên Model ID tùy ý:</label>
-            <div class="ai-custom-model-row">
-              <input type="text" id="aiCustomModelInput" class="ai-settings-input"
-                     placeholder="vd: qwen-2.5-coder-32b, llama3.2, mistralai/mistral-large..."
-                     value="${currentModel}" autocomplete="off" spellcheck="false" />
-              <button id="aiApplyCustomModel" class="ai-settings-btn" type="button">Áp dụng</button>
-            </div>
-            <span class="ai-model-active-hint">Đang chọn: <strong id="aiActiveModelLabel">${currentModel}</strong></span>
-          </div>
+          <span class="ai-model-active-hint">Đang chọn: <strong id="aiActiveModelLabel">${currentModel}</strong></span>
         </div>
 
         <div class="ai-settings-divider"></div>
@@ -169,7 +140,6 @@ function bindSettingsEvents() {
   const statusEl = panelEl.querySelector('#aiKeyStatus');
   const activeModelLabel = panelEl.querySelector('#aiActiveModelLabel');
   const presetBtns = panelEl.querySelectorAll('.ai-url-preset-btn');
-  const modelOptions = panelEl.querySelectorAll('.ai-model-option');
 
   backdrop.addEventListener('click', closeSettings);
   closeBtn.addEventListener('click', closeSettings);
@@ -241,38 +211,12 @@ function bindSettingsEvents() {
     statusEl.innerHTML = '<span class="ai-key-empty">Đã xóa Key.</span>';
   });
 
-  // Model Presets
-  modelOptions.forEach(opt => {
-    const radio = opt.querySelector('input[name="aiModel"]');
-    radio.addEventListener('change', () => {
-      const val = radio.value;
-      setPreferredModel(val);
-      customModelInput.value = val;
-      if (activeModelLabel) activeModelLabel.textContent = val;
-      modelOptions.forEach(o => o.classList.remove('is-active'));
-      opt.classList.add('is-active');
-    });
-  });
-
-  // Custom Model Input & Apply
+  // Custom Model Input & Sync
   function updateFromCustomInput() {
     const val = customModelInput.value.trim();
     if (!val) return;
     setPreferredModel(val);
     if (activeModelLabel) activeModelLabel.textContent = val;
-    // Check if matches a preset radio
-    let matched = false;
-    modelOptions.forEach(opt => {
-      const radio = opt.querySelector('input[name="aiModel"]');
-      if (radio.value === val) {
-        radio.checked = true;
-        opt.classList.add('is-active');
-        matched = true;
-      } else {
-        radio.checked = false;
-        opt.classList.remove('is-active');
-      }
-    });
   }
 
   customModelInput.addEventListener('keydown', (e) => {
@@ -290,9 +234,7 @@ function bindSettingsEvents() {
     }
   });
 
-  if (applyCustomModelBtn) {
-    applyCustomModelBtn.addEventListener('click', updateFromCustomInput);
-  }
+  customModelInput.addEventListener('change', updateFromCustomInput);
 }
 
 export function openSettings() {
