@@ -13,7 +13,7 @@ export const FONT_FAMILIES = {
   sans: "'CJK-Smart-Enlarged', 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
   vietnam: "'CJK-Smart-Enlarged', 'Be Vietnam Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
   serif: "'CJK-Smart-Enlarged', 'Cormorant Garamond', 'Noto Serif SC', Georgia, serif",
-  kaiti: "'CJK-Smart-Enlarged', 'Kaiti SC', 'STKaiti', 'KaiTi', 'SimKai', 'Noto Serif SC', serif",
+  kaiti: "'CJK-Smart-Enlarged', 'Kaiti SC', 'STKaiti', 'KaiTi', 'SimKai', 'Ma Shan Zheng', 'ZCOOL XiaoWei', 'Noto Serif SC', serif",
   mono: "'JetBrains Mono', 'Courier New', monospace",
   dancing: "'Dancing Script', 'CJK-Smart-Enlarged', cursive",
   caveat: "'Caveat', 'CJK-Smart-Enlarged', cursive",
