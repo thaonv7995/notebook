@@ -16,6 +16,7 @@ import { getActivePageInfo, applyAiAutofillToCurrentPage, saveActivePages, apply
 import { applyFontSize, applyFontFamily, applyLineHeight } from '../editor/formatter.js';
 import { getState, setState, persistState, getActiveNotebook } from '../state/store.js';
 import { setCornerFabGenerating } from './floating-bar.js';
+import { setOverflowGuardBypass } from '../editor/page-overflow-guard.js';
 
 let inlineContainerEl = null;
 let activeAbortController = null;
@@ -215,6 +216,7 @@ function handleStopGeneration() {
     activeAbortController = null;
   }
   setCornerFabGenerating(false);
+  setOverflowGuardBypass(false); // Re-enable overflow guard
   isGenerating = false;
   saveActivePages();
   if (inlineContainerEl) {
@@ -519,6 +521,7 @@ async function handleExecutePrompt(promptText, actionType = 'write') {
     inlineContainerEl.hidden = true;
   }
   setCornerFabGenerating(true);
+  setOverflowGuardBypass(true); // Disable overflow guard during AI generation
 
   const pageInfo = getActivePageInfo();
   const template = pageInfo?.template || 'ruled';
@@ -647,6 +650,7 @@ async function handleExecutePrompt(promptText, actionType = 'write') {
 
     // Move to Review State: restore corner fab and show review bar neatly positioned
     setCornerFabGenerating(false);
+    setOverflowGuardBypass(false); // Re-enable overflow guard
     isGenerating = false;
     activeAbortController = null;
 
@@ -660,6 +664,7 @@ async function handleExecutePrompt(promptText, actionType = 'write') {
   } catch (err) {
     console.error('Notion AI execution error:', err);
     setCornerFabGenerating(false);
+    setOverflowGuardBypass(false); // Re-enable overflow guard
     isGenerating = false;
     activeAbortController = null;
     alert(`Không thể hoàn thành yêu cầu: ${err.message}`);

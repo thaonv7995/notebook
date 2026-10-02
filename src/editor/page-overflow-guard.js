@@ -7,6 +7,11 @@
  * Works by intercepting keydown (Enter, character keys) and input events
  * on all .template-writing-area contenteditable elements. If the content's
  * scrollHeight exceeds clientHeight, further input is blocked.
+ *
+ * Special handling:
+ * - Backspace/Delete are ALWAYS allowed (never blocked, even if overflowing)
+ * - AI-generated content bypasses the guard via a temporary flag
+ * - CJK/Hanzi wrapped spans use a relaxed tolerance to avoid false positives
  */
 
 const ALLOWED_KEYS = new Set([
@@ -17,17 +22,34 @@ const ALLOWED_KEYS = new Set([
   'F1', 'F2', 'F3', 'F4', 'F5', 'F6', 'F7', 'F8', 'F9', 'F10', 'F11', 'F12',
 ]);
 
+// Keys that actively delete/reduce content — these must NEVER be blocked
+const DELETION_KEYS = new Set(['Backspace', 'Delete']);
+
+// Flag to temporarily bypass the overflow guard (e.g., during AI generation)
+let bypassOverflowGuard = false;
+
+/**
+ * Temporarily disable the overflow guard (used during AI content insertion).
+ * Call with `true` before programmatic content insertion and `false` after.
+ */
+export function setOverflowGuardBypass(enabled) {
+  bypassOverflowGuard = !!enabled;
+}
+
 /**
  * Check if a writing area's content overflows its visible bounds.
- * Uses a small tolerance (2px) to avoid sub-pixel false positives.
+ * Uses a tolerance of 6px to avoid sub-pixel and CJK wrapper false positives.
+ * CJK text wrapped in <span class="hanzi-cjk"> with position offsets can add
+ * a few extra pixels of scroll height — the larger tolerance accounts for this.
  */
 function isOverflowing(el) {
-  return el.scrollHeight > el.clientHeight + 2;
+  return el.scrollHeight > el.clientHeight + 6;
 }
 
 /**
  * Handles keydown on contenteditable writing areas.
  * Blocks input that would add content when the area is already full.
+ * NEVER blocks Backspace or Delete.
  */
 function handleWritingAreaKeydown(e) {
   const area = e.target.closest('.template-writing-area');
@@ -36,6 +58,9 @@ function handleWritingAreaKeydown(e) {
   // Always allow: navigation, deletion, modifier combos (Ctrl+A, Cmd+Z, etc.)
   if (ALLOWED_KEYS.has(e.key)) return;
   if (e.ctrlKey || e.metaKey) return; // Allow copy, paste (paste handled separately), undo, etc.
+
+  // Bypass during AI generation
+  if (bypassOverflowGuard) return;
 
   // If area is already full, block Enter and character input
   if (isOverflowing(area)) {
@@ -62,6 +87,9 @@ function handleWritingAreaPaste(e) {
   const area = e.target.closest('.template-writing-area');
   if (!area) return;
 
+  // Bypass during AI generation
+  if (bypassOverflowGuard) return;
+
   if (isOverflowing(area)) {
     // Already full — block paste entirely
     const selection = window.getSelection();
@@ -79,10 +107,21 @@ function handleWritingAreaPaste(e) {
 
 /**
  * After an input event, check if we overflowed and undo the last action if so.
+ * CRITICAL: Only undo for additive input (insertText, insertParagraph, etc.),
+ * NEVER undo deletions (deleteContentBackward, deleteContentForward, etc.).
  */
 function handleWritingAreaInput(e) {
   const area = e.target.closest('.template-writing-area');
   if (!area) return;
+
+  // Bypass during AI generation
+  if (bypassOverflowGuard) return;
+
+  // Never interfere with deletion operations — user must always be able to delete
+  const inputType = e.inputType || '';
+  if (inputType.startsWith('delete') || inputType === 'historyUndo' || inputType === 'historyRedo') {
+    return;
+  }
 
   // Small delay to let DOM update
   requestAnimationFrame(() => {
