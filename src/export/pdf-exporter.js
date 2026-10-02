@@ -91,10 +91,7 @@ export async function exportPdfFromServer(includeCover = false) {
     showToast('✅ PDF đã tải xuống!', 3000);
   } catch (err) {
     console.error('PDF export error:', err);
-    showToast(`⚠️ Server PDF không khả dụng (${err.message}). Đang chuyển sang in trực tiếp từ trình duyệt...`, 4500);
-    setTimeout(() => {
-      printFullNotebook(includeCover);
-    }, 800);
+    showToast(`❌ Lỗi tạo PDF: ${err.message}`, 5000);
   }
 }
 
