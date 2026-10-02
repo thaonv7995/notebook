@@ -10,9 +10,10 @@
 import 'dotenv/config';
 import express from 'express';
 import cookieParser from 'cookie-parser';
-import { existsSync } from 'fs';
+import { existsSync, mkdirSync, writeFileSync, unlinkSync } from 'fs';
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
+import os from 'os';
 
 import { ensureAdminUser, authRoutes } from './auth.js';
 import { apiRoutes } from './api.js';
@@ -22,6 +23,24 @@ import { pdfRoutes } from './pdf.js';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PORT = parseInt(process.env.PORT, 10) || 27972;
 const IS_DEV = process.env.NODE_ENV !== 'production';
+
+// Ensure writable TMPDIR for environments with read-only /tmp (e.g. systemd ProtectSystem=strict, containers)
+const localTempDir = join(__dirname, '..', 'data', 'temp');
+try {
+  const testFile = join(os.tmpdir(), `.nb_write_test_${Date.now()}`);
+  writeFileSync(testFile, '1');
+  unlinkSync(testFile);
+} catch {
+  try {
+    mkdirSync(localTempDir, { recursive: true });
+    process.env.TMPDIR = localTempDir;
+    process.env.TEMP = localTempDir;
+    process.env.TMP = localTempDir;
+    console.log(`  ℹ Read-only system /tmp detected. Redirected temp dir to: ${localTempDir}`);
+  } catch (err) {
+    console.warn('  ⚠ Unable to initialize local temp dir:', err.message);
+  }
+}
 
 const app = express();
 

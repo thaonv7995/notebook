@@ -9,6 +9,9 @@
  * Endpoint: GET /api/notebooks/:id/pdf?cover=0|1
  */
 
+import fs from 'fs';
+import path from 'path';
+import os from 'os';
 import { requireAuth } from './auth.js';
 import { loadFullState } from './db.js';
 
@@ -20,6 +23,7 @@ const PORT = parseInt(process.env.PORT, 10) || 27972;
 export function pdfRoutes(app) {
   app.get('/api/notebooks/:id/pdf', requireAuth, async (req, res) => {
     let browser = null;
+    let tempProfileDir = null;
     try {
       const notebooks = loadFullState(req.user.id);
       const notebook = notebooks.find(nb => nb.id === req.params.id);
@@ -32,13 +36,33 @@ export function pdfRoutes(app) {
       // Dynamically import puppeteer
       const puppeteer = await import('puppeteer');
 
+      // Resolve safe writable directory for Puppeteer Chrome user profile
+      const baseTemp = process.env.TMPDIR || os.tmpdir();
+      let candidateBase = baseTemp;
+      try {
+        const testFile = path.join(baseTemp, `.pdf_write_test_${Date.now()}`);
+        fs.writeFileSync(testFile, '1');
+        fs.unlinkSync(testFile);
+      } catch {
+        candidateBase = path.join(process.cwd(), 'data', 'temp');
+        fs.mkdirSync(candidateBase, { recursive: true });
+      }
+
+      tempProfileDir = path.join(
+        candidateBase,
+        `puppeteer_profile_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`
+      );
+      fs.mkdirSync(tempProfileDir, { recursive: true });
+
       browser = await puppeteer.default.launch({
         headless: true,
+        userDataDir: tempProfileDir,
         args: [
           '--no-sandbox',
           '--disable-setuid-sandbox',
           '--font-render-hinting=none',
           '--disable-dev-shm-usage',
+          '--disable-gpu',
         ],
       });
 
@@ -101,10 +125,17 @@ export function pdfRoutes(app) {
       res.send(pdfBuffer);
     } catch (err) {
       console.error('PDF generation error:', err);
+      res.status(500).json({ error: 'Lỗi tạo PDF: ' + err.message });
+    } finally {
       if (browser) {
         try { await browser.close(); } catch {}
+        browser = null;
       }
-      res.status(500).json({ error: 'Lỗi tạo PDF: ' + err.message });
+      if (tempProfileDir) {
+        try {
+          fs.rmSync(tempProfileDir, { recursive: true, force: true });
+        } catch {}
+      }
     }
   });
 }

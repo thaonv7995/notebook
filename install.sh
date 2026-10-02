@@ -173,7 +173,8 @@ StandardError=append:${INSTALL_DIR}/logs/stderr.log
 # Security hardening
 NoNewPrivileges=true
 ProtectSystem=strict
-ReadWritePaths=${INSTALL_DIR}
+PrivateTmp=true
+ReadWritePaths=${INSTALL_DIR} /tmp /var/tmp
 
 [Install]
 WantedBy=multi-user.target"
