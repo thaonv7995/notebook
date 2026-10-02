@@ -173,6 +173,37 @@ export function attachTemplateInputListeners(sheetEl, page) {
       scheduleSave(() => saveActivePages());
     });
   });
+
+  // Signature Seal Cartouche - Click to personalize author / handle
+  sheetEl.querySelectorAll('.signature-seal-cartouche').forEach(seal => {
+    seal.setAttribute('title', 'Bấm để đổi tên tác giả / @handle (ví dụ: @thaonv)');
+    seal.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const nb = getActiveNotebook();
+      const currentAuthor = (nb && nb.author) || '@thaonv';
+      const promptVal = (currentAuthor === 'Cá nhân' || currentAuthor === 'Notebook Studio') ? '@thaonv' : currentAuthor;
+      const newAuthor = await showPromptModal(
+        'Cá nhân hoá Sổ tay',
+        'Nhập tên hiển thị hoặc handle cá nhân của bạn (ví dụ: @thaonv):',
+        promptVal
+      );
+      if (newAuthor !== null) {
+        const trimmed = newAuthor.trim();
+        if (trimmed) {
+          const formatted = (/^[a-zA-Z0-9._-]+$/.test(trimmed) && !trimmed.startsWith('@'))
+            ? `@${trimmed}`
+            : trimmed;
+          if (nb) {
+            nb.author = formatted;
+            nb.updatedAt = new Date().toISOString();
+            persistState();
+            renderBookPages();
+            showToast(`Đã cập nhật tác giả: ${formatted}`, 'success');
+          }
+        }
+      }
+    });
+  });
 }
 
 export function saveActivePages() {

@@ -149,6 +149,7 @@ export function getEls() {
     btnConfirmNewNotebook: document.querySelector('#btnConfirmNewNotebook'),
     newNotebookTitle: document.querySelector('#newNotebookTitle'),
     newNotebookCategory: document.querySelector('#newNotebookCategory'),
+    newNotebookAuthor: document.querySelector('#newNotebookAuthor'),
     newNotebookTemplate: document.querySelector('#newNotebookTemplate'),
 
     deleteNotebookModal: document.querySelector('#deleteNotebookModal'),

@@ -50,6 +50,9 @@ export function openNewNotebookModal(defaultCategory = 'Học tập') {
   if (els.newNotebookCategory) {
     els.newNotebookCategory.value = defaultCategory;
   }
+  if (els.newNotebookAuthor) {
+    els.newNotebookAuthor.value = '@thaonv';
+  }
 }
 
 export function closeNewNotebookModal() {
@@ -146,13 +149,15 @@ export function setupModalListeners({ onNotebookCreated } = {}) {
       const title = els.newNotebookTitle ? els.newNotebookTitle.value.trim() : '';
       const finalTitle = title || 'Cuốn Sổ Mới';
       const category = (els.newNotebookCategory ? els.newNotebookCategory.value.trim() : '') || 'Ghi chép';
+      const rawAuthor = (els.newNotebookAuthor ? els.newNotebookAuthor.value.trim() : '') || '@thaonv';
+      const author = (/^[a-zA-Z0-9._-]+$/.test(rawAuthor) && !rawAuthor.startsWith('@')) ? `@${rawAuthor}` : rawAuthor;
       const template = (els.newNotebookTemplate && els.newNotebookTemplate.value) || 'cornell';
       const newId = 'nb-' + Date.now();
       const createdAt = new Date().toISOString();
       const newBook = {
         id: newId,
         title: finalTitle,
-        author: 'Cá nhân',
+        author: author,
         category,
         lang: 'EN · VI',
         coverGradient: selectedCoverGradient,

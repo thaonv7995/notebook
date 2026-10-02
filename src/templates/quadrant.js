@@ -8,7 +8,7 @@
  * - Zone 4: ELIMINATE (Not Urgent + Not Important)
  */
 
-import { ROYAL_CORNERS_SVG, EDGE_NOTCHES_HTML } from './ornaments.js';
+import { ROYAL_CORNERS_SVG, EDGE_NOTCHES_HTML, renderSignatureSeal } from './ornaments.js';
 import { formatContentToHtml } from '../editor/sanitizer.js';
 import { getActiveNotebook } from '../state/store.js';
 
@@ -29,7 +29,6 @@ function escapeAttr(str) {
 
 export function renderEisenhowerLayout(sheetEl, page, pageNum, isLeft, attachListeners) {
   const activeNotebook = getActiveNotebook();
-  const authorName = (activeNotebook && activeNotebook.author) || 'Cá nhân';
 
   // Parse quadrant data from page content or initialize empty
   const q = page.quadrants || { q1: '', q2: '', q3: '', q4: '' };
@@ -43,10 +42,7 @@ export function renderEisenhowerLayout(sheetEl, page, pageNum, isLeft, attachLis
       <div class="functional-header">
         <div class="header-top-meta">
           <div class="header-purpose-badge"><span>⚡</span> EISENHOWER MATRIX</div>
-          <div class="signature-seal-cartouche">
-            <span class="seal-user-handle">${escapeHTML(authorName)}</span>
-            <span class="seal-user-sub">PRIORITY PLANNER</span>
-          </div>
+          ${renderSignatureSeal(activeNotebook && activeNotebook.author, 'PRIORITY PLANNER')}
         </div>
         <div class="header-main-field">
           <span class="field-label">GOAL / CONTEXT:</span>

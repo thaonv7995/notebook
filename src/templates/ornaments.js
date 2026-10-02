@@ -36,3 +36,36 @@ export const EDGE_NOTCHES_HTML = `
     <div class="index-notch">VI</div>
   </div>
 `;
+
+function escapeSealHTML(str) {
+  if (str == null) return '';
+  return String(str).replace(/[&<>'"]/g, tag => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    "'": '&#39;',
+    '"': '&quot;'
+  }[tag] || tag));
+}
+
+export function formatAuthorHandle(author) {
+  if (!author || author === 'Cá nhân' || author === 'Notebook Studio') {
+    return '@thaonv';
+  }
+  const str = String(author).trim();
+  if (!str || str === 'Cá nhân') return '@thaonv';
+  if (/^[a-zA-Z0-9._-]+$/.test(str) && !str.startsWith('@')) {
+    return `@${str}`;
+  }
+  return str;
+}
+
+export function renderSignatureSeal(author, subLabel = 'STUDY ARCHIVE') {
+  const handle = formatAuthorHandle(author);
+  return `
+    <div class="signature-seal-cartouche" title="Bấm để đổi tên tác giả / handle (ví dụ: @thaonv)">
+      <span class="seal-user-handle">${escapeSealHTML(handle)}</span>
+      <span class="seal-user-sub">${escapeSealHTML(subLabel)}</span>
+    </div>
+  `;
+}

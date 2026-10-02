@@ -39,7 +39,7 @@ export function createPrintCover(notebook) {
   footer.className = 'print-cover-footer';
 
   const author = document.createElement('span');
-  author.textContent = notebook.author || 'Cá nhân';
+  author.textContent = (!notebook.author || notebook.author === 'Cá nhân') ? '@thaonv' : notebook.author;
 
   const pageCount = document.createElement('span');
   pageCount.textContent = `${notebook.pages.length} trang`;

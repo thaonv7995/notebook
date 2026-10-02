@@ -7,7 +7,7 @@
  * - Example Sentence column (with context usage)
  */
 
-import { ROYAL_CORNERS_SVG, EDGE_NOTCHES_HTML } from './ornaments.js';
+import { ROYAL_CORNERS_SVG, EDGE_NOTCHES_HTML, renderSignatureSeal } from './ornaments.js';
 import { formatContentToHtml } from '../editor/sanitizer.js';
 import { getActiveNotebook } from '../state/store.js';
 
@@ -28,7 +28,6 @@ function escapeAttr(str) {
 
 export function renderVocabLayout(sheetEl, page, pageNum, isLeft, attachListeners) {
   const activeNotebook = getActiveNotebook();
-  const authorName = (activeNotebook && activeNotebook.author) || 'Cá nhân';
   const langLabel = (page.lang || 'EN').toUpperCase();
 
   sheetEl.innerHTML = `
@@ -40,10 +39,7 @@ export function renderVocabLayout(sheetEl, page, pageNum, isLeft, attachListener
       <div class="functional-header">
         <div class="header-top-meta">
           <div class="header-purpose-badge"><span>🗣️</span> VOCABULARY · ${escapeHTML(langLabel)}</div>
-          <div class="signature-seal-cartouche">
-            <span class="seal-user-handle">${escapeHTML(authorName)}</span>
-            <span class="seal-user-sub">LANGUAGE LAB</span>
-          </div>
+          ${renderSignatureSeal(activeNotebook && activeNotebook.author, 'LANGUAGE LAB')}
         </div>
         <div class="header-main-field">
           <span class="field-label">TOPIC / THEME:</span>

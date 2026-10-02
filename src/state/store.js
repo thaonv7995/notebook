@@ -63,7 +63,7 @@ export function normalizeState(rawState) {
       .replace(/\s*Sổ\s+Kẻ\s+Ngang\s+A4/gi, '')
       .trim();
     if (!nb.title) nb.title = 'Ruled Notebook';
-    nb.author = String(nb.author || 'Cá nhân');
+    nb.author = (!nb.author || nb.author === 'Cá nhân' || nb.author === 'Notebook Studio') ? '@thaonv' : String(nb.author);
     nb.category = String(nb.category || 'Ghi chép');
     nb.lang = String(nb.lang || 'VI');
     nb.fontFamily = typeof nb.fontFamily === 'string' && nb.fontFamily ? nb.fontFamily : state.fontFamily;

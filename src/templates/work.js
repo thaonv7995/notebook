@@ -2,7 +2,7 @@
  * Work Notes Template Layout & Event Handlers
  */
 
-import { ROYAL_CORNERS_SVG, EDGE_NOTCHES_HTML } from './ornaments.js';
+import { ROYAL_CORNERS_SVG, EDGE_NOTCHES_HTML, renderSignatureSeal } from './ornaments.js';
 import { formatContentToHtml } from '../editor/sanitizer.js';
 import { getActiveNotebook } from '../state/store.js';
 
@@ -23,7 +23,6 @@ function escapeAttr(str) {
 
 export function renderWorkLayout(sheetEl, page, pageNum, isLeft, attachListeners) {
   const activeNotebook = getActiveNotebook();
-  const authorName = (activeNotebook && activeNotebook.author) || 'Cá nhân';
 
   const storedActions = Array.isArray(page.actions) ? page.actions : [];
   const actions = storedActions.slice(0, 5).map(action => ({
@@ -49,10 +48,7 @@ export function renderWorkLayout(sheetEl, page, pageNum, isLeft, attachListeners
       <div class="functional-header">
         <div class="header-top-meta">
           <div class="header-purpose-badge"><span>💼</span> WORK & PROJECT</div>
-          <div class="signature-seal-cartouche">
-            <span class="seal-user-handle">${escapeHTML(authorName)}</span>
-            <span class="seal-user-sub">WORK ARCHIVE</span>
-          </div>
+          ${renderSignatureSeal(activeNotebook && activeNotebook.author, 'WORK ARCHIVE')}
         </div>
         <div class="header-main-field">
           <span class="field-label">PROJECT / OBJECTIVE:</span>

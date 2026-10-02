@@ -2,7 +2,7 @@
  * Cornell Notes Template Layout & Event Handlers
  */
 
-import { ROYAL_CORNERS_SVG, EDGE_NOTCHES_HTML } from './ornaments.js';
+import { ROYAL_CORNERS_SVG, EDGE_NOTCHES_HTML, renderSignatureSeal } from './ornaments.js';
 import { formatContentToHtml } from '../editor/sanitizer.js';
 import { getActiveNotebook } from '../state/store.js';
 
@@ -23,7 +23,6 @@ function escapeAttr(str) {
 
 export function renderCornellLayout(sheetEl, page, pageNum, isLeft, attachListeners) {
   const activeNotebook = getActiveNotebook();
-  const authorName = (activeNotebook && activeNotebook.author) || 'Cá nhân';
 
   sheetEl.innerHTML = `
     <div class="a4-template-sheet cornell-template-sheet">
@@ -34,10 +33,7 @@ export function renderCornellLayout(sheetEl, page, pageNum, isLeft, attachListen
       <div class="functional-header">
         <div class="header-top-meta">
           <div class="header-purpose-badge"><span>✦</span> STUDY JOURNAL</div>
-          <div class="signature-seal-cartouche">
-            <span class="seal-user-handle">${escapeHTML(authorName)}</span>
-            <span class="seal-user-sub">STUDY ARCHIVE</span>
-          </div>
+          ${renderSignatureSeal(activeNotebook && activeNotebook.author, 'STUDY ARCHIVE')}
         </div>
         <div class="header-main-field">
           <span class="field-label">SUBJECT / TOPIC:</span>

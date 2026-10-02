@@ -17,7 +17,7 @@ export const INITIAL_LIBRARY_DATA = {
     {
       id: 'nb-cornell-study',
       title: 'Cornell Notes • Study Journal',
-      author: 'Notebook Studio',
+      author: '@thaonv',
       category: 'Học tập',
       lang: 'EN · VI',
       coverGradient: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
@@ -52,7 +52,7 @@ export const INITIAL_LIBRARY_DATA = {
     {
       id: 'nb-work-project',
       title: 'Work & Project Log • Meeting Notes',
-      author: 'Notebook Studio',
+      author: '@thaonv',
       category: 'Công việc',
       lang: 'EN · VI',
       coverGradient: 'linear-gradient(135deg, #0f766e 0%, #115e59 100%)',
@@ -101,7 +101,7 @@ export const INITIAL_LIBRARY_DATA = {
     {
       id: 'nb-ruled-classic',
       title: 'Ruled Notebook',
-      author: 'Notebook Studio',
+      author: '@thaonv',
       category: 'Ghi chép',
       lang: 'EN · VI',
       coverGradient: 'linear-gradient(135deg, #4338ca 0%, #312e81 100%)',
@@ -132,7 +132,7 @@ export const INITIAL_LIBRARY_DATA = {
     {
       id: 'nb-vocab-lang',
       title: 'Vocabulary Lab • Ngoại Ngữ',
-      author: 'Notebook Studio',
+      author: '@thaonv',
       category: 'Ngoại ngữ',
       lang: 'EN · JP · VI',
       coverGradient: 'linear-gradient(135deg, #ec4899 0%, #be185d 100%)',
@@ -169,7 +169,7 @@ export const INITIAL_LIBRARY_DATA = {
     {
       id: 'nb-eisenhower-planner',
       title: 'Eisenhower Priority • Kế Hoạch Tuần',
-      author: 'Notebook Studio',
+      author: '@thaonv',
       category: 'Kế hoạch',
       lang: 'VI · EN',
       coverGradient: 'linear-gradient(135deg, #e11d48 0%, #9f1239 100%)',
@@ -195,7 +195,7 @@ export const INITIAL_LIBRARY_DATA = {
     {
       id: 'nb-reading-journal',
       title: 'Reading Journal • Sổ Tay Sách Hay',
-      author: 'Notebook Studio',
+      author: '@thaonv',
       category: 'Đọc sách',
       lang: 'VI · EN',
       coverGradient: 'linear-gradient(135deg, #d97706 0%, #92400e 100%)',
@@ -218,7 +218,7 @@ export const INITIAL_LIBRARY_DATA = {
     {
       id: 'nb-freeform-notes',
       title: 'Sổ Ghi Chú Tự Do • Freeform Notes',
-      author: 'Thao NV',
+      author: '@thaonv',
       category: 'Ghi chép',
       lang: 'VN · EN',
       coverGradient: 'linear-gradient(135deg, #b45309 0%, #78350f 100%)',
