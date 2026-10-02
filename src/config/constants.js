@@ -10,16 +10,16 @@ export const SAVE_DEBOUNCE_MS = 400;
 export const FONT_SIZES = [11, 12, 13, 14, 15, 16, 18, 20, 22, 24, 28];
 
 export const FONT_FAMILIES = {
-  sans: "'CJK-Smart-Enlarged', 'Noto Serif SC', 'Ma Shan Zheng', 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
-  vietnam: "'CJK-Smart-Enlarged', 'Noto Serif SC', 'Ma Shan Zheng', 'Be Vietnam Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
-  serif: "'CJK-Smart-Enlarged', 'Noto Serif SC', 'Ma Shan Zheng', 'Cormorant Garamond', Georgia, serif",
-  kaiti: "'CJK-Smart-Enlarged', 'Kaiti SC', 'STKaiti', 'KaiTi', 'SimKai', 'Ma Shan Zheng', 'ZCOOL XiaoWei', 'Noto Serif SC', serif",
-  mono: "'JetBrains Mono', 'Noto Serif SC', 'Courier New', monospace",
-  dancing: "'Dancing Script', 'CJK-Smart-Enlarged', 'Noto Serif SC', cursive",
-  caveat: "'Caveat', 'CJK-Smart-Enlarged', 'Noto Serif SC', cursive",
-  patrickhand: "'Patrick Hand', 'CJK-Smart-Enlarged', 'Noto Serif SC', cursive",
-  kalam: "'Kalam', 'CJK-Smart-Enlarged', 'Noto Serif SC', cursive",
-  indieflower: "'Indie Flower', 'CJK-Smart-Enlarged', 'Noto Serif SC', cursive"
+  sans: "'CJK-Smart-Enlarged', 'Plus Jakarta Sans', 'Noto Serif SC', 'Ma Shan Zheng', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, serif",
+  vietnam: "'CJK-Smart-Enlarged', 'Be Vietnam Pro', 'Noto Serif SC', 'Ma Shan Zheng', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, serif",
+  serif: "'CJK-Smart-Enlarged', 'Cormorant Garamond', 'Noto Serif SC', 'Ma Shan Zheng', Georgia, serif",
+  kaiti: "'CJK-Smart-Enlarged', 'Kaiti SC', 'STKaiti', 'KaiTi', 'SimKai', 'Ma Shan Zheng', 'Noto Serif SC', 'ZCOOL XiaoWei', serif",
+  mono: "'JetBrains Mono', 'CJK-Smart-Enlarged', 'Noto Serif SC', 'Ma Shan Zheng', 'Courier New', monospace",
+  dancing: "'Dancing Script', 'CJK-Smart-Enlarged', 'Ma Shan Zheng', 'Noto Serif SC', cursive",
+  caveat: "'Caveat', 'CJK-Smart-Enlarged', 'Ma Shan Zheng', 'Noto Serif SC', cursive",
+  patrickhand: "'Patrick Hand', 'CJK-Smart-Enlarged', 'Ma Shan Zheng', 'Noto Serif SC', cursive",
+  kalam: "'Kalam', 'CJK-Smart-Enlarged', 'Ma Shan Zheng', 'Noto Serif SC', cursive",
+  indieflower: "'Indie Flower', 'CJK-Smart-Enlarged', 'Ma Shan Zheng', 'Noto Serif SC', cursive"
 };
 
 export const LINE_HEIGHT_MAP = {

@@ -6,18 +6,14 @@
    Ensures Hanzi is ALWAYS prominent, large, and readable
    relative to Latin / Vietnamese characters in notebooks.
    Local fonts tried first (desktop), then web fonts (mobile fallback). */
-/* Desktop-first: try local CJK fonts (fast, no download).
-   Mobile/tablet: relies on 'Noto Serif SC' / 'Ma Shan Zheng' loaded via
-   Google Fonts CSS in index.html, included in every font-family stack. */
+/* Desktop: try local calligraphic KaiTi / SongTi fonts (fast, no download, 140% prominent size).
+   iOS/mobile: since iOS lacks local KaiTi/SongTi, CJK-Smart-Enlarged skips, falling back to
+   'Noto Serif SC' and 'Ma Shan Zheng' (Google Fonts web fonts) with beautiful stroke contrast (thanh đậm). */
 @font-face {
   font-family: 'CJK-Smart-Enlarged';
   src: local('Kaiti SC'), local('STKaiti'), local('KaiTi'), local('SimKai'),
        local('KaiTi_GB2312'), local('BiauKai'),
-       local('Ma Shan Zheng'), local('ZCOOL XiaoWei'),
-       local('Noto Serif SC'),
-       local('Songti SC'), local('STSong'), local('Hiragino Sans GB'),
-       local('STHeiti'), local('Heiti SC'), local('PingFang SC'),
-       local('Microsoft YaHei'), local('SimSun');
+       local('Songti SC'), local('STSong');
   unicode-range: U+2E80-2EFF, U+2F00-2FDF, U+3000-303F, U+3100-312F,
                  U+31C0-31EF, U+3200-32FF, U+3400-4DBF, U+4E00-9FFF,
                  U+F900-FAFF, U+FE30-FE4F, U+FF00-FFEF;
@@ -80,6 +76,6 @@
     #cbd5e1 var(--notebook-line-height, 28px)
   );
   --paper-zoom: 1.0;
-  --cjk-calligraphic-font: "CJK-Smart-Enlarged", "Kaiti SC", "STKaiti", "KaiTi", "SimKai", "KaiTi_GB2312", "BiauKai", "Noto Serif SC", "Songti SC", "STSong", "SimSun", serif;
-  --notebook-font-family: 'CJK-Smart-Enlarged', 'Noto Serif SC', 'Ma Shan Zheng', 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, var(--cjk-calligraphic-font);
+  --cjk-calligraphic-font: "CJK-Smart-Enlarged", "Kaiti SC", "STKaiti", "KaiTi", "SimKai", "KaiTi_GB2312", "BiauKai", "Ma Shan Zheng", "Noto Serif SC", "Songti SC", "STSong", serif;
+  --notebook-font-family: 'CJK-Smart-Enlarged', 'Plus Jakarta Sans', 'Noto Serif SC', 'Ma Shan Zheng', var(--cjk-calligraphic-font);
 }
