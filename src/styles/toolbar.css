@@ -328,6 +328,16 @@
   justify-content: center;
   color: #94a3b8;
 }
+.tool-menu-icon svg,
+svg.tool-menu-icon {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
 .tool-menu-item:hover .tool-menu-icon {
   color: #38bdf8;
 }
