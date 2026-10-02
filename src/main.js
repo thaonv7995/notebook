@@ -77,7 +77,7 @@ import {
 import './ai/floating-bar.js'; // Mounts tiny corner FAB
 
 import { setupSelectionListener as setupAiSelectionListener } from './ai/selection-bubble.js';
-import { toggleSettings as toggleAiSettings, closeSettings as closeAiSettings } from './ai/ai-settings.js';
+import { toggleSettings as toggleAiSettings, closeSettings as closeAiSettings, openSettings as openAiSettings } from './ai/ai-settings.js';
 import { typewriteTextIntoElement } from './ai/typewriter.js';
 import {
   openNotionAiBar,
@@ -151,6 +151,11 @@ function setupGlobalKeyAndWindowListeners() {
       // Close AI inline bar first
       if (document.getElementById('aiNotionInlineBar') && !document.getElementById('aiNotionInlineBar').hidden) {
         closeNotionAiBar();
+        return;
+      }
+      const aiContainer = document.getElementById('aiSettingsContainer');
+      if (aiContainer && aiContainer.classList.contains('is-open')) {
+        closeAiSettings();
         return;
       }
       if (els.changePasswordModal && els.changePasswordModal.classList.contains('open')) {
@@ -674,17 +679,23 @@ function openAiCommandBar() {
 
 function setupAiToolbarButtons() {
   const btnAi = document.getElementById('btnAiCommandBar');
-  const btnSettings = document.getElementById('btnAiSettings');
+  const btnSettingsList = document.querySelectorAll('#btnAiSettings, [data-action="ai-settings"]');
 
   if (btnAi) {
     btnAi.addEventListener('click', () => openAiCommandBar());
   }
-  if (btnSettings) {
-    btnSettings.addEventListener('click', () => toggleAiSettings());
-  }
+  btnSettingsList.forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      openAiSettings();
+    });
+  });
 
   // Wire up corner FAB event to open inline bar
   window.addEventListener('ai:open-inline', () => openAiCommandBar());
+  // Wire up global open AI settings event
+  window.addEventListener('ai:open-settings', () => openAiSettings());
 }
 
 // Launch application

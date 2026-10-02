@@ -143,6 +143,9 @@ function createPanelHTML() {
 }
 
 function ensurePanel() {
+  if (!panelEl) {
+    panelEl = document.getElementById('aiSettingsContainer');
+  }
   if (panelEl) return;
   panelEl = document.createElement('div');
   panelEl.id = 'aiSettingsContainer';

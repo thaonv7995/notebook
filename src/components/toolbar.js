@@ -234,6 +234,9 @@ export function setupToolbarListeners() {
         else if (id === 'fmt-code') applyFormattingToActiveTarget('code');
         else if (id === 'fmt-hr') applyFormattingToActiveTarget('hr');
         else if (id === 'fmt-clear') applyFormattingToActiveTarget('clear');
+        else if (id === 'btnAiSettings') {
+          window.dispatchEvent(new CustomEvent('ai:open-settings'));
+        }
         closeAllPopoverMenus();
       });
     });
