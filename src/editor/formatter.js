@@ -415,36 +415,54 @@ export function applyFontSizeToSelection(editable, direction, reset = false) {
       nextSize = FONT_SIZES[idx];
     }
 
+    const currentLhStr = document.documentElement.style.getPropertyValue('--notebook-line-height') || '28px';
+    const nbLh = parseInt(currentLhStr, 10) || 28;
+    const isBlank = document.documentElement.style.getPropertyValue('--notebook-lines-display') === 'none';
+    const maxAllowedSize = isBlank ? 32 : Math.max(12, nbLh - 6);
+    if (!reset && nextSize > maxAllowedSize) {
+      nextSize = maxAllowedSize;
+    }
+
     const els = getEls();
     if (els.fontSizeLabel) els.fontSizeLabel.textContent = nextSize;
 
     if (!sel.isCollapsed) {
       // User selected text: apply font size only to the selection
-      const span = document.createElement('span');
-      if (!reset) {
-        span.style.fontSize = `${nextSize}px`;
+      if (parentEl && parentEl.tagName === 'SPAN' && parentEl.style.fontSize && sel.toString() === parentEl.textContent) {
+        if (reset) parentEl.style.fontSize = '';
+        else parentEl.style.fontSize = `${nextSize}px`;
+      } else {
+        const span = document.createElement('span');
+        if (!reset) {
+          span.style.fontSize = `${nextSize}px`;
+        }
+        span.appendChild(range.extractContents());
+        range.insertNode(span);
+        range.selectNodeContents(span);
+        sel.removeAllRanges();
+        sel.addRange(range);
       }
-      span.appendChild(range.extractContents());
-      range.insertNode(span);
-      range.selectNodeContents(span);
-      sel.removeAllRanges();
-      sel.addRange(range);
       saveCurrentSelection();
     } else {
       // No selection: insert zero-width space in a span with new font size
       // so subsequent typing uses this size without affecting existing text
-      const span = document.createElement('span');
-      if (!reset) {
-        span.style.fontSize = `${nextSize}px`;
-      }
-      span.textContent = '\u200B'; // zero-width space
-      range.insertNode(span);
+      if (parentEl && parentEl.tagName === 'SPAN' && parentEl.textContent === '\u200B') {
+        if (reset) parentEl.style.fontSize = '';
+        else parentEl.style.fontSize = `${nextSize}px`;
+      } else {
+        const span = document.createElement('span');
+        if (!reset) {
+          span.style.fontSize = `${nextSize}px`;
+        }
+        span.textContent = '\u200B'; // zero-width space
+        range.insertNode(span);
 
-      const newRange = document.createRange();
-      newRange.setStart(span.firstChild, 1);
-      newRange.collapse(true);
-      sel.removeAllRanges();
-      sel.addRange(newRange);
+        const newRange = document.createRange();
+        newRange.setStart(span.firstChild, 1);
+        newRange.collapse(true);
+        sel.removeAllRanges();
+        sel.addRange(newRange);
+      }
       saveCurrentSelection();
     }
 

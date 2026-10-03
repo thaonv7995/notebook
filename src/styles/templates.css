@@ -466,7 +466,7 @@
   min-height: 0; /* Prevent flex child from expanding beyond page bounds */
   width: 100%;
   box-sizing: border-box;
-  padding: 0 12px;
+  padding: 4px 12px 0 12px;
   margin: 0;
   border: none;
   outline: none;
@@ -477,7 +477,7 @@
   color: var(--ink-primary);
   background: var(--notebook-lines-display);
   background-size: 100% var(--notebook-line-height, 28px);
-  background-position: 0 -6px;
+  background-position: 0 0;
   background-attachment: local;
   overflow: hidden !important;
   white-space: pre-wrap !important;
@@ -491,6 +491,11 @@
   padding: 0 !important;
   line-height: var(--notebook-line-height, 28px) !important;
   min-height: var(--notebook-line-height, 28px);
+  box-sizing: border-box;
+}
+.template-writing-area span,
+.template-writing-area font {
+  line-height: 1 !important;
 }
 .template-writing-area:focus {
   background-color: rgba(37, 99, 235, 0.015);
@@ -508,7 +513,7 @@
 .hanzi-cjk {
   display: inline;
   position: relative;
-  top: -4.5px;
+  top: -2px;
 }
 
 /* Rich Text Formatting inside Notebook Template Writing Area */
@@ -604,12 +609,13 @@
 }
 
 .ruled-canvas-text {
-  padding: 0 16px;
+  padding: 4px 16px 0 16px;
   font-size: var(--notebook-font-size, 15px);
   line-height: var(--notebook-line-height, 28px);
   background: var(--notebook-lines-display);
   background-size: 100% var(--notebook-line-height, 28px);
-  background-position: 0 -6px;
+  background-position: 0 0;
+  background-attachment: local;
   overflow: hidden !important;
 }
 
@@ -713,7 +719,7 @@
       var(--notebook-line-color, #cbd5e1) var(--notebook-line-height, 28px)
     );
   background-size: var(--notebook-line-height, 28px) var(--notebook-line-height, 28px);
-  background-position: 0 -6px;
+  background-position: 0 0;
   background-attachment: local;
   overflow: hidden !important;
 }
@@ -787,10 +793,10 @@
   line-height: var(--notebook-line-height, 28px);
   background: var(--notebook-lines-display);
   background-size: 100% var(--notebook-line-height, 28px);
-  background-position: 0 -6px;
+  background-position: 0 0;
   background-attachment: local;
   overflow: hidden !important;
-  padding: 0 8px;
+  padding: 4px 8px 0 8px;
 }
 
 /* ========================================================

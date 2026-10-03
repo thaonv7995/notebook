@@ -101,6 +101,15 @@ export function formatContentToHtml(content) {
 
   // ── Step 2: If content already has block-level HTML, it's pre-formatted — just sanitize ──
   if (/<(p|div|blockquote|ul|ol|h[1-6])[^>]*>/i.test(html)) {
+    // If there is leading inline text before the first block element, wrap it in a div
+    // so every line in the notebook has consistent block formatting
+    const firstBlockMatch = html.match(/<(p|div|blockquote|ul|ol|h[1-6])[^>]*>/i);
+    if (firstBlockMatch && firstBlockMatch.index > 0) {
+      const leading = html.slice(0, firstBlockMatch.index);
+      if (leading.trim() && !/^<(p|div|blockquote|ul|ol|h[1-6])/i.test(leading.trim())) {
+        html = `<div>${leading}</div>` + html.slice(firstBlockMatch.index);
+      }
+    }
     html = wrapHanziInHtml(html);
     return sanitizeRichHtml(html);
   }
