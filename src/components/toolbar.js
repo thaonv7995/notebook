@@ -19,6 +19,8 @@ import {
 import { showToast } from './modal.js';
 import { handleFitPage } from './reader.js';
 import { printFullNotebook, exportPdfFromServer } from '../export/pdf-exporter.js';
+import { compressAndProcessImageFile, insertImageCardIntoEditable } from '../editor/image-manager.js';
+import { renderEmojiPickerContent } from '../editor/emoji-picker.js';
 
 export function applyToolbarCollapse(collapsed, save = true) {
   const els = getEls();
@@ -60,7 +62,7 @@ export function openPopoverMenu(menuEl, otherMenuEls = []) {
 
 export function closeAllPopoverMenus() {
   const els = getEls();
-  [els.fmtColorPalette, els.fmtBgPalette, els.lineHeightMenu, els.pdfExportMenu, els.toolbarMoreMenu].forEach(m => {
+  [els.fmtColorPalette, els.fmtBgPalette, els.lineHeightMenu, els.pdfExportMenu, els.toolbarMoreMenu, els.emojiPickerPopover].forEach(m => {
     if (m) {
       m.setAttribute('hidden', '');
       m.hidden = true;
@@ -69,6 +71,7 @@ export function closeAllPopoverMenus() {
   });
   if (els.exportPrintBtn) els.exportPrintBtn.setAttribute('aria-expanded', 'false');
   if (els.btnToolbarMore) els.btnToolbarMore.setAttribute('aria-expanded', 'false');
+  if (els.fmtInsertEmoji) els.fmtInsertEmoji.setAttribute('aria-expanded', 'false');
 }
 
 export function setupToolbarListeners() {
@@ -108,6 +111,52 @@ export function setupToolbarListeners() {
   if (els.fmtHr) els.fmtHr.addEventListener('click', () => applyFormattingToActiveTarget('hr'));
   if (els.fmtUndo) els.fmtUndo.addEventListener('click', () => applyFormattingToActiveTarget('undo'));
   if (els.fmtRedo) els.fmtRedo.addEventListener('click', () => applyFormattingToActiveTarget('redo'));
+
+  // Insert Image from file
+  if (els.fmtInsertImage && els.imageFileInput) {
+    els.fmtInsertImage.addEventListener('click', () => {
+      saveCurrentSelection();
+      els.imageFileInput.click();
+    });
+
+    els.imageFileInput.addEventListener('change', async () => {
+      const file = els.imageFileInput.files && els.imageFileInput.files[0];
+      if (file) {
+        const editable = getActiveEditableArea();
+        if (editable) {
+          try {
+            showToast('Đang đính kèm hình ảnh... ⏳', 'info');
+            const dataUrl = await compressAndProcessImageFile(file);
+            insertImageCardIntoEditable(editable, dataUrl, file.name);
+            showToast('Đã chèn ảnh vào trang! 🖼️', 'success');
+          } catch (err) {
+            console.error('Lỗi chèn ảnh:', err);
+            showToast('Không thể chèn ảnh: ' + err.message, 'error');
+          }
+        } else {
+          showToast('Vui lòng nhấp vào trang viết trước khi chèn ảnh', 'info');
+        }
+        els.imageFileInput.value = '';
+      }
+    });
+  }
+
+  // Insert Emoji Popover
+  if (els.fmtInsertEmoji && els.emojiPickerPopover) {
+    els.fmtInsertEmoji.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      saveCurrentSelection();
+      const willOpen = els.emojiPickerPopover.hidden;
+      openPopoverMenu(els.emojiPickerPopover, [els.fmtColorPalette, els.fmtBgPalette, els.lineHeightMenu, els.pdfExportMenu, els.toolbarMoreMenu]);
+      if (willOpen) {
+        renderEmojiPickerContent(els.emojiPickerPopover);
+        els.fmtInsertEmoji.setAttribute('aria-expanded', 'true');
+      } else {
+        els.fmtInsertEmoji.setAttribute('aria-expanded', 'false');
+      }
+    });
+  }
 
   // Color picker popover
   if (els.fmtColorBtn && els.fmtColorPalette) {

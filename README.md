@@ -92,13 +92,16 @@ Mở trình duyệt truy cập: `http://localhost:27972`
 | Phím tắt | Thao tác |
 | :--- | :--- |
 | `Ctrl/Cmd + S` | Lưu tức thì dữ liệu trang hiện tại |
+| `Alt + PageUp / PageDown` | **Lật trang nhanh ngay cả khi đang gõ chữ** |
+| `Ctrl/Cmd + Alt + ← / →` | Lật trang Lùi / Tiến chuyên dụng khi đang soạn thảo |
+| `Ctrl/Cmd + V` | **Dán ảnh chụp màn hình trực tiếp** vào trang sổ |
 | `Ctrl/Cmd + \` | Thu gọn / Mở rộng thanh công cụ định dạng |
 | `F11` hoặc `Alt + Enter` | Bật / Tắt chế độ toàn màn hình không xao nhãng |
 | `Ctrl/Cmd + B / I / U` | In đậm / In nghiêng / Gạch chân chữ đang chọn |
 | `Ctrl/Cmd + =` / `-` | Phóng to / Thu nhỏ bàn làm việc |
 | `Ctrl/Cmd + 0` | Trả về tỷ lệ thu phóng chuẩn 100% |
 | `Ctrl + Con lăn chuột` | Zoom tự do theo vị trí trỏ chuột |
-| `Mũi tên Trái / Phải` | Lật trang Lùi / Tiến |
+| `Mũi tên Trái / Phải` | Lật trang Lùi / Tiến (khi không trong ô gõ chữ) |
 | `Dải lụa đỏ` | Chuyển đổi con trỏ nhanh giữa trang Trái và Phải |
 | `Escape` | Đóng menu nổi, popup Cài đặt AI hoặc thoát toàn màn hình |
 

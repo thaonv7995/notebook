@@ -43,13 +43,13 @@
    2. CORNER AI CHAT COPILOT (Góc nhỏ màn hình)
    ═══════════════════════════════════════════════ */
 
-/* Floating FAB — corner AI icon */
+/* Floating FAB — corner AI icon (only visible inside notebook reader view) */
 .ai-corner-fab {
   position: fixed;
   bottom: 16px;
   right: 16px;
   z-index: 9980;
-  display: flex;
+  display: none;
   align-items: center;
   justify-content: center;
   width: 32px;
@@ -66,6 +66,11 @@
   opacity: 0.6;
   transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
   user-select: none;
+}
+
+body:has(#notebookView:not(.hidden)) .ai-corner-fab,
+.ai-corner-fab.is-visible {
+  display: flex;
 }
 
 .ai-corner-fab:hover {

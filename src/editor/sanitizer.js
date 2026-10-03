@@ -13,13 +13,16 @@ export function sanitizeRichHtml(html) {
   const allowedTags = new Set([
     'DIV', 'P', 'BR', 'STRONG', 'B', 'EM', 'I', 'U', 'S', 'STRIKE',
     'CODE', 'BLOCKQUOTE', 'UL', 'OL', 'LI', 'H1', 'H2', 'H3', 'HR',
-    'SPAN', 'MARK', 'FONT'
+    'SPAN', 'MARK', 'FONT', 'FIGURE', 'FIGCAPTION', 'IMG'
   ]);
 
   const safeStyleProps = new Set([
     'color', 'background', 'background-color',
     'font-size', 'font-family', 'font-weight', 'font-style',
-    'text-decoration', 'line-height', 'vertical-align'
+    'text-decoration', 'line-height', 'vertical-align',
+    'max-width', 'width', 'height', 'margin', 'margin-top', 'margin-bottom',
+    'margin-left', 'margin-right', 'display', 'text-align', 'border-radius',
+    'box-shadow', 'object-fit', 'cursor'
   ]);
 
   container.querySelectorAll('*').forEach(el => {
@@ -51,9 +54,36 @@ export function sanitizeRichHtml(html) {
     [...el.attributes].forEach(attr => {
       const name = attr.name.toLowerCase();
       if (name === 'class') {
-        const classes = attr.value.split(/\s+/).filter(c => /^(pill-badge|badge-pill|done-line|action-line-input|topic-input|date-input|no-input|hanzi-cjk)$/.test(c));
+        const classes = attr.value.split(/\s+/).filter(c => /^(pill-badge|badge-pill|done-line|action-line-input|topic-input|date-input|no-input|hanzi-cjk|notebook-image-card|notebook-image-frame|notebook-embedded-img|notebook-image-caption|img-align-center|img-align-left|img-align-right|img-size-sm|img-size-md|img-size-full|is-selected)$/.test(c));
         if (classes.length > 0) el.className = classes.join(' ');
         else el.removeAttribute('class');
+      } else if (name === 'src' && el.tagName === 'IMG') {
+        const val = attr.value.trim();
+        if (/^(data:image\/[a-zA-Z0-9+.-]+;base64,|blob:|https?:\/\/)/i.test(val)) {
+          el.setAttribute('src', val);
+        } else {
+          el.removeAttribute('src');
+        }
+      } else if (name === 'alt' && el.tagName === 'IMG') {
+        el.setAttribute('alt', attr.value.slice(0, 200));
+      } else if (name === 'title') {
+        el.setAttribute('title', attr.value.slice(0, 200));
+      } else if (name === 'loading' && el.tagName === 'IMG') {
+        el.setAttribute('loading', 'lazy');
+      } else if (name === 'draggable' && el.tagName === 'IMG') {
+        el.setAttribute('draggable', 'false');
+      } else if ((name === 'data-align' || name === 'data-size') && el.tagName === 'FIGURE') {
+        el.setAttribute(name, attr.value);
+      } else if (name === 'contenteditable') {
+        if (el.tagName === 'FIGCAPTION') {
+          el.setAttribute('contenteditable', 'true');
+        } else if (el.tagName === 'FIGURE') {
+          el.setAttribute('contenteditable', 'false');
+        } else {
+          el.removeAttribute(name);
+        }
+      } else if (name === 'placeholder' && el.tagName === 'FIGCAPTION') {
+        el.setAttribute('placeholder', attr.value.slice(0, 100));
       } else if (name === 'style') {
         const rawStyles = attr.value.split(';');
         const safeDeclarations = [];
@@ -100,13 +130,13 @@ export function formatContentToHtml(content) {
   html = html.replace(/&lt;em&gt;(.*?)&lt;\/em&gt;/gi, '<em>$1</em>');
 
   // ── Step 2: If content already has block-level HTML, it's pre-formatted — just sanitize ──
-  if (/<(p|div|blockquote|ul|ol|h[1-6])[^>]*>/i.test(html)) {
+  if (/<(p|div|blockquote|ul|ol|h[1-6]|figure|img)[^>]*>/i.test(html)) {
     // If there is leading inline text before the first block element, wrap it in a div
     // so every line in the notebook has consistent block formatting
-    const firstBlockMatch = html.match(/<(p|div|blockquote|ul|ol|h[1-6])[^>]*>/i);
+    const firstBlockMatch = html.match(/<(p|div|blockquote|ul|ol|h[1-6]|figure|img)[^>]*>/i);
     if (firstBlockMatch && firstBlockMatch.index > 0) {
       const leading = html.slice(0, firstBlockMatch.index);
-      if (leading.trim() && !/^<(p|div|blockquote|ul|ol|h[1-6])/i.test(leading.trim())) {
+      if (leading.trim() && !/^<(p|div|blockquote|ul|ol|h[1-6]|figure|img)/i.test(leading.trim())) {
         html = `<div>${leading}</div>` + html.slice(firstBlockMatch.index);
       }
     }

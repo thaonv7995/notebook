@@ -89,6 +89,42 @@ export function closeDeleteNotebookModal() {
   pendingDeleteAction = null;
 }
 
+let pendingEditCoverAction = null;
+let selectedNewCoverGradient = '';
+
+export function openEditCoverModal(notebook, onConfirm) {
+  const modal = document.getElementById('editCoverModal');
+  if (!modal || !notebook) return;
+  pendingEditCoverAction = onConfirm;
+  selectedNewCoverGradient = notebook.coverGradient || 'linear-gradient(135deg, #1e3a8a, #0f172a)';
+
+  const desc = document.getElementById('editCoverModalDesc');
+  if (desc) desc.textContent = `Chọn màu bìa mới cho “${notebook.title || 'Cuốn sổ'}”:`;
+
+  const options = modal.querySelectorAll('.cover-color-option');
+  let hasSelected = false;
+  options.forEach(opt => {
+    const isMatch = opt.dataset.gradient === selectedNewCoverGradient;
+    opt.classList.toggle('selected', isMatch);
+    if (isMatch) hasSelected = true;
+  });
+  if (!hasSelected && options[0]) {
+    options[0].classList.add('selected');
+    selectedNewCoverGradient = options[0].dataset.gradient;
+  }
+
+  modal.classList.add('open');
+  modal.setAttribute('aria-hidden', 'false');
+}
+
+export function closeEditCoverModal() {
+  const modal = document.getElementById('editCoverModal');
+  if (!modal) return;
+  modal.classList.remove('open');
+  modal.setAttribute('aria-hidden', 'true');
+  pendingEditCoverAction = null;
+}
+
 export function openChangePasswordModal() {
   const els = getEls();
   if (!els.changePasswordModal) return;
@@ -289,6 +325,35 @@ export function setupModalListeners({ onNotebookCreated } = {}) {
       } finally {
         if (els.btnSubmitChangePassword) els.btnSubmitChangePassword.disabled = false;
       }
+    });
+  }
+
+  // Edit Cover Modal Listeners
+  const editCoverModal = document.getElementById('editCoverModal');
+  const btnCloseEditCover = document.getElementById('btnCloseEditCoverModal');
+  const btnCancelEditCover = document.getElementById('btnCancelEditCover');
+  const btnConfirmEditCover = document.getElementById('btnConfirmEditCover');
+
+  if (btnCloseEditCover) btnCloseEditCover.addEventListener('click', closeEditCoverModal);
+  if (btnCancelEditCover) btnCancelEditCover.addEventListener('click', closeEditCoverModal);
+  if (editCoverModal) {
+    editCoverModal.addEventListener('click', (e) => {
+      if (e.target === editCoverModal) closeEditCoverModal();
+    });
+    editCoverModal.querySelectorAll('.cover-color-option').forEach(opt => {
+      opt.addEventListener('click', () => {
+        editCoverModal.querySelectorAll('.cover-color-option').forEach(o => o.classList.remove('selected'));
+        opt.classList.add('selected');
+        selectedNewCoverGradient = opt.dataset.gradient || 'linear-gradient(135deg, #1e3a8a, #0f172a)';
+      });
+    });
+  }
+  if (btnConfirmEditCover) {
+    btnConfirmEditCover.addEventListener('click', () => {
+      const action = pendingEditCoverAction;
+      const gradient = selectedNewCoverGradient;
+      closeEditCoverModal();
+      if (action) action(gradient);
     });
   }
 }

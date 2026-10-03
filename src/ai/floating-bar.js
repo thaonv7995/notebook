@@ -45,6 +45,24 @@ export function setCornerFabGenerating(isGenerating) {
   }
 }
 
+export function setFabVisible(visible) {
+  const el = ensureFab();
+  if (!el) return;
+  if (visible) {
+    el.classList.add('is-visible');
+    el.style.display = 'flex';
+  } else {
+    el.classList.remove('is-visible');
+    el.style.display = 'none';
+  }
+}
+
+export function updateFabVisibility() {
+  const nbView = document.getElementById('notebookView');
+  const isNotebookActive = nbView && !nbView.classList.contains('hidden');
+  setFabVisible(isNotebookActive);
+}
+
 // ─── Public API (kept for backward compat) ───
 
 export function open() {
@@ -68,11 +86,20 @@ export function updatePageContext() {
   // No-op
 }
 
-// Auto mount FAB on load
+// Auto mount FAB on load and sync visibility with #notebookView
 if (typeof document !== 'undefined') {
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => ensureFab());
-  } else {
+  const init = () => {
     ensureFab();
+    updateFabVisibility();
+    const nbView = document.getElementById('notebookView');
+    if (nbView) {
+      const observer = new MutationObserver(() => updateFabVisibility());
+      observer.observe(nbView, { attributes: true, attributeFilter: ['class'] });
+    }
+  };
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
   }
 }

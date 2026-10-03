@@ -11,6 +11,7 @@ import { renderSheetContent, renderEmptyRightPagePlaceholder, createNotebookPage
 import { applyFontFamily, applyFontSize, applyLineHeight, setLastActiveEditable, setLastActiveTextarea } from '../editor/formatter.js';
 import { placeCaretAtStart } from '../editor/caret.js';
 import { wrapHanziInElement } from '../editor/hanzi-aligner.js';
+import { attachImageHandlersToSheet } from '../editor/image-manager.js';
 import { showStatus, showToast, openDeleteNotebookModal, showPromptModal, showConfirmModal, showAlertModal } from './modal.js';
 import { renderLibraryGrid, deleteBook } from './library.js';
 import { playPaperFlipSound, isSoundEnabled, toggleSound } from '../utils/audio.js';
@@ -170,6 +171,13 @@ export function attachTemplateInputListeners(sheetEl, page) {
       showStatus('Chưa lưu', 'dirty');
       scheduleSave(() => saveActivePages());
     });
+  });
+
+  // Attach screenshot paste, drag-and-drop, and floating toolbar for images
+  attachImageHandlersToSheet(sheetEl, () => {
+    extractTemplateDataFromSheet(sheetEl, page);
+    showStatus('Chưa lưu', 'dirty');
+    scheduleSave(() => saveActivePages());
   });
 
   // Action checkboxes for Work Template
@@ -454,6 +462,15 @@ export function togglePageDrawer() {
   }
 }
 
+function getPageSnippet(page) {
+  if (!page) return '';
+  const raw = page.notes || page.content || page.summary || page.cues || page.discussions || page.agenda || page.vocabWord || '';
+  if (!raw) return '';
+  const text = String(raw).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+  if (!text) return '';
+  return text.length > 70 ? text.slice(0, 70) + '…' : text;
+}
+
 export function renderPageDrawerList(filter = '') {
   const els = getEls();
   if (!els.pageDrawerList) return;
@@ -495,6 +512,7 @@ export function renderPageDrawerList(filter = '') {
     item.setAttribute('tabindex', '0');
 
     const displayTitle = page.topic || page.title || `Trang ${originalIndex + 1}`;
+    const snippet = getPageSnippet(page);
     const templateNames = {
       cornell: 'Cornell',
       work: 'Work',
@@ -515,21 +533,123 @@ export function renderPageDrawerList(filter = '') {
       <div class="page-nav-item-num">P.${originalIndex + 1}</div>
       <div class="page-nav-item-body">
         <div class="page-nav-item-title">${escapeHTML(displayTitle)}</div>
+        ${snippet ? `<div class="page-nav-item-snippet">${escapeHTML(snippet)}</div>` : ''}
         <div class="page-nav-item-meta">
           <span class="page-nav-badge ${tplClass}">${tplName}</span>
           ${page.status ? `<span class="page-nav-badge">${escapeHTML(page.status)}</span>` : ''}
           <span>${escapeHTML(dateStr)}</span>
         </div>
       </div>
+      <div class="page-nav-item-actions">
+        <button class="btn-page-action btn-page-dup" type="button" data-idx="${originalIndex}" title="Nhân bản trang này" aria-label="Nhân bản trang">
+          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+          </svg>
+        </button>
+        <button class="btn-page-action btn-page-del" type="button" data-idx="${originalIndex}" title="Xóa trang này" aria-label="Xóa trang">
+          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="3 6 5 6 21 6"/>
+            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+          </svg>
+        </button>
+      </div>
     `;
 
-    item.addEventListener('click', () => {
+    item.addEventListener('click', (e) => {
+      if (e.target.closest('.page-nav-item-actions')) return;
       jumpToPage(originalIndex + 1);
       closePageDrawer();
     });
 
+    const btnDup = item.querySelector('.btn-page-dup');
+    if (btnDup) {
+      btnDup.addEventListener('click', (e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        duplicatePageByIndex(originalIndex);
+      });
+    }
+
+    const btnDel = item.querySelector('.btn-page-del');
+    if (btnDel) {
+      btnDel.addEventListener('click', (e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        deletePageByIndex(originalIndex);
+      });
+    }
+
     els.pageDrawerList.appendChild(item);
   });
+}
+
+export function duplicatePageByIndex(idx) {
+  saveActivePages();
+  const nb = getActiveNotebook();
+  if (!nb || !Array.isArray(nb.pages) || !nb.pages[idx]) return;
+
+  const targetPage = nb.pages[idx];
+  const now = new Date().toISOString();
+  const clone = JSON.parse(JSON.stringify(targetPage));
+  clone.id = 'p-' + Date.now() + '-' + Math.random().toString(36).substr(2, 4);
+  clone.updatedAt = now;
+  if (clone.topic) clone.topic = `${clone.topic} (Bản sao)`;
+  else if (clone.title) clone.title = `${clone.title} (Bản sao)`;
+
+  nb.pages.splice(idx + 1, 0, clone);
+  nb.updatedAt = now;
+  persistState();
+
+  renderBookPages();
+  const els = getEls();
+  renderPageDrawerList(els.pageDrawerSearch ? els.pageDrawerSearch.value : '');
+  showToast(`Đã nhân bản Trang ${idx + 1}.`);
+}
+
+export async function deletePageByIndex(idx) {
+  saveActivePages();
+  const nb = getActiveNotebook();
+  if (!nb || !Array.isArray(nb.pages) || !nb.pages[idx]) return;
+
+  if (nb.pages.length <= 1) {
+    await showAlertModal('Không thể xóa', 'Cuốn sổ phải có ít nhất 1 trang ghi chép.');
+    return;
+  }
+
+  const state = getState();
+  const pageNum = idx + 1;
+  const pageTitle = nb.pages[idx].topic || nb.pages[idx].title || `Trang ${pageNum}`;
+  const confirmed = await showConfirmModal(
+    'Xóa trang',
+    `Bạn có chắc chắn muốn xóa <strong>Trang ${pageNum} (${escapeHTML(pageTitle)})</strong> khỏi cuốn sổ <strong>"${escapeHTML(nb.title)}"</strong>?`,
+    { confirmText: 'Xóa trang', danger: true }
+  );
+
+  if (confirmed) {
+    const [removed] = nb.pages.splice(idx, 1);
+    if (!Array.isArray(nb.deletedPageIds)) nb.deletedPageIds = [];
+    if (removed && removed.id) {
+      nb.deletedPageIds.push(removed.id);
+      if (nb.deletedPageIds.length > 200) {
+        nb.deletedPageIds = nb.deletedPageIds.slice(-200);
+      }
+    }
+
+    let curIdx = state.activePageIndex || 0;
+    if (curIdx >= nb.pages.length) {
+      curIdx = Math.max(0, nb.pages.length - 1);
+    }
+    setState({ activePageIndex: curIdx });
+    nb.lastPageIndex = curIdx;
+    nb.updatedAt = new Date().toISOString();
+    persistState();
+
+    renderBookPages();
+    const els = getEls();
+    renderPageDrawerList(els.pageDrawerSearch ? els.pageDrawerSearch.value : '');
+    showToast(`Đã xóa Trang ${pageNum}.`);
+  }
 }
 
 export function applyPageMode(mode, persistPreference = true) {

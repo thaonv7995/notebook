@@ -1023,3 +1023,113 @@
   flex-direction: column;
   box-sizing: border-box;
 }
+
+/* ========================================================
+   NOTEBOOK SCRAPBOOK IMAGE CARDS
+   ======================================================== */
+.notebook-image-card {
+  margin: 14px auto;
+  display: block;
+  box-sizing: border-box;
+  clear: both;
+  user-select: none;
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+  position: relative;
+}
+
+/* Alignments */
+.notebook-image-card.img-align-center {
+  margin-left: auto;
+  margin-right: auto;
+  display: block;
+  clear: both;
+}
+.notebook-image-card.img-align-left {
+  float: left;
+  margin: 8px 18px 12px 0;
+  clear: left;
+}
+.notebook-image-card.img-align-right {
+  float: right;
+  margin: 8px 0 12px 18px;
+  clear: right;
+}
+
+/* Sizing */
+.notebook-image-card.img-size-sm {
+  max-width: 38%;
+  width: auto;
+}
+.notebook-image-card.img-size-md {
+  max-width: 68%;
+  width: auto;
+}
+.notebook-image-card.img-size-full {
+  max-width: 100%;
+  width: 100%;
+}
+
+.notebook-image-frame {
+  position: relative;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #ffffff;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12), 0 1px 3px rgba(0, 0, 0, 0.08);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.notebook-image-card:hover .notebook-image-frame {
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.16), 0 2px 6px rgba(0, 0, 0, 0.08);
+  transform: translateY(-1px);
+}
+
+.notebook-image-card.is-selected .notebook-image-frame {
+  outline: 2.5px solid #38bdf8;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgba(56, 189, 248, 0.25), 0 8px 24px rgba(0, 0, 0, 0.18);
+}
+
+.notebook-embedded-img {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 480px;
+  object-fit: contain;
+  border-radius: 7px;
+  pointer-events: auto;
+}
+
+.notebook-image-caption {
+  margin-top: 6px;
+  font-size: 13px;
+  color: #64748b;
+  font-style: italic;
+  text-align: center;
+  line-height: 1.4;
+  min-height: 1.2em;
+  outline: none;
+  border-bottom: 1px dashed transparent;
+  user-select: text;
+  transition: border-color 0.15s ease;
+}
+
+.notebook-image-caption:empty::before {
+  content: attr(placeholder);
+  color: #94a3b8;
+  font-style: italic;
+  pointer-events: none;
+}
+
+.notebook-image-caption:focus {
+  border-bottom-color: #94a3b8;
+  color: #334155;
+}
+
+/* Drag over visual drop target */
+.template-writing-area.writing-area-drag-over {
+  outline: 2.5px dashed #38bdf8 !important;
+  outline-offset: -4px;
+  background-color: rgba(56, 189, 248, 0.04) !important;
+}

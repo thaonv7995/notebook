@@ -172,9 +172,13 @@
 .export-menu[hidden]:not(.is-open) { display: none !important; }
 .export-menu.is-open { display: block !important; }
 
-.pdf-export-menu {
+.pdf-export-menu,
+#line-height-menu {
   left: auto;
   right: 0;
+  min-width: 185px;
+}
+.pdf-export-menu {
   min-width: 230px;
 }
 .pdf-export-menu__item {
@@ -353,4 +357,227 @@ svg.tool-menu-icon {
   height: 1px;
   background: rgba(255, 255, 255, 0.08);
   margin: 4px 6px;
+}
+
+/* ========================================================
+   FLOATING IMAGE ACTIONS TOOLBAR
+   ======================================================== */
+.image-action-toolbar {
+  position: fixed;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  background: #1e293b;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4), 0 8px 10px -6px rgba(0, 0, 0, 0.3);
+  animation: fadeInPop 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.image-action-toolbar[hidden] {
+  display: none !important;
+}
+
+.img-tool-group {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.img-tool-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 5px;
+  border: none;
+  background: transparent;
+  color: #94a3b8;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+
+.img-tool-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+}
+
+.img-tool-btn.is-active {
+  background: rgba(56, 189, 248, 0.2);
+  color: #38bdf8;
+  font-weight: 700;
+}
+
+.img-tool-btn--text {
+  font-weight: 700;
+  font-size: 11px;
+}
+
+.img-tool-btn--danger:hover {
+  background: rgba(239, 68, 68, 0.25);
+  color: #ef4444;
+}
+
+.img-tool-divider {
+  width: 1px;
+  height: 18px;
+  background: rgba(255, 255, 255, 0.12);
+  margin: 0 4px;
+}
+
+/* ========================================================
+   EMOJI PICKER POPOVER
+   ======================================================== */
+.emoji-picker-wrapper {
+  position: relative;
+}
+
+.emoji-picker-popover {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 500;
+  width: 290px;
+  background: #1e293b;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  animation: fadeInPop 0.15s ease;
+}
+
+.emoji-picker-popover[hidden] {
+  display: none !important;
+}
+
+.emoji-picker-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.emoji-search-box {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(15, 23, 42, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  padding: 4px 8px;
+  width: 100%;
+}
+
+.emoji-search-icon {
+  color: #64748b;
+  flex-shrink: 0;
+}
+
+.emoji-search-input {
+  background: transparent;
+  border: none;
+  outline: none;
+  color: #f1f5f9;
+  font-size: 12px;
+  width: 100%;
+}
+
+.emoji-search-input::placeholder {
+  color: #64748b;
+}
+
+.emoji-search-clear {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  font-size: 14px;
+  cursor: pointer;
+  padding: 0 2px;
+  line-height: 1;
+}
+
+.emoji-cat-tabs {
+  display: flex;
+  gap: 3px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding-bottom: 6px;
+}
+
+.emoji-cat-tab {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 0;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 15px;
+  transition: all 0.12s ease;
+  opacity: 0.6;
+}
+
+.emoji-cat-tab:hover {
+  opacity: 1;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.emoji-cat-tab.is-active {
+  opacity: 1;
+  background: rgba(56, 189, 248, 0.18);
+  box-shadow: inset 0 -2px 0 #38bdf8;
+}
+
+.emoji-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 4px;
+  max-height: 190px;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+.emoji-grid::-webkit-scrollbar {
+  width: 5px;
+}
+.emoji-grid::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
+}
+
+.emoji-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 34px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  font-size: 18px;
+  cursor: pointer;
+  transition: transform 0.1s ease, background 0.12s ease;
+}
+
+.emoji-btn:hover {
+  transform: scale(1.22);
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.emoji-btn:active {
+  transform: scale(1.05);
+}
+
+.emoji-no-results {
+  grid-column: 1 / -1;
+  text-align: center;
+  font-size: 12px;
+  color: #64748b;
+  padding: 18px 0;
 }

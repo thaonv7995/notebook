@@ -250,6 +250,33 @@ function setupGlobalKeyAndWindowListeners() {
       }
     }
 
+    // Dedicated page turning shortcuts while actively typing or editing:
+    // Alt + PageUp / Alt + PageDown
+    // Ctrl/Cmd + Alt + ArrowLeft / ArrowRight
+    // Ctrl/Cmd + PageUp / PageDown
+    const isPageForwardShortcut =
+      (e.altKey && e.key === 'PageDown') ||
+      ((e.ctrlKey || e.metaKey) && e.altKey && e.key === 'ArrowRight') ||
+      ((e.ctrlKey || e.metaKey) && e.key === 'PageDown');
+
+    const isPageBackwardShortcut =
+      (e.altKey && e.key === 'PageUp') ||
+      ((e.ctrlKey || e.metaKey) && e.altKey && e.key === 'ArrowLeft') ||
+      ((e.ctrlKey || e.metaKey) && e.key === 'PageUp');
+
+    if (isPageForwardShortcut) {
+      e.preventDefault();
+      saveActivePages();
+      turnPageForward();
+      return;
+    }
+    if (isPageBackwardShortcut) {
+      e.preventDefault();
+      saveActivePages();
+      turnPageBackward();
+      return;
+    }
+
     if (activeEl) {
       const tag = activeEl.tagName;
       if (tag === 'TEXTAREA' || tag === 'INPUT' || activeEl.isContentEditable || activeEl.classList.contains('ProseMirror')) {
