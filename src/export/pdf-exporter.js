@@ -192,16 +192,50 @@ export async function exportPdfFromServer(includeCover = false) {
       sheet.style.setProperty('outline', 'none', 'important');
     });
 
-    // Fix ruled lines: html2canvas can't resolve CSS var() in gradients
-    // and doesn't support background-attachment: local.
-    // Set the gradient explicitly with actual px values.
+    // Fix ruled lines: html2canvas CANNOT render repeating-linear-gradient.
+    // Solution: Create actual DOM <div> elements for each line (1px colored bars).
     offscreen.querySelectorAll('.template-writing-area').forEach(area => {
+      // Remove the CSS gradient that html2canvas can't render
+      area.style.setProperty('background-image', 'none', 'important');
+      area.style.setProperty('background', 'transparent', 'important');
+
+      // Make area a positioning context for the line divs
+      area.style.setProperty('position', 'relative');
+
       const lh = parseInt(getComputedStyle(area).lineHeight, 10) || lhPx;
-      const gradient = `repeating-linear-gradient(to bottom, transparent 0px, transparent ${lh - 1}px, ${lineColor} ${lh - 1}px, ${lineColor} ${lh}px)`;
-      area.style.setProperty('background-image', gradient, 'important');
-      area.style.setProperty('background-size', `100% ${lh}px`, 'important');
-      area.style.setProperty('background-attachment', 'scroll', 'important');
-      area.style.setProperty('background-position', '0 0', 'important');
+      const areaHeight = area.offsetHeight || area.clientHeight || 700;
+
+      // Create a container for all line divs (behind text content)
+      const lineLayer = document.createElement('div');
+      lineLayer.style.cssText = `
+        position: absolute;
+        top: 0; left: 0; right: 0; bottom: 0;
+        pointer-events: none;
+        z-index: 0;
+      `;
+
+      // Create one div per ruled line
+      for (let y = lh; y < areaHeight; y += lh) {
+        const lineDv = document.createElement('div');
+        lineDv.style.cssText = `
+          position: absolute;
+          left: 0; right: 0;
+          top: ${y - 1}px;
+          height: 1px;
+          background: ${lineColor};
+        `;
+        lineLayer.appendChild(lineDv);
+      }
+
+      area.insertBefore(lineLayer, area.firstChild);
+
+      // Ensure text content is above lines
+      Array.from(area.children).forEach(child => {
+        if (child !== lineLayer) {
+          child.style.position = 'relative';
+          child.style.zIndex = '1';
+        }
+      });
     });
 
     // ── Capture each page as canvas ──
