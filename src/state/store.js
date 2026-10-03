@@ -383,9 +383,22 @@ export function extractTemplateDataFromSheet(sheetEl, page) {
   }
 }
 
+export function isSavePending() {
+  return saveTimer !== null;
+}
+
+export function cancelPendingSave() {
+  if (saveTimer !== null) {
+    clearTimeout(saveTimer);
+    saveTimer = null;
+  }
+}
+
 export function scheduleSave(onSaveCallback) {
   clearTimeout(saveTimer);
   saveTimer = setTimeout(() => {
+    saveTimer = null;
     if (onSaveCallback) onSaveCallback();
   }, SAVE_DEBOUNCE_MS);
 }
+

@@ -123,11 +123,15 @@ function handleWritingAreaInput(e) {
     return;
   }
 
-  // Small delay to let DOM update
+  // Small delay to let DOM update and indicate overflow if necessary
   requestAnimationFrame(() => {
     if (isOverflowing(area)) {
-      // Try to undo the last input that caused overflow
-      document.execCommand('undo');
+      // Flash red indicator to notify user that page has reached capacity
+      area.style.transition = 'box-shadow 0.15s ease';
+      area.style.boxShadow = 'inset 0 -3px 0 rgba(239, 68, 68, 0.5)';
+      setTimeout(() => {
+        area.style.boxShadow = '';
+      }, 300);
     }
   });
 }

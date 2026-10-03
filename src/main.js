@@ -43,7 +43,8 @@ import {
   handleFitWidth,
   saveActivePages,
   getActivePageInfo,
-  applyAiAutofillToCurrentPage
+  applyAiAutofillToCurrentPage,
+  isUserActivelyEditing
 } from './components/reader.js';
 
 import {
@@ -500,14 +501,24 @@ async function pullFromServer() {
   isPulling = true;
 
   try {
+    // Flush any pending DOM edits into local state before pulling
+    saveActivePages();
+
     const data = await fetchNotebooks();
     if (!data.ok || !Array.isArray(data.notebooks)) return false;
 
     if (data.lastSyncedAt) lastSyncedAt = data.lastSyncedAt;
 
-    const serverNotebooks = data.notebooks;
     const currentState = getState();
     const localNotebooks = currentState.notebooks || [];
+
+    // Normalize incoming server notebooks so schema defaults (deletedPageIds, author, etc.)
+    // match local representation and avoid false-positive dirty checks every cycle
+    const normalizedServer = normalizeState({
+      ...currentState,
+      notebooks: data.notebooks
+    });
+    const serverNotebooks = normalizedServer.notebooks;
 
     // Quick check — if server data is identical to local, skip
     const serverJson = JSON.stringify(serverNotebooks);
@@ -549,10 +560,39 @@ async function pullFromServer() {
     const mergedJson = JSON.stringify(mergedNotebooks);
     if (mergedJson === localJson) return false;
 
+    const userIsEditing = isUserActivelyEditing();
+
+    // Check if the currently active notebook/page actually changed on the server
+    const activeNbId = currentState.activeNotebookId;
+    const activeIdx = currentState.activePageIndex || 0;
+    const oldActiveNb = localNotebooks.find(n => n.id === activeNbId);
+    const newActiveNb = mergedNotebooks.find(n => n.id === activeNbId);
+
+    const oldLeftPage = oldActiveNb?.pages?.[activeIdx];
+    const newLeftPage = newActiveNb?.pages?.[activeIdx];
+    const oldRightPage = oldActiveNb?.pages?.[activeIdx + 1];
+    const newRightPage = newActiveNb?.pages?.[activeIdx + 1];
+
+    const visiblePagesChanged =
+      JSON.stringify(oldLeftPage) !== JSON.stringify(newLeftPage) ||
+      JSON.stringify(oldRightPage) !== JSON.stringify(newRightPage);
+
+    // If user is currently typing/editing in this notebook, protect the active notebook
+    // from being overwritten by older server content
+    let safeMergedNotebooks = mergedNotebooks;
+    if (userIsEditing && oldActiveNb) {
+      safeMergedNotebooks = mergedNotebooks.map(nb => {
+        if (nb.id === activeNbId) {
+          return oldActiveNb;
+        }
+        return nb;
+      });
+    }
+
     // Apply merged data
     const normalized = normalizeState({
       ...currentState,
-      notebooks: mergedNotebooks
+      notebooks: safeMergedNotebooks
     });
     replaceState(normalized);
 
@@ -564,9 +604,8 @@ async function pullFromServer() {
       renderLibraryGrid();
     }
     if (notebookView && !notebookView.classList.contains('hidden')) {
-      // Re-render the currently open notebook
-      const activeNb = currentState.activeNotebookId;
-      if (activeNb) {
+      // Re-render ONLY IF the currently visible pages changed AND user is not actively editing
+      if (visiblePagesChanged && !userIsEditing) {
         renderBookPages();
       }
     }
@@ -618,15 +657,20 @@ async function doSyncToServer() {
     // (server may have kept notebooks from other devices)
     if (result.notebooks && Array.isArray(result.notebooks)) {
       const currentState = getState();
-      const normalized = normalizeState({
-        ...currentState,
-        notebooks: result.notebooks
-      });
-      // Only replace if different to avoid unnecessary re-renders
-      const mergedJson = JSON.stringify(normalized.notebooks);
-      if (mergedJson !== JSON.stringify(currentState.notebooks)) {
-        replaceState(normalized);
-        lastPushedJson = mergedJson;
+      const currentLocalJson = JSON.stringify(currentState.notebooks);
+
+      // Only apply server echo if local state has not been modified since the push started
+      // and user is not currently in the middle of typing
+      if (currentLocalJson === currentJson && !isUserActivelyEditing()) {
+        const normalized = normalizeState({
+          ...currentState,
+          notebooks: result.notebooks
+        });
+        const mergedJson = JSON.stringify(normalized.notebooks);
+        if (mergedJson !== currentLocalJson) {
+          replaceState(normalized);
+          lastPushedJson = mergedJson;
+        }
       }
     }
   } catch (err) {
@@ -666,9 +710,9 @@ function pushToServerNow() {
  * Strategy:
  *  - On tab hide  → save + push immediately (so other devices get it fast)
  *  - On tab show  → save + pull (to get changes from other devices)
- *  - On focus     → pull (covers mobile Safari/Chrome edge cases)
+ *  - On focus     → rate-limited pull (covers mobile Safari/Chrome edge cases)
  *  - beforeunload → save + push via sendBeacon as last resort
- *  - Every 15s    → pull if tab is visible
+ *  - Every 15s    → pull if tab is visible and user is not actively typing
  */
 function startSyncListeners() {
   document.addEventListener('visibilitychange', () => {
@@ -679,16 +723,23 @@ function startSyncListeners() {
       saveActivePages();
       pushToServerNow();
     } else {
-      // Returning to tab → save any local edits, then pull latest from server
+      // Returning to tab → save any local edits, then pull latest from server if not editing
       saveActivePages();
-      pullFromServer();
+      if (!isUserActivelyEditing()) {
+        pullFromServer();
+      }
     }
   });
 
-  // Also pull on window focus (covers more cases on mobile)
+  // Rate-limited pull on window focus (don't pull if user is editing or pulled recently)
+  let lastFocusPullTime = 0;
   window.addEventListener('focus', () => {
     if (isAuthenticated) {
-      pullFromServer();
+      const now = Date.now();
+      if (now - lastFocusPullTime > 10000 && !isUserActivelyEditing()) {
+        lastFocusPullTime = now;
+        pullFromServer();
+      }
     }
   });
 
@@ -717,10 +768,10 @@ function startSyncListeners() {
     }
   });
 
-  // Periodic polling every 15 seconds
+  // Periodic polling every 15 seconds (skipped if user is actively editing)
   clearInterval(pullTimer);
   pullTimer = setInterval(() => {
-    if (isAuthenticated && document.visibilityState === 'visible') {
+    if (isAuthenticated && document.visibilityState === 'visible' && !isUserActivelyEditing()) {
       pullFromServer();
     }
   }, PULL_INTERVAL_MS);

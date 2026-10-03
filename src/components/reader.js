@@ -5,7 +5,7 @@
  * desk zoom scaling, silk focus ribbon, page transitions, and templates binding.
  */
 
-import { getState, setState, persistState, getActiveNotebook, scheduleSave, extractTemplateDataFromSheet } from '../state/store.js';
+import { getState, setState, persistState, getActiveNotebook, scheduleSave, cancelPendingSave, isSavePending, extractTemplateDataFromSheet } from '../state/store.js';
 import { getEls } from '../utils/dom.js';
 import { renderSheetContent, renderEmptyRightPagePlaceholder, createNotebookPage } from '../templates/index.js';
 import { applyFontFamily, applyFontSize, applyLineHeight, setLastActiveEditable, setLastActiveTextarea } from '../editor/formatter.js';
@@ -14,6 +14,31 @@ import { wrapHanziInElement } from '../editor/hanzi-aligner.js';
 import { showStatus, showToast, openDeleteNotebookModal, showPromptModal, showConfirmModal, showAlertModal } from './modal.js';
 import { renderLibraryGrid, deleteBook } from './library.js';
 import { playPaperFlipSound, isSoundEnabled, toggleSound } from '../utils/audio.js';
+
+let lastTypingTimestamp = 0;
+
+export function recordUserTyping() {
+  lastTypingTimestamp = Date.now();
+}
+
+export function isUserActivelyEditing() {
+  const active = document.activeElement;
+  if (active) {
+    if (active.isContentEditable) return true;
+    const tag = active.tagName;
+    if (tag === 'INPUT' || tag === 'TEXTAREA') return true;
+    if (active.closest && (active.closest('.template-writing-area') || active.closest('.book-page-sheet'))) {
+      return true;
+    }
+  }
+  if (Date.now() - lastTypingTimestamp < 2500) {
+    return true;
+  }
+  if (isSavePending()) {
+    return true;
+  }
+  return false;
+}
 
 /**
  * Maps template key to the CSS selector of its main writing area
@@ -113,7 +138,11 @@ export function attachTemplateInputListeners(sheetEl, page) {
       setLastActiveTextarea(input);
       setFocusedPageSide(sheetSide);
     });
+    input.addEventListener('keydown', () => {
+      recordUserTyping();
+    });
     input.addEventListener('input', () => {
+      recordUserTyping();
       extractTemplateDataFromSheet(sheetEl, page);
       showStatus('Chưa lưu', 'dirty');
       scheduleSave(() => saveActivePages());
@@ -130,7 +159,11 @@ export function attachTemplateInputListeners(sheetEl, page) {
       setLastActiveEditable(editable);
       setFocusedPageSide(sheetSide);
     });
+    editable.addEventListener('keydown', () => {
+      recordUserTyping();
+    });
     editable.addEventListener('input', () => {
+      recordUserTyping();
       setLastActiveEditable(editable);
       wrapHanziInElement(editable);
       extractTemplateDataFromSheet(sheetEl, page);
@@ -207,6 +240,7 @@ export function attachTemplateInputListeners(sheetEl, page) {
 }
 
 export function saveActivePages() {
+  cancelPendingSave();
   const els = getEls();
   if (els.notebookView && els.notebookView.classList.contains('hidden')) return true;
   const nb = getActiveNotebook();
