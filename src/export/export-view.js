@@ -149,8 +149,13 @@ export function checkAndRenderPdfExport() {
         /* ── KEY FIX: Render page at web dimensions, then scale up to A4 ──
            This ensures ruled lines, font size, and text wrapping are IDENTICAL
            to the web view. Without this, the 28px line-height at 210mm width
-           produces visually larger/sparser lines than at the 480px web width. */
-        .pdf-export-sheet .book-page-sheet {
+           produces visually larger/sparser lines than at the 480px web width.
+           
+           SPECIFICITY: Use .pdf-export-sheet .book-spread-casing .book-page-sheet
+           (3 classes = 0,3,0) to beat .book-spread-casing.mode-1-page .book-page-sheet
+           (also 0,3,0 but our rule comes LATER in the cascade via injected <style>) */
+        .pdf-export-sheet .book-spread-casing .book-page-sheet,
+        .pdf-export-sheet .book-spread-casing.mode-1-page .book-page-sheet {
           display: flex !important;
           width: ${WEB_W}px !important;
           height: ${WEB_H}px !important;
@@ -176,14 +181,17 @@ export function checkAndRenderPdfExport() {
           cursor: default !important;
         }
 
-        /* Ensure ruled-line backgrounds render in PDF */
+        /* Ensure ruled-line backgrounds and paper colors render in PDF */
         .pdf-export-sheet .template-writing-area,
         .pdf-export-sheet .ruled-canvas-text,
         .pdf-export-sheet .dotgrid-canvas-text,
         .pdf-export-sheet .grid-canvas-text,
-        .pdf-export-sheet .quadrant-text {
+        .pdf-export-sheet .quadrant-text,
+        .pdf-export-sheet .a4-template-sheet,
+        .pdf-export-sheet .a4-template-sheet::after {
           -webkit-print-color-adjust: exact !important;
           print-color-adjust: exact !important;
+          color-adjust: exact !important;
           background-attachment: scroll !important;
         }
 
@@ -200,13 +208,12 @@ export function checkAndRenderPdfExport() {
           top: -2px;
         }
 
+        /* Hide only interactive/UI elements — keep decorative elements like
+           corner ornaments (.content-corner-frame) and edge index markers (.edge-index-markers) */
         .pdf-export-sheet .ai-corner-copilot-container,
         .pdf-export-sheet .ai-corner-fab,
         .pdf-export-sheet .ai-corner-chat,
-        .pdf-export-sheet .status-pill-btn,
-        .pdf-export-sheet .edge-index-markers,
-        .pdf-export-sheet .content-corner-frame,
-        .pdf-export-sheet .punch-margin-line {
+        .pdf-export-sheet .status-pill-btn {
           display: none !important;
         }
 
@@ -291,6 +298,12 @@ export function checkAndRenderPdfExport() {
       const container = document.createElement('div');
       container.className = 'pdf-export-container';
 
+      // ── Apply paper tone & texture so colors/textures render in PDF ──
+      const paperTone = state.paperTone || 'cream';
+      const paperTexture = state.paperTexture || 'grain';
+      container.setAttribute('data-paper-tone', paperTone);
+      container.setAttribute('data-paper-texture', paperTexture);
+
       // 4. Optional Cover
       if (includeCover) {
         const coverWrapper = document.createElement('div');
@@ -307,6 +320,9 @@ export function checkAndRenderPdfExport() {
 
         const casing = document.createElement('div');
         casing.className = 'book-spread-casing mode-1-page focus-left';
+        // Paper tone & texture attributes on casing too (CSS selectors use [data-paper-tone])
+        casing.setAttribute('data-paper-tone', paperTone);
+        casing.setAttribute('data-paper-texture', paperTexture);
 
         const sheet = document.createElement('article');
         sheet.className = 'book-page-sheet book-page-left';

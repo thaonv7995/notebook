@@ -241,13 +241,12 @@
   }
 
   /* ══════════════════════════════════════════════════════
-     HIDE ALL DECORATIVE & INTERACTIVE ELEMENTS IN PRINT
+     HIDE INTERACTIVE & UI ELEMENTS IN PRINT
+     (Keep decorative elements: corner frames, edge index markers, paper texture)
      ══════════════════════════════════════════════════════ */
 
-  /* UI Controls */
+  /* UI Controls — hide interactive buttons only */
   .status-pill-btn,
-  .edge-index-markers,
-  .content-corner-frame,
   .book-star-badge,
   .book-center-spine,
   .book-center-ribbon {
@@ -277,11 +276,11 @@
     content: none !important;
   }
 
-  /* Remove paper texture overlay */
+  /* Paper texture overlay — KEEP visible for authentic paper feel in PDF */
   .a4-template-sheet::after {
-    display: none !important;
-    content: none !important;
-    opacity: 0 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
   }
 
   /* Hide punch margin dashed line */
