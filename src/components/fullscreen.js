@@ -8,7 +8,7 @@
 import { getState, getActiveNotebook } from '../state/store.js';
 import { getEls } from '../utils/dom.js';
 import { getCurrentPageMode, getFocusedPageSide, handleFitPage, handleFitWidth } from './reader.js';
-import { applyFormattingToActiveTarget, updateFontSize, setLineHeight } from '../editor/formatter.js';
+import { applyFormattingToActiveTarget, updateFontSize, setLineHeight, saveCurrentSelection } from '../editor/formatter.js';
 import { showPromptModal } from './modal.js';
 
 export function isFullscreenActive() {
@@ -338,6 +338,14 @@ export function setupFullscreenListeners({
       updateFullscreenRailControls();
     });
   }
+
+  // Prevent losing selection on clicking floating toolbar buttons
+  document.querySelectorAll('.fs-tool-btn, .fs-color-swatch, .fs-bg-swatch').forEach(btn => {
+    btn.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      saveCurrentSelection();
+    });
+  });
 
   // Floating Tools formatting actions
   const fsUndo = document.querySelector('#fs-fmt-undo');

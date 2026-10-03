@@ -370,34 +370,11 @@ export function applyFormattingToActiveTarget(type, value, focusedPageSide = 'le
 
 export function updateFontSize(direction, reset = false, focusedPageSide = 'left', currentPageMode = '2-page') {
   const editable = getActiveEditableArea(focusedPageSide, currentPageMode);
-  const sel = window.getSelection();
-  const hasSelection = editable && sel && !sel.isCollapsed && editable.contains(sel.anchorNode);
+  if (!editable) return;
 
-  if (hasSelection) {
-    applyFontSizeToSelection(editable, direction, reset);
-    return;
-  }
-
-  const state = getState();
-  if (reset) {
-    setState({ fontSize: 16 });
-    applyFontSize(16);
-    persistState();
-    return;
-  }
-
-  const cur = state.fontSize || 16;
-  let idx = FONT_SIZES.findIndex(s => s >= cur);
-  if (idx === -1) idx = FONT_SIZES.length - 1;
-  if (FONT_SIZES[idx] > cur && direction < 0) {
-    idx = Math.max(0, idx - 1);
-  } else {
-    idx = Math.max(0, Math.min(FONT_SIZES.length - 1, idx + direction));
-  }
-  const next = FONT_SIZES[idx];
-  setState({ fontSize: next });
-  applyFontSize(next);
-  persistState();
+  editable.focus();
+  restoreCurrentSelection();
+  applyFontSizeToSelection(editable, direction, reset);
 }
 
 export function applyFontSizeToSelection(editable, direction, reset = false) {
@@ -405,12 +382,27 @@ export function applyFontSizeToSelection(editable, direction, reset = false) {
   editable.focus();
   restoreCurrentSelection();
   const sel = window.getSelection();
-  if (!sel || !sel.rangeCount || sel.isCollapsed) return;
+  if (!sel || !sel.rangeCount) {
+    const newRange = document.createRange();
+    newRange.selectNodeContents(editable);
+    newRange.collapse(false);
+    sel?.removeAllRanges();
+    sel?.addRange(newRange);
+  }
+  if (!sel || !sel.rangeCount) return;
 
   try {
     const range = sel.getRangeAt(0);
-    const parent = sel.anchorNode.parentElement;
-    let cur = parent ? parseInt(window.getComputedStyle(parent).fontSize) || 16 : 16;
+    const anchor = sel.anchorNode;
+    const parentEl = anchor ? (anchor.nodeType === Node.ELEMENT_NODE ? anchor : anchor.parentElement) : editable;
+
+    // Detect current font size at selection or cursor
+    let cur = 16;
+    if (parentEl) {
+      const computed = window.getComputedStyle(parentEl).fontSize;
+      cur = parseInt(computed, 10) || 16;
+    }
+
     let nextSize = 16;
     if (!reset) {
       let idx = FONT_SIZES.findIndex(s => s >= cur);
@@ -423,19 +415,39 @@ export function applyFontSizeToSelection(editable, direction, reset = false) {
       nextSize = FONT_SIZES[idx];
     }
 
-    const span = document.createElement('span');
-    if (!reset) {
-      span.style.fontSize = `${nextSize}px`;
-    }
-    span.appendChild(range.extractContents());
-    range.insertNode(span);
-    range.selectNodeContents(span);
-    sel.removeAllRanges();
-    sel.addRange(range);
-    saveCurrentSelection();
-
     const els = getEls();
     if (els.fontSizeLabel) els.fontSizeLabel.textContent = nextSize;
+
+    if (!sel.isCollapsed) {
+      // User selected text: apply font size only to the selection
+      const span = document.createElement('span');
+      if (!reset) {
+        span.style.fontSize = `${nextSize}px`;
+      }
+      span.appendChild(range.extractContents());
+      range.insertNode(span);
+      range.selectNodeContents(span);
+      sel.removeAllRanges();
+      sel.addRange(range);
+      saveCurrentSelection();
+    } else {
+      // No selection: insert zero-width space in a span with new font size
+      // so subsequent typing uses this size without affecting existing text
+      const span = document.createElement('span');
+      if (!reset) {
+        span.style.fontSize = `${nextSize}px`;
+      }
+      span.textContent = '\u200B'; // zero-width space
+      range.insertNode(span);
+
+      const newRange = document.createRange();
+      newRange.setStart(span.firstChild, 1);
+      newRange.collapse(true);
+      sel.removeAllRanges();
+      sel.addRange(newRange);
+      saveCurrentSelection();
+    }
+
     editable.dispatchEvent(new Event('input', { bubbles: true }));
     scheduleSave();
   } catch (err) {
