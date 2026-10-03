@@ -69,41 +69,17 @@ export function checkAndRenderPdfExport() {
         );
       }
 
-      // 2. Inject A4 export stylesheet
+      // 2. Inject export stylesheet
       const style = document.createElement('style');
       style.id = 'pdf-export-runtime-styles';
 
-      // ── Page dimensions and A4 scale factor ──
-      // Render at 1-page-mode web dimensions (660×820px) so text wraps identically.
-      // Puppeteer server strips @media print rules before pdf(), so NO double-scaling.
+      // ── SCREENSHOT-BASED PDF ──
+      // Pages render at exact web dimensions (660×820px = 1-page mode).
+      // Puppeteer takes pixel-perfect screenshots → no transform needed.
       const WEB_W = 660;
       const WEB_H = 820;
-      const A4_W_PX = 793;   // 210mm at 96dpi
-      const A4_H_PX = 1123;  // 297mm at 96dpi
-      const scale = Math.min(A4_W_PX / WEB_W, A4_H_PX / WEB_H); // ≈ 1.2015
 
       style.textContent = `
-        /* Emoji font for Puppeteer headless Chrome */
-        @font-face {
-          font-family: 'Noto Color Emoji';
-          src: local('Noto Color Emoji'),
-               local('Apple Color Emoji'),
-               local('Segoe UI Emoji'),
-               local('Segoe UI Symbol'),
-               local('Noto Emoji');
-          unicode-range: U+200D, U+2049, U+20E3, U+2122, U+2139, U+2194-21AA,
-                         U+231A-231B, U+2328, U+23CF, U+23E9-23F3, U+23F8-23FA,
-                         U+24C2, U+25AA-25AB, U+25B6, U+25C0, U+25FB-25FE,
-                         U+2600-27BF, U+2934-2935, U+2B05-2B07, U+2B1B-2B1C,
-                         U+2B50, U+2B55, U+3030, U+303D, U+3297, U+3299,
-                         U+FE0F, U+1F000-1FFFF;
-        }
-
-        @page {
-          size: 210mm 297mm;
-          margin: 0;
-        }
-
         html, body {
           margin: 0 !important;
           padding: 0 !important;
@@ -112,19 +88,17 @@ export function checkAndRenderPdfExport() {
         }
 
         .pdf-export-container {
-          width: 210mm;
-          margin: 0 auto;
+          width: ${WEB_W}px;
+          margin: 0;
           background: #ffffff;
         }
 
         .pdf-export-sheet {
-          width: 210mm;
-          height: 297mm;
-          min-height: 297mm;
-          max-height: 297mm;
+          width: ${WEB_W}px;
+          height: ${WEB_H}px;
+          min-height: ${WEB_H}px;
+          max-height: ${WEB_H}px;
           box-sizing: border-box;
-          page-break-after: always;
-          page-break-inside: avoid;
           overflow: hidden;
           position: relative;
           background: #ffffff;
@@ -137,15 +111,14 @@ export function checkAndRenderPdfExport() {
           border-radius: 0 !important;
           padding: 0 !important;
           margin: 0 !important;
-          width: 210mm !important;
-          height: 297mm !important;
+          width: ${WEB_W}px !important;
+          height: ${WEB_H}px !important;
           display: block !important;
           overflow: hidden !important;
         }
 
-        /* Render .book-page-sheet at 1-page-mode web dimensions, then
-           scale up to fill A4. @media print rules are stripped by Puppeteer
-           so there's NO double-scaling risk. */
+        /* Render at exact web dimensions — NO transform, NO scaling.
+           Puppeteer screenshots capture these pixels directly. */
         .pdf-export-sheet .book-spread-casing .book-page-sheet,
         .pdf-export-sheet .book-spread-casing.mode-1-page .book-page-sheet {
           display: flex !important;
@@ -160,11 +133,9 @@ export function checkAndRenderPdfExport() {
           box-sizing: border-box !important;
           position: relative !important;
           background: var(--paper-cream, #ffffff) !important;
-          transform: scale(${scale.toFixed(4)}) !important;
-          transform-origin: 0 0 !important;
+          transform: none !important;
         }
 
-        /* .a4-template-sheet fills the page sheet at 100%. NO additional transform. */
         .pdf-export-sheet .a4-template-sheet {
           width: 100% !important;
           height: 100% !important;

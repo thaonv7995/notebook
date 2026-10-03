@@ -3,8 +3,8 @@
  *
  * Renders the notebook using the web app's real template renderers,
  * stylesheets, fonts, and Hanzi optical alignment engine in a headless Chrome
- * browser. Emulates screen media to guarantee pixel-perfect parity with
- * the web view.
+ * browser. Uses a screenshot-based approach to guarantee pixel-perfect parity
+ * with the web view.
  *
  * Endpoint: GET /api/notebooks/:id/pdf?cover=0|1
  */
@@ -123,8 +123,13 @@ export function pdfRoutes(app) {
       }
 
       const browserPage = await browser.newPage();
-      // Set viewport matching standard A4 at 96 DPI with retina 2x density for ultra-sharp rendering
-      await browserPage.setViewport({ width: 794, height: 1123, deviceScaleFactor: 2 });
+
+      // ── SCREENSHOT-BASED PDF ──
+      // Set viewport to EXACT web view dimensions (1-page mode)
+      // with 2x deviceScaleFactor for retina-quality screenshots
+      const WEB_W = 660;
+      const WEB_H = 820;
+      await browserPage.setViewport({ width: WEB_W, height: WEB_H, deviceScaleFactor: 2 });
 
       // Pass user JWT auth cookie to Puppeteer browser context
       const token = req.cookies?.nb_token
@@ -144,7 +149,7 @@ export function pdfRoutes(app) {
       const targetUrl = `http://localhost:${PORT}/?export-pdf=${encodeURIComponent(req.params.id)}&cover=${cover}`;
       await browserPage.goto(targetUrl, { waitUntil: 'networkidle0', timeout: 30000 });
 
-      // Emulate screen media to prevent @media print from overriding styles
+      // Emulate screen media (no @media print interference)
       await browserPage.emulateMediaType('screen');
 
       // Wait for client to signal that all pages and fonts are fully rendered
@@ -158,28 +163,78 @@ export function pdfRoutes(app) {
         throw new Error(pdfError);
       }
 
-      // ── CRITICAL: Strip ALL @media print CSS rules ──
-      // Puppeteer's page.pdf() ALWAYS applies @media print CSS regardless of
-      // emulateMediaType('screen'). This causes conflicts with export-view.js CSS
-      // (e.g., double transform scale on .a4-template-sheet).
-      // By removing @media print rules, only our export-view.js CSS applies.
-      await browserPage.evaluate(() => {
-        for (const sheet of document.styleSheets) {
-          try {
-            const rules = sheet.cssRules;
-            for (let i = rules.length - 1; i >= 0; i--) {
-              if (rules[i] instanceof CSSMediaRule &&
-                  rules[i].conditionText &&
-                  rules[i].conditionText.includes('print')) {
-                sheet.deleteRule(i);
-              }
-            }
-          } catch (e) { /* cross-origin stylesheets, skip */ }
-        }
-      });
+      // ── Take screenshot of each .pdf-export-sheet ──
+      const sheetCount = await browserPage.evaluate(
+        () => document.querySelectorAll('.pdf-export-sheet').length
+      );
+
+      const screenshots = [];
+      for (let i = 0; i < sheetCount; i++) {
+        const screenshotBuffer = await browserPage.evaluate(async (idx) => {
+          const sheets = document.querySelectorAll('.pdf-export-sheet');
+          const sheet = sheets[idx];
+          if (!sheet) return null;
+          // Scroll element into view and return its bounding rect
+          sheet.scrollIntoView({ block: 'start' });
+          const rect = sheet.getBoundingClientRect();
+          return { x: rect.x, y: rect.y, width: rect.width, height: rect.height };
+        }, i);
+
+        if (!screenshotBuffer) continue;
+
+        const png = await browserPage.screenshot({
+          type: 'png',
+          clip: {
+            x: screenshotBuffer.x,
+            y: screenshotBuffer.y,
+            width: screenshotBuffer.width,
+            height: screenshotBuffer.height,
+          },
+        });
+        screenshots.push(png.toString('base64'));
+      }
+
+      // ── Compose screenshots into a PDF ──
+      // Create a temporary HTML page with all screenshots as full-page images,
+      // then use page.pdf() on this SIMPLE page (just images, no complex CSS)
+      const imgWidth = WEB_W;
+      const imgHeight = WEB_H;
+      const pagesHtml = screenshots.map((base64, idx) => `
+        <div class="pdf-page" ${idx < screenshots.length - 1 ? 'style="page-break-after: always;"' : ''}>
+          <img src="data:image/png;base64,${base64}" />
+        </div>
+      `).join('\n');
+
+      const composerHtml = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    @page { size: ${imgWidth}px ${imgHeight}px; margin: 0; }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: ${imgWidth}px; background: #fff; }
+    .pdf-page {
+      width: ${imgWidth}px;
+      height: ${imgHeight}px;
+      overflow: hidden;
+    }
+    .pdf-page img {
+      display: block;
+      width: ${imgWidth}px;
+      height: ${imgHeight}px;
+    }
+  </style>
+</head>
+<body>${pagesHtml}</body>
+</html>`;
+
+      // Navigate to the composer page and generate PDF
+      await browserPage.setViewport({ width: imgWidth, height: imgHeight, deviceScaleFactor: 1 });
+      await browserPage.setContent(composerHtml, { waitUntil: 'networkidle0' });
 
       const pdfBuffer = await browserPage.pdf({
-        format: 'A4',
+        width: `${imgWidth}px`,
+        height: `${imgHeight}px`,
         printBackground: true,
         margin: { top: 0, right: 0, bottom: 0, left: 0 },
         preferCSSPageSize: true,
