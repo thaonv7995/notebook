@@ -162,10 +162,55 @@ export async function exportPdfFromServer(includeCover = false) {
     await document.fonts.ready;
     await new Promise(r => setTimeout(r, 300));
 
+    // ── Pre-capture fixes for html2canvas ──
+    // Line color lookup for each paper tone
+    const lineColors = {
+      cream: '#dfd5c4', white: '#cbd5e1', ivory: '#d4c9ab',
+      aged: '#c5b99a', mint: '#a4c5b8', rose: '#d4a9a9',
+      lavender: '#b0a4c5',
+    };
+    const lineColor = lineColors[paperTone] || '#dfd5c4';
+
+    // Fix each page element before capture
+    offscreen.querySelectorAll('.book-spread-casing').forEach(casing => {
+      // Remove casing visual chrome (shadows, borders, background)
+      casing.style.setProperty('box-shadow', 'none', 'important');
+      casing.style.setProperty('border', 'none', 'important');
+      casing.style.setProperty('background', 'transparent', 'important');
+      casing.style.setProperty('border-radius', '0', 'important');
+      casing.style.setProperty('padding', '0', 'important');
+      casing.style.setProperty('width', '660px', 'important');
+      casing.style.setProperty('height', '820px', 'important');
+      casing.style.setProperty('overflow', 'hidden', 'important');
+    });
+
+    offscreen.querySelectorAll('.book-page-sheet').forEach(sheet => {
+      // Remove sheet border/shadow (causes black vertical line)
+      sheet.style.setProperty('box-shadow', 'none', 'important');
+      sheet.style.setProperty('border', 'none', 'important');
+      sheet.style.setProperty('border-radius', '0', 'important');
+      sheet.style.setProperty('outline', 'none', 'important');
+    });
+
+    // Fix ruled lines: html2canvas can't resolve CSS var() in gradients
+    // and doesn't support background-attachment: local.
+    // Set the gradient explicitly with actual px values.
+    offscreen.querySelectorAll('.template-writing-area').forEach(area => {
+      const lh = parseInt(getComputedStyle(area).lineHeight, 10) || lhPx;
+      const gradient = `repeating-linear-gradient(to bottom, transparent 0px, transparent ${lh - 1}px, ${lineColor} ${lh - 1}px, ${lineColor} ${lh}px)`;
+      area.style.setProperty('background-image', gradient, 'important');
+      area.style.setProperty('background-size', `100% ${lh}px`, 'important');
+      area.style.setProperty('background-attachment', 'scroll', 'important');
+      area.style.setProperty('background-position', '0 0', 'important');
+    });
+
     // ── Capture each page as canvas ──
     const PAGE_W = 660;
     const PAGE_H = 820;
     const SCALE = 2; // 2x for retina quality
+
+    // Capture the CASING elements (includes paper tone/texture styling)
+    const casingElements = offscreen.querySelectorAll('.book-spread-casing');
 
     // Create PDF (page size = web dimensions in mm)
     // 660px at 96dpi = 174.625mm, 820px at 96dpi = 216.958mm
@@ -177,10 +222,10 @@ export async function exportPdfFromServer(includeCover = false) {
       format: [pdfWidthMm, pdfHeightMm],
     });
 
-    for (let i = 0; i < sheetElements.length; i++) {
-      showToast(`📄 Đang xuất trang ${i + 1}/${sheetElements.length}...`, 0);
+    for (let i = 0; i < casingElements.length; i++) {
+      showToast(`📄 Đang xuất trang ${i + 1}/${casingElements.length}...`, 0);
 
-      const canvas = await html2canvas(sheetElements[i], {
+      const canvas = await html2canvas(casingElements[i], {
         scale: SCALE,
         width: PAGE_W,
         height: PAGE_H,
