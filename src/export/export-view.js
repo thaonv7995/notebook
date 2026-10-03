@@ -73,17 +73,12 @@ export function checkAndRenderPdfExport() {
       const style = document.createElement('style');
       style.id = 'pdf-export-runtime-styles';
 
-      // ── Web page dimensions and A4 scale factor ──
-      // Pages are rendered at their web dimensions (480×680px) to guarantee
-      // identical text wrapping, line spacing, and ruled-line density.
-      // Then CSS transform scales them up to fill the A4 page (210×297mm ≈ 793×1123px).
-      const WEB_W = 480;
-      const WEB_H = 680;
-      const A4_W_PX = 793;   // 210mm at 96dpi
-      const A4_H_PX = 1123;  // 297mm at 96dpi
-      const scaleX = A4_W_PX / WEB_W;  // ≈ 1.652
-      const scaleY = A4_H_PX / WEB_H;  // ≈ 1.651
-      const scale = Math.min(scaleX, scaleY); // uniform scale preserving aspect ratio
+      // ── IMPORTANT: Puppeteer page.pdf() ALWAYS applies @media print CSS ──
+      // print.css already handles: .book-page-sheet at 210mm×297mm and
+      // .book-page-sheet > .a4-template-sheet at 480×680px with transform:scale(1.65).
+      // We must NOT add another transform or the lines will be double-scaled.
+      // Our export CSS only needs to: (1) set up the page-break containers,
+      // (2) reset visual chrome, and (3) override mode-1-page dimensions.
 
       style.textContent = `
         /* Emoji font for Puppeteer headless Chrome */
@@ -146,21 +141,16 @@ export function checkAndRenderPdfExport() {
           overflow: hidden !important;
         }
 
-        /* ── KEY FIX: Render page at web dimensions, then scale up to A4 ──
-           This ensures ruled lines, font size, and text wrapping are IDENTICAL
-           to the web view. Without this, the 28px line-height at 210mm width
-           produces visually larger/sparser lines than at the 480px web width.
-           
-           SPECIFICITY: Use .pdf-export-sheet .book-spread-casing .book-page-sheet
-           (3 classes = 0,3,0) to beat .book-spread-casing.mode-1-page .book-page-sheet
-           (also 0,3,0 but our rule comes LATER in the cascade via injected <style>) */
+        /* Book page sheet: A4 size. NO transform here!
+           print.css handles the inner .a4-template-sheet scaling (480×680 → A4).
+           Adding transform here would cause DOUBLE scaling. */
         .pdf-export-sheet .book-spread-casing .book-page-sheet,
         .pdf-export-sheet .book-spread-casing.mode-1-page .book-page-sheet {
           display: flex !important;
-          width: ${WEB_W}px !important;
-          height: ${WEB_H}px !important;
-          min-height: ${WEB_H}px !important;
-          max-height: ${WEB_H}px !important;
+          width: 210mm !important;
+          height: 297mm !important;
+          min-height: 297mm !important;
+          max-height: 297mm !important;
           box-shadow: none !important;
           border: none !important;
           border-radius: 0 !important;
@@ -168,13 +158,7 @@ export function checkAndRenderPdfExport() {
           box-sizing: border-box !important;
           position: relative !important;
           background: var(--paper-cream, #ffffff) !important;
-          /* Scale from web dimensions → A4 dimensions */
-          transform: scale(${scale.toFixed(4)}) !important;
-          transform-origin: 0 0 !important;
-        }
-
-        .pdf-export-sheet .book-spread-casing.mode-1-page .a4-template-sheet {
-          padding: 15px 14px 10px 28px !important;
+          transform: none !important;
         }
 
         .pdf-export-sheet [contenteditable] {
