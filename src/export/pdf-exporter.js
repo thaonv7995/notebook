@@ -163,79 +163,61 @@ export async function exportPdfFromServer(includeCover = false) {
     await new Promise(r => setTimeout(r, 300));
 
     // ── Pre-capture fixes for html2canvas ──
-    // Line color lookup for each paper tone
+    // Paper background and line color lookup
+    const paperBgs = {
+      cream: '#faf7f0', white: '#ffffff', ivory: '#f5f0e0',
+      aged: '#ede4d0', mint: '#e8f5f0', rose: '#fce8e8',
+      lavender: '#f0ecf8',
+    };
     const lineColors = {
       cream: '#dfd5c4', white: '#cbd5e1', ivory: '#d4c9ab',
       aged: '#c5b99a', mint: '#a4c5b8', rose: '#d4a9a9',
       lavender: '#b0a4c5',
     };
+    const paperBg = paperBgs[paperTone] || '#faf7f0';
     const lineColor = lineColors[paperTone] || '#dfd5c4';
 
     // Fix each page element before capture
     offscreen.querySelectorAll('.book-spread-casing').forEach(casing => {
-      // Remove casing visual chrome (shadows, borders, background)
-      casing.style.setProperty('box-shadow', 'none', 'important');
-      casing.style.setProperty('border', 'none', 'important');
-      casing.style.setProperty('background', 'transparent', 'important');
-      casing.style.setProperty('border-radius', '0', 'important');
-      casing.style.setProperty('padding', '0', 'important');
-      casing.style.setProperty('width', '660px', 'important');
-      casing.style.setProperty('height', '820px', 'important');
-      casing.style.setProperty('overflow', 'hidden', 'important');
+      casing.style.cssText += `
+        box-shadow: none !important;
+        border: none !important;
+        border-radius: 0 !important;
+        padding: 0 !important;
+        width: 660px !important;
+        height: 820px !important;
+        overflow: hidden !important;
+      `;
     });
 
     offscreen.querySelectorAll('.book-page-sheet').forEach(sheet => {
-      // Remove sheet border/shadow (causes black vertical line)
-      sheet.style.setProperty('box-shadow', 'none', 'important');
-      sheet.style.setProperty('border', 'none', 'important');
-      sheet.style.setProperty('border-radius', '0', 'important');
-      sheet.style.setProperty('outline', 'none', 'important');
+      sheet.style.cssText += `
+        box-shadow: none !important;
+        border: none !important;
+        border-radius: 0 !important;
+        outline: none !important;
+        background-color: ${paperBg} !important;
+      `;
     });
 
-    // Fix ruled lines: html2canvas CANNOT render repeating-linear-gradient.
-    // Solution: Create actual DOM <div> elements for each line (1px colored bars).
+    offscreen.querySelectorAll('.a4-template-sheet').forEach(tmpl => {
+      tmpl.style.setProperty('background-color', paperBg, 'important');
+    });
+
+    // Fix ruled lines using SVG data URI (html2canvas supports SVG images)
     offscreen.querySelectorAll('.template-writing-area').forEach(area => {
-      // Remove the CSS gradient that html2canvas can't render
-      area.style.setProperty('background-image', 'none', 'important');
-      area.style.setProperty('background', 'transparent', 'important');
-
-      // Make area a positioning context for the line divs
-      area.style.setProperty('position', 'relative');
-
       const lh = parseInt(getComputedStyle(area).lineHeight, 10) || lhPx;
-      const areaHeight = area.offsetHeight || area.clientHeight || 700;
 
-      // Create a container for all line divs (behind text content)
-      const lineLayer = document.createElement('div');
-      lineLayer.style.cssText = `
-        position: absolute;
-        top: 0; left: 0; right: 0; bottom: 0;
-        pointer-events: none;
-        z-index: 0;
-      `;
+      // Create a tiny SVG that draws a 1px line at the bottom of each cell
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="10" height="${lh}"><rect x="0" y="${lh - 1}" width="10" height="1" fill="${lineColor}"/></svg>`;
+      const svgDataUri = `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
 
-      // Create one div per ruled line
-      for (let y = lh; y < areaHeight; y += lh) {
-        const lineDv = document.createElement('div');
-        lineDv.style.cssText = `
-          position: absolute;
-          left: 0; right: 0;
-          top: ${y - 1}px;
-          height: 1px;
-          background: ${lineColor};
-        `;
-        lineLayer.appendChild(lineDv);
-      }
-
-      area.insertBefore(lineLayer, area.firstChild);
-
-      // Ensure text content is above lines
-      Array.from(area.children).forEach(child => {
-        if (child !== lineLayer) {
-          child.style.position = 'relative';
-          child.style.zIndex = '1';
-        }
-      });
+      area.style.setProperty('background-image', svgDataUri, 'important');
+      area.style.setProperty('background-repeat', 'repeat', 'important');
+      area.style.setProperty('background-size', `100% ${lh}px`, 'important');
+      area.style.setProperty('background-position', '0 0', 'important');
+      area.style.setProperty('background-attachment', 'scroll', 'important');
+      area.style.setProperty('background-color', paperBg, 'important');
     });
 
     // ── Capture each page as canvas ──
