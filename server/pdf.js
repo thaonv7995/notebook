@@ -146,16 +146,20 @@ export function pdfRoutes(app) {
       }
 
       // Navigate to web app with export query params
+      // Use 'domcontentloaded' (not 'networkidle') because the app has persistent
+      // WebSocket/sync connections that prevent networkidle from resolving.
+      // Actual readiness is signaled by __PDF_READY__ (checked via waitForFunction below).
       const targetUrl = `http://localhost:${PORT}/?export-pdf=${encodeURIComponent(req.params.id)}&cover=${cover}`;
-      await browserPage.goto(targetUrl, { waitUntil: 'networkidle2', timeout: 60000 });
+      await browserPage.goto(targetUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
 
       // Emulate screen media (no @media print interference)
       await browserPage.emulateMediaType('screen');
 
       // Wait for client to signal that all pages and fonts are fully rendered
+      // This is the MAIN wait step (domcontentloaded resolves quickly)
       await browserPage.waitForFunction(
         () => window.__PDF_READY__ === true || window.__PDF_ERROR__ !== undefined,
-        { timeout: 30000 }
+        { timeout: 60000 }
       );
 
       const pdfError = await browserPage.evaluate(() => window.__PDF_ERROR__);
