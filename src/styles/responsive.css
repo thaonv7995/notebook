@@ -69,27 +69,18 @@
 
   .open-book-workspace {
     padding: 10px 8px 44px;
-    overflow-x: hidden;
+    overflow-x: auto;
     align-items: flex-start;
   }
-  .book-desk-scaler {
-    width: 100%;
-    transform: none !important;
-  }
+  /* Let JS-based applyZoom handle scaling via transform.
+     Page dimensions stay FIXED to preserve A4 ratio and prevent text drift. */
   .book-spread-casing,
   .book-spread-casing.mode-1-page {
     display: block;
-    width: 100%;
     padding: 5px;
     border-radius: 7px;
   }
-  .book-page-sheet,
-  .book-spread-casing.mode-1-page .book-page-sheet {
-    width: 100% !important;
-    height: 760px !important;
-    min-height: 760px;
-    max-height: 760px;
-  }
+  /* Keep fixed page dimensions — scaling is handled by .book-desk-scaler transform */
   .book-page-right,
   .book-center-spine,
   .book-center-ribbon { display: none !important; }
@@ -106,10 +97,4 @@
   .book-cover { max-height: 520px; }
   .reader-title-box { max-width: 58vw; }
   .reader-book-title { max-width: 45vw; }
-  .book-page-sheet,
-  .book-spread-casing.mode-1-page .book-page-sheet {
-    height: 720px !important;
-    min-height: 720px;
-    max-height: 720px;
-  }
 }

@@ -1123,8 +1123,16 @@ export function handleFitWidth() {
   const casing = els.bookSpreadCasing;
   if (desk && casing) {
     const availW = desk.clientWidth - 40;
-    const casingW = casing.offsetWidth || (currentPageMode === '1-page' ? 510 : 1010);
-    const scale = Math.max(0.3, Math.min(3.0, availW / casingW));
+    // Use the actual page sheet + casing padding for width calculation
+    const casingPad = parseFloat(getComputedStyle(casing).paddingLeft || '14') * 2;
+    const pageSheet = casing.querySelector('.book-page-sheet');
+    const pageW = pageSheet ? pageSheet.offsetWidth : (currentPageMode === '1-page' ? 660 : 480);
+    // In 2-page mode, total = 2 pages + spine (14px) + casing padding
+    const totalW = currentPageMode === '1-page'
+      ? pageW + casingPad
+      : (pageW * 2) + 14 + casingPad;
+    const naturalW = Math.max(totalW, casing.scrollWidth || totalW);
+    const scale = Math.max(0.3, Math.min(3.0, availW / naturalW));
     applyZoom(Math.round(scale * 100) / 100);
   } else {
     applyZoom(1.0);
@@ -1174,9 +1182,14 @@ export function openNotebook(notebookId, targetPageIndex = null, skipUrlUpdate =
 
   renderBookPages();
 
-  // Default to Fit Page (fit height) after layout is rendered
+  // Default to Fit Width on compact viewports (so fixed-dimension page scales to fill screen)
+  // and Fit Page on larger viewports
   requestAnimationFrame(() => {
-    handleFitPage();
+    if (compact) {
+      handleFitWidth();
+    } else {
+      handleFitPage();
+    }
   });
 }
 
@@ -1260,12 +1273,21 @@ export function setupReaderListeners({ onCopyBookLink } = {}) {
     const state = getState();
     if (!els.notebookView.classList.contains('hidden') && isCompactViewport !== wasCompactViewport) {
       applyPageMode(isCompactViewport ? '1-page' : state.pageMode, false);
-      applyZoom(isCompactViewport ? 1 : (state.zoomLevel || 1), false);
+      // On compact: auto fit-width so page scales to screen; on desktop: restore saved zoom
+      if (isCompactViewport) {
+        requestAnimationFrame(() => handleFitWidth());
+      } else {
+        applyZoom(state.zoomLevel || 1, false);
+      }
       wasCompactViewport = isCompactViewport;
       return;
     }
     wasCompactViewport = isCompactViewport;
-    if (isCompactViewport) return;
+    // On compact viewports, always re-fit width on resize
+    if (isCompactViewport) {
+      handleFitWidth();
+      return;
+    }
     if (els.btnFitPage && els.btnFitPage.classList.contains('active')) {
       handleFitPage();
     } else if (els.btnFitWidth && els.btnFitWidth.classList.contains('active')) {

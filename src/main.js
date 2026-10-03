@@ -616,14 +616,15 @@ async function pullFromServer() {
       });
     }
 
-    // Apply merged data
+    // Apply merged data silently (replaceState notifies store subscribers but we
+    // control UI refresh ourselves to prevent flicker)
     const normalized = normalizeState({
       ...currentState,
       notebooks: safeMergedNotebooks
     });
     replaceState(normalized);
 
-    // Refresh visible UI
+    // Refresh visible UI — ONLY re-render what actually changed to avoid flicker
     const libraryView = document.getElementById('libraryView');
     const notebookView = document.getElementById('notebookView');
 
@@ -631,7 +632,9 @@ async function pullFromServer() {
       renderLibraryGrid();
     }
     if (notebookView && !notebookView.classList.contains('hidden')) {
-      // Re-render ONLY IF the currently visible pages changed AND user is not actively editing
+      // Re-render ONLY IF the currently visible pages actually changed AND user is not editing.
+      // This is the key anti-flicker guard: if the server returned the same page content
+      // we already have on screen, skip the expensive DOM rebuild entirely.
       if (visiblePagesChanged && !userIsEditing) {
         renderBookPages();
       }
@@ -695,8 +698,25 @@ async function doSyncToServer() {
         });
         const mergedJson = JSON.stringify(normalized.notebooks);
         if (mergedJson !== currentLocalJson) {
+          // Check if visible pages actually changed before deciding to re-render
+          const activeNbId = currentState.activeNotebookId;
+          const activeIdx = currentState.activePageIndex || 0;
+          const oldNb = currentState.notebooks.find(n => n.id === activeNbId);
+          const newNb = normalized.notebooks.find(n => n.id === activeNbId);
+          const visibleChanged =
+            JSON.stringify(oldNb?.pages?.[activeIdx]) !== JSON.stringify(newNb?.pages?.[activeIdx]) ||
+            JSON.stringify(oldNb?.pages?.[activeIdx + 1]) !== JSON.stringify(newNb?.pages?.[activeIdx + 1]);
+
           replaceState(normalized);
           lastPushedJson = mergedJson;
+
+          // Only re-render if currently visible pages actually differ
+          if (visibleChanged) {
+            const notebookView = document.getElementById('notebookView');
+            if (notebookView && !notebookView.classList.contains('hidden')) {
+              renderBookPages();
+            }
+          }
         }
       }
     }
