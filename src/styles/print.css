@@ -204,14 +204,16 @@
   }
 
   /*
-   * For Cmd+P print: scale 480×680 content to fill A4 page.
+   * For Cmd+P print: render content at web dimensions (480×680px)
+   * then scale up to fill A4 page (210×297mm ≈ 793×1123px).
    * transform:scale affects visual rendering only (not layout),
-   * so content is laid out at web dimensions = identical text wrapping.
+   * so content is laid out at web dimensions = identical text wrapping,
+   * ruled-line spacing, and font sizing.
    */
   .book-page-sheet > .a4-template-sheet {
     width: 480px !important;
     height: 680px !important;
-    transform: scale(1.65) !important;
+    transform: scale(1.6514) !important;
     transform-origin: 0 0 !important;
     zoom: normal !important;
   }
@@ -223,6 +225,19 @@
   .grid-canvas-text,
   .quadrant-text {
     background-attachment: scroll !important;
+  }
+
+  /* Emoji rendering in print */
+  .template-writing-area,
+  .a4-template-sheet {
+    font-family: var(--notebook-font-family), 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif !important;
+  }
+
+  /* Hanzi CJK alignment preserved in print */
+  .hanzi-cjk {
+    display: inline;
+    position: relative;
+    top: -2px;
   }
 
   /* ══════════════════════════════════════════════════════

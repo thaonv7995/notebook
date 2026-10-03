@@ -11,6 +11,7 @@
 import { getState } from '../state/store.js';
 import { renderSheetContent } from '../templates/index.js';
 import { createPrintCover } from './pdf-exporter.js';
+import { FONT_FAMILIES } from '../config/constants.js';
 
 export function checkAndRenderPdfExport() {
   const params = new URLSearchParams(window.location.search);
@@ -46,10 +47,61 @@ export function checkAndRenderPdfExport() {
 
       document.body.classList.add('pdf-export-mode');
 
+      // ── Apply notebook typography CSS variables ──
+      // These must be set so templates render with the correct font, size, and line spacing
+      const nbFontKey = notebook.fontFamily || state.fontFamily || 'sans';
+      const cssFont = FONT_FAMILIES[nbFontKey] || FONT_FAMILIES['sans'];
+      const lhValue = notebook.lineHeight || state.lineHeight || '28';
+      const fontSize = state.fontSize || 16;
+      const lhPx = lhValue === 'none' ? 28 : (parseInt(lhValue, 10) || 28);
+      const maxNbFont = Math.max(12, lhPx - 4);
+      const nbFont = Math.max(10, Math.min(fontSize, maxNbFont));
+
+      document.documentElement.style.setProperty('--notebook-font-family', cssFont);
+      document.documentElement.style.setProperty('--notebook-line-height', `${lhPx}px`);
+      document.documentElement.style.setProperty('--notebook-font-size', `${nbFont}px`);
+      if (lhValue === 'none') {
+        document.documentElement.style.setProperty('--notebook-lines-display', 'none');
+      } else {
+        document.documentElement.style.setProperty(
+          '--notebook-lines-display',
+          `repeating-linear-gradient(to bottom, transparent 0, transparent ${lhPx - 1}px, #cbd5e1 ${lhPx - 1}px, #cbd5e1 ${lhPx}px)`
+        );
+      }
+
       // 2. Inject A4 export stylesheet
       const style = document.createElement('style');
       style.id = 'pdf-export-runtime-styles';
+
+      // ── Web page dimensions and A4 scale factor ──
+      // Pages are rendered at their web dimensions (480×680px) to guarantee
+      // identical text wrapping, line spacing, and ruled-line density.
+      // Then CSS transform scales them up to fill the A4 page (210×297mm ≈ 793×1123px).
+      const WEB_W = 480;
+      const WEB_H = 680;
+      const A4_W_PX = 793;   // 210mm at 96dpi
+      const A4_H_PX = 1123;  // 297mm at 96dpi
+      const scaleX = A4_W_PX / WEB_W;  // ≈ 1.652
+      const scaleY = A4_H_PX / WEB_H;  // ≈ 1.651
+      const scale = Math.min(scaleX, scaleY); // uniform scale preserving aspect ratio
+
       style.textContent = `
+        /* Emoji font for Puppeteer headless Chrome */
+        @font-face {
+          font-family: 'Noto Color Emoji';
+          src: local('Noto Color Emoji'),
+               local('Apple Color Emoji'),
+               local('Segoe UI Emoji'),
+               local('Segoe UI Symbol'),
+               local('Noto Emoji');
+          unicode-range: U+200D, U+2049, U+20E3, U+2122, U+2139, U+2194-21AA,
+                         U+231A-231B, U+2328, U+23CF, U+23E9-23F3, U+23F8-23FA,
+                         U+24C2, U+25AA-25AB, U+25B6, U+25C0, U+25FB-25FE,
+                         U+2600-27BF, U+2934-2935, U+2B05-2B07, U+2B1B-2B1C,
+                         U+2B50, U+2B55, U+3030, U+303D, U+3297, U+3299,
+                         U+FE0F, U+1F000-1FFFF;
+        }
+
         @page {
           size: 210mm 297mm;
           margin: 0;
@@ -79,9 +131,6 @@ export function checkAndRenderPdfExport() {
           overflow: hidden;
           position: relative;
           background: #ffffff;
-          display: flex;
-          align-items: center;
-          justify-content: center;
         }
 
         .pdf-export-sheet .book-spread-casing {
@@ -91,17 +140,22 @@ export function checkAndRenderPdfExport() {
           border-radius: 0 !important;
           padding: 0 !important;
           margin: 0 !important;
-          width: 100% !important;
-          height: 100% !important;
-          display: block !important;
-        }
-
-        .pdf-export-sheet .book-page-sheet {
-          display: flex !important;
           width: 210mm !important;
           height: 297mm !important;
-          min-height: 297mm !important;
-          max-height: 297mm !important;
+          display: block !important;
+          overflow: hidden !important;
+        }
+
+        /* ── KEY FIX: Render page at web dimensions, then scale up to A4 ──
+           This ensures ruled lines, font size, and text wrapping are IDENTICAL
+           to the web view. Without this, the 28px line-height at 210mm width
+           produces visually larger/sparser lines than at the 480px web width. */
+        .pdf-export-sheet .book-page-sheet {
+          display: flex !important;
+          width: ${WEB_W}px !important;
+          height: ${WEB_H}px !important;
+          min-height: ${WEB_H}px !important;
+          max-height: ${WEB_H}px !important;
           box-shadow: none !important;
           border: none !important;
           border-radius: 0 !important;
@@ -109,21 +163,50 @@ export function checkAndRenderPdfExport() {
           box-sizing: border-box !important;
           position: relative !important;
           background: var(--paper-cream, #ffffff) !important;
-          transform: none !important;
+          /* Scale from web dimensions → A4 dimensions */
+          transform: scale(${scale.toFixed(4)}) !important;
+          transform-origin: 0 0 !important;
         }
 
         .pdf-export-sheet .book-spread-casing.mode-1-page .a4-template-sheet {
-          padding: 22px 20px 16px 36px !important;
+          padding: 15px 14px 10px 28px !important;
         }
 
         .pdf-export-sheet [contenteditable] {
           cursor: default !important;
         }
 
+        /* Ensure ruled-line backgrounds render in PDF */
+        .pdf-export-sheet .template-writing-area,
+        .pdf-export-sheet .ruled-canvas-text,
+        .pdf-export-sheet .dotgrid-canvas-text,
+        .pdf-export-sheet .grid-canvas-text,
+        .pdf-export-sheet .quadrant-text {
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+          background-attachment: scroll !important;
+        }
+
+        /* Emoji rendering: add emoji font to all text areas */
+        .pdf-export-sheet .template-writing-area,
+        .pdf-export-sheet .a4-template-sheet {
+          font-family: var(--notebook-font-family), 'Noto Color Emoji', 'Apple Color Emoji', 'Segoe UI Emoji', sans-serif !important;
+        }
+
+        /* Hanzi CJK alignment preserved in PDF */
+        .pdf-export-sheet .hanzi-cjk {
+          display: inline;
+          position: relative;
+          top: -2px;
+        }
+
         .pdf-export-sheet .ai-corner-copilot-container,
         .pdf-export-sheet .ai-corner-fab,
         .pdf-export-sheet .ai-corner-chat,
-        .pdf-export-sheet .status-pill-btn {
+        .pdf-export-sheet .status-pill-btn,
+        .pdf-export-sheet .edge-index-markers,
+        .pdf-export-sheet .content-corner-frame,
+        .pdf-export-sheet .punch-margin-line {
           display: none !important;
         }
 
@@ -256,3 +339,4 @@ export function checkAndRenderPdfExport() {
   tryRender();
   return true;
 }
+
