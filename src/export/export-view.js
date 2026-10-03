@@ -73,12 +73,14 @@ export function checkAndRenderPdfExport() {
       const style = document.createElement('style');
       style.id = 'pdf-export-runtime-styles';
 
-      // ── IMPORTANT: Puppeteer page.pdf() ALWAYS applies @media print CSS ──
-      // print.css already handles: .book-page-sheet at 210mm×297mm and
-      // .book-page-sheet > .a4-template-sheet at 480×680px with transform:scale(1.65).
-      // We must NOT add another transform or the lines will be double-scaled.
-      // Our export CSS only needs to: (1) set up the page-break containers,
-      // (2) reset visual chrome, and (3) override mode-1-page dimensions.
+      // ── Page dimensions and A4 scale factor ──
+      // Render at 1-page-mode web dimensions (660×820px) so text wraps identically.
+      // Puppeteer server strips @media print rules before pdf(), so NO double-scaling.
+      const WEB_W = 660;
+      const WEB_H = 820;
+      const A4_W_PX = 793;   // 210mm at 96dpi
+      const A4_H_PX = 1123;  // 297mm at 96dpi
+      const scale = Math.min(A4_W_PX / WEB_W, A4_H_PX / WEB_H); // ≈ 1.2015
 
       style.textContent = `
         /* Emoji font for Puppeteer headless Chrome */
@@ -141,16 +143,16 @@ export function checkAndRenderPdfExport() {
           overflow: hidden !important;
         }
 
-        /* Book page sheet: A4 size. NO transform here!
-           print.css handles the inner .a4-template-sheet scaling (480×680 → A4).
-           Adding transform here would cause DOUBLE scaling. */
+        /* Render .book-page-sheet at 1-page-mode web dimensions, then
+           scale up to fill A4. @media print rules are stripped by Puppeteer
+           so there's NO double-scaling risk. */
         .pdf-export-sheet .book-spread-casing .book-page-sheet,
         .pdf-export-sheet .book-spread-casing.mode-1-page .book-page-sheet {
           display: flex !important;
-          width: 210mm !important;
-          height: 297mm !important;
-          min-height: 297mm !important;
-          max-height: 297mm !important;
+          width: ${WEB_W}px !important;
+          height: ${WEB_H}px !important;
+          min-height: ${WEB_H}px !important;
+          max-height: ${WEB_H}px !important;
           box-shadow: none !important;
           border: none !important;
           border-radius: 0 !important;
@@ -158,6 +160,14 @@ export function checkAndRenderPdfExport() {
           box-sizing: border-box !important;
           position: relative !important;
           background: var(--paper-cream, #ffffff) !important;
+          transform: scale(${scale.toFixed(4)}) !important;
+          transform-origin: 0 0 !important;
+        }
+
+        /* .a4-template-sheet fills the page sheet at 100%. NO additional transform. */
+        .pdf-export-sheet .a4-template-sheet {
+          width: 100% !important;
+          height: 100% !important;
           transform: none !important;
         }
 

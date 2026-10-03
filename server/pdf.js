@@ -158,6 +158,26 @@ export function pdfRoutes(app) {
         throw new Error(pdfError);
       }
 
+      // ── CRITICAL: Strip ALL @media print CSS rules ──
+      // Puppeteer's page.pdf() ALWAYS applies @media print CSS regardless of
+      // emulateMediaType('screen'). This causes conflicts with export-view.js CSS
+      // (e.g., double transform scale on .a4-template-sheet).
+      // By removing @media print rules, only our export-view.js CSS applies.
+      await browserPage.evaluate(() => {
+        for (const sheet of document.styleSheets) {
+          try {
+            const rules = sheet.cssRules;
+            for (let i = rules.length - 1; i >= 0; i--) {
+              if (rules[i] instanceof CSSMediaRule &&
+                  rules[i].conditionText &&
+                  rules[i].conditionText.includes('print')) {
+                sheet.deleteRule(i);
+              }
+            }
+          } catch (e) { /* cross-origin stylesheets, skip */ }
+        }
+      });
+
       const pdfBuffer = await browserPage.pdf({
         format: 'A4',
         printBackground: true,
