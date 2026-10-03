@@ -147,7 +147,7 @@ export function pdfRoutes(app) {
 
       // Navigate to web app with export query params
       const targetUrl = `http://localhost:${PORT}/?export-pdf=${encodeURIComponent(req.params.id)}&cover=${cover}`;
-      await browserPage.goto(targetUrl, { waitUntil: 'networkidle0', timeout: 30000 });
+      await browserPage.goto(targetUrl, { waitUntil: 'networkidle2', timeout: 60000 });
 
       // Emulate screen media (no @media print interference)
       await browserPage.emulateMediaType('screen');
@@ -155,7 +155,7 @@ export function pdfRoutes(app) {
       // Wait for client to signal that all pages and fonts are fully rendered
       await browserPage.waitForFunction(
         () => window.__PDF_READY__ === true || window.__PDF_ERROR__ !== undefined,
-        { timeout: 20000 }
+        { timeout: 30000 }
       );
 
       const pdfError = await browserPage.evaluate(() => window.__PDF_ERROR__);
