@@ -204,16 +204,20 @@
   }
 
   /*
-   * For Cmd+P print: render content at web dimensions (480×680px)
-   * then scale up to fill A4 page (210×297mm ≈ 793×1123px).
+   * For Cmd+P print / PDF export: render content at 1-page-mode web
+   * dimensions (660×820px) then scale up to fill A4 (210×297mm ≈ 793×1123px).
    * transform:scale affects visual rendering only (not layout),
-   * so content is laid out at web dimensions = identical text wrapping,
-   * ruled-line spacing, and font sizing.
+   * so content is laid out at the same width as the web view = identical
+   * text wrapping, ruled-line spacing, and font sizing.
+   *
+   * NOTE: Using 660×820 (1-page mode) instead of 480×680 (2-page mode)
+   * because PDF export renders in mode-1-page. If we used 480px, text that
+   * fits on one line at 660px would reflow (last word pushed to next line).
    */
   .book-page-sheet > .a4-template-sheet {
-    width: 480px !important;
-    height: 680px !important;
-    transform: scale(1.6514) !important;
+    width: 660px !important;
+    height: 820px !important;
+    transform: scale(1.2015) !important;
     transform-origin: 0 0 !important;
     zoom: normal !important;
   }
