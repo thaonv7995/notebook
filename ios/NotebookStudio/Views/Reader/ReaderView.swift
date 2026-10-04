@@ -192,34 +192,6 @@ struct ReaderView: View {
                     }
                     .transition(.move(edge: .top).combined(with: .opacity))
                 }
-
-                // Minimal floating indicator/button to exit full-screen mode easily
-                if isFullScreen {
-                    HStack {
-                        Spacer()
-                        Button(action: {
-                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                            withAnimation(.easeInOut(duration: 0.28)) {
-                                isFullScreen = false
-                            }
-                        }) {
-                            Image(systemName: "arrow.down.right.and.arrow.up.left")
-                                .font(.system(size: 13, weight: .bold))
-                                .foregroundColor(.white.opacity(0.85))
-                                .frame(width: 32, height: 32)
-                                .background(Color(hex: "1e293b").opacity(0.85))
-                                .clipShape(Circle())
-                                .overlay(
-                                    Circle()
-                                        .stroke(Color.white.opacity(0.15), lineWidth: 1)
-                                )
-                                .shadow(color: Color.black.opacity(0.35), radius: 6, x: 0, y: 3)
-                        }
-                        .padding(.top, isPhone ? max(10, phoneTopInset) : 16)
-                        .padding(.trailing, 16)
-                        .transition(.opacity)
-                    }
-                }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
