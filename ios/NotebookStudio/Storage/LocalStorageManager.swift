@@ -75,6 +75,11 @@ class LocalStorageManager {
         return cached.map { $0.toNotebook() }
     }
 
+    /// Alias for loadNotebooks() for consistent naming across views.
+    func fetchNotebooks() -> [Notebook] {
+        loadNotebooks()
+    }
+
     // MARK: - Get Single Notebook
 
     /// Load a single notebook by ID.

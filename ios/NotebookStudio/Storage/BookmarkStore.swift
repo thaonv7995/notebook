@@ -63,6 +63,11 @@ class BookmarkStore: ObservableObject {
         bookmarks.contains { $0.notebookId == notebookId && $0.pageId == pageId }
     }
 
+    /// Check if a page is bookmarked by page ID.
+    func isBookmarked(pageId: String) -> Bool {
+        bookmarks.contains { $0.pageId == pageId }
+    }
+
     // MARK: - Get Bookmarks for Notebook
 
     /// Get all bookmarked page IDs for a specific notebook.

@@ -154,8 +154,11 @@ struct LoginView: View {
         }
         .onAppear {
             if serverURL.isEmpty {
-                let saved = KeychainManager.getServerURL()
-                serverURL = saved.isEmpty ? "http://localhost:3000" : saved
+                if let saved = KeychainManager.getServerURL(), !saved.isEmpty {
+                    serverURL = saved
+                } else {
+                    serverURL = "http://localhost:3000"
+                }
             }
             if username.isEmpty {
                 username = KeychainManager.getUsername() ?? ""

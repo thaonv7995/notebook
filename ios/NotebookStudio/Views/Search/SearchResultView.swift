@@ -65,30 +65,16 @@ struct SearchResultView: View {
 
     private var highlightedSnippet: AttributedString {
         var attributed = AttributedString(result.snippet)
-        let query = result.query.lowercased()
+        let query = result.query.trimmingCharacters(in: .whitespacesAndNewlines)
 
         guard !query.isEmpty else { return attributed }
 
         var searchStartIndex = attributed.startIndex
-        let plain = String(attributed.characters).lowercased()
-
-        while let range = plain.range(of: query, range: Range(uncheckedBounds: (plain.index(plain.startIndex, offsetBy: attributed.characters.distance(from: attributed.startIndex, to: searchStartIndex)), plain.endIndex))) {
-            let offsetStart = plain.distance(from: plain.startIndex, to: range.lowerBound)
-            let offsetEnd = plain.distance(from: plain.startIndex, to: range.upperBound)
-
-            if let attrStart = attributed.index(attributed.startIndex, offsetByCharacters: offsetStart),
-               let attrEnd = attributed.index(attributed.startIndex, offsetByCharacters: offsetEnd) {
-                attributed[attrStart..<attrEnd].foregroundColor = .orange
-                attributed[attrStart..<attrEnd].font = .system(size: 13, weight: .bold)
-
-                if attrEnd < attributed.endIndex {
-                    searchStartIndex = attrEnd
-                } else {
-                    break
-                }
-            } else {
-                break
-            }
+        while searchStartIndex < attributed.endIndex,
+              let range = attributed[searchStartIndex...].range(of: query, options: .caseInsensitive) {
+            attributed[range].foregroundColor = .orange
+            attributed[range].font = .system(size: 13, weight: .bold)
+            searchStartIndex = range.upperBound
         }
 
         return attributed

@@ -139,7 +139,7 @@ struct SearchView: View {
             // Mini cover thumbnail
             ZStack(alignment: .bottomLeading) {
                 RoundedRectangle(cornerRadius: 8)
-                    .fill(GradientParser.parse(nb.coverGradient))
+                    .fill(GradientParser.gradient(from: nb.coverGradient))
                     .frame(width: 120, height: 75)
 
                 Text(nb.category)

@@ -1,6 +1,7 @@
 import XCTest
 @testable import NotebookStudio
 
+@MainActor
 final class SyncManagerTests: XCTestCase {
 
     func testReadingProgressStore() {

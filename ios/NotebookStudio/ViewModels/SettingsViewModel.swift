@@ -30,15 +30,29 @@ final class SettingsViewModel: ObservableObject {
     }
 
     func loadSettings() {
-        serverURL = KeychainManager.shared.getServerURL()
+        serverURL = KeychainManager.getServerURL() ?? ""
         cachedNotebooksCount = LocalStorageManager.shared.fetchNotebooks().count
+        updateLastSyncedTime()
+    }
 
-        if let lastSync = SyncManager.shared.lastSyncedAt {
-            let formatter = RelativeDateTimeFormatter()
-            formatter.unitsStyle = .full
-            lastSyncedTime = formatter.localizedString(for: lastSync, relativeTo: Date())
-        } else {
+    private func updateLastSyncedTime() {
+        guard let lastSync = SyncManager.shared.lastSyncedAt else {
             lastSyncedTime = "Chưa có"
+            return
+        }
+        let isoFormatter = ISO8601DateFormatter()
+        isoFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        var date = isoFormatter.date(from: lastSync)
+        if date == nil {
+            isoFormatter.formatOptions = [.withInternetDateTime]
+            date = isoFormatter.date(from: lastSync)
+        }
+        if let validDate = date {
+            let relFormatter = RelativeDateTimeFormatter()
+            relFormatter.unitsStyle = .full
+            lastSyncedTime = relFormatter.localizedString(for: validDate, relativeTo: Date())
+        } else {
+            lastSyncedTime = lastSync
         }
     }
 
@@ -49,12 +63,7 @@ final class SettingsViewModel: ObservableObject {
 
         let result = await SyncManager.shared.forceRefresh()
         cachedNotebooksCount = result.count
-
-        if let lastSync = SyncManager.shared.lastSyncedAt {
-            let formatter = RelativeDateTimeFormatter()
-            formatter.unitsStyle = .full
-            lastSyncedTime = formatter.localizedString(for: lastSync, relativeTo: Date())
-        }
+        updateLastSyncedTime()
 
         syncStatusMessage = "Đã đồng bộ \(result.count) sổ tay thành công."
         isSyncing = false
@@ -83,7 +92,7 @@ final class SettingsViewModel: ObservableObject {
 
         isChangingPassword = true
         do {
-            try await AuthService.shared.changePassword(oldPassword: oldPassword, newPassword: newPassword)
+            try await AuthService.changePassword(oldPassword: oldPassword, newPassword: newPassword)
             passwordAlertMessage = "Đổi mật khẩu thành công!"
             showPasswordAlert = true
             oldPassword = ""

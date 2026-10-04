@@ -33,6 +33,22 @@ class ReadingProgressStore: ObservableObject {
         return stored
     }
 
+    /// Convenience alias for getProgress.
+    func lastPageIndex(for notebookId: String) -> Int {
+        getProgress(notebookId: notebookId)
+    }
+
+    /// Convenience save method used by Reader and Quick Note components.
+    func saveProgress(notebookId: String, pageIndex: Int, totalPages: Int = 0) {
+        setProgress(notebookId: notebookId, pageIndex: pageIndex, syncToServer: true)
+    }
+
+    /// Calculate percentage read for display.
+    func progressPercentage(for notebookId: String, totalPages: Int) -> Double {
+        guard totalPages > 0 else { return 0.0 }
+        return min(1.0, max(0.0, Double(getProgress(notebookId: notebookId) + 1) / Double(totalPages)))
+    }
+
     // MARK: - Set Progress
 
     /// Update reading progress. Saves locally and optionally triggers server sync.
