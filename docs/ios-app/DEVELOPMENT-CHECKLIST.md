@@ -124,34 +124,34 @@
 
 ### 5A: Reader Shell
 
-- [ ] **P5-1** Tạo `Views/Reader/ReaderView.swift`:
+- [x] **P5-1** Tạo `Views/Reader/ReaderView.swift` ✅:
   - Nhận `Notebook` → hiển thị trang theo `lastPageIndex`
   - Tap giữa → toggle chrome (top bar + bottom scrubber)
   - Tự động lưu `lastPageIndex` khi chuyển trang
 
-- [ ] **P5-2** Tạo `Views/Reader/ReaderChromeView.swift` (Top bar):
+- [x] **P5-2** Tạo `Views/Reader/ReaderChromeView.swift` (Top bar) ✅:
   - ← Back button | Notebook title | "Trang 3/12"
   - Auto-hide sau 3s không tương tác
   - Semi-transparent background
 
-- [ ] **P5-3** Tạo `Views/Reader/PageScrubberView.swift` (Bottom):
+- [x] **P5-3** Tạo `Views/Reader/PageScrubberView.swift` (Bottom) ✅:
   - Slider từ trang 1 → N
   - Kéo → hiện preview số trang
   - Auto-hide cùng chrome
 
-- [ ] **P5-4** Tạo `Views/Reader/PageNavigationView.swift`:
+- [x] **P5-4** Tạo `Views/Reader/PageNavigationView.swift` ✅:
   - TabView với `.tabViewStyle(.page(indexDisplayMode: .never))`
   - Swipe trái/phải để lật trang
   - Custom transition animation (slide + fade)
 
-- [ ] **P5-5** Haptic feedback — `UIImpactFeedbackGenerator(.light)` khi lật trang
+- [x] **P5-5** Haptic feedback — `UIImpactFeedbackGenerator(.light)` khi lật trang ✅
 
 ### 5B: HTML → Native Rendering
 
 > Nội dung trang lưu dạng **HTML string** (rich-text từ contentEditable trên web).
 > Cần parse HTML → SwiftUI Text/AttributedString.
 
-- [ ] **P5-6** Tạo `Services/HTMLParser.swift`:
+- [x] **P5-6** Tạo `Services/HTMLParser.swift` ✅:
   - Parse HTML tags: `<b>`, `<i>`, `<u>`, `<s>`, `<br>`, `<div>`, `<p>`
   - Parse `<h1>`, `<h2>`, `<h3>` → heading styles
   - Parse `<span style="color:...">` → text color
@@ -163,77 +163,77 @@
   - Parse `<img src="data:...">` → inline images
   - Output: `AttributedString` hoặc `[RichTextBlock]` enum
 
-- [ ] **P5-7** Tạo `Views/Reader/RichTextView.swift`:
+- [x] **P5-7** Tạo `Views/Reader/RichTextView.swift` ✅:
   - Nhận parsed content → render SwiftUI views
   - Hỗ trợ: bold, italic, underline, strikethrough, colors, headings, lists, code blocks
   - Scrollable nếu nội dung dài hơn màn hình
 
 ### 5C: Template Layouts (10 templates)
 
-- [ ] **P5-8** Tạo `Views/Reader/Templates/CornellPageView.swift`:
+- [x] **P5-8** Tạo `Views/Reader/Templates/CornellPageView.swift` ✅:
   - Header: Subject/Topic | Date | No.
   - 2 cột: Cues & Questions (30%) | Notes (70%)
   - Footer: Summary & Synthesis
   - Nền giấy cream + border lines
   > Ref: [`templates/cornell.js`](file:///Users/thaonv/Desktop/Notebook%20Project/src/templates/cornell.js)
 
-- [ ] **P5-9** Tạo `Views/Reader/Templates/WorkPageView.swift`:
+- [x] **P5-9** Tạo `Views/Reader/Templates/WorkPageView.swift` ✅:
   - Header: Project | Deadline | Status badge (TODO/WIP/DONE)
   - 2 cột: Notes/Discussions | Action Items checklist
   - Agenda section
   > Ref: [`templates/work.js`](file:///Users/thaonv/Desktop/Notebook%20Project/src/templates/work.js)
 
-- [ ] **P5-10** Tạo `Views/Reader/Templates/RuledPageView.swift`:
+- [x] **P5-10** Tạo `Views/Reader/Templates/RuledPageView.swift` ✅:
   - Full-width content area với dòng kẻ ngang nền
   - Scrollable rich-text
   > Ref: [`templates/ruled.js`](file:///Users/thaonv/Desktop/Notebook%20Project/src/templates/ruled.js)
 
-- [ ] **P5-11** Tạo `Views/Reader/Templates/VocabPageView.swift`:
+- [x] **P5-11** Tạo `Views/Reader/Templates/VocabPageView.swift` ✅:
   - Cards: Word | Meaning | Example | Review
   > Ref: [`templates/vocab.js`](file:///Users/thaonv/Desktop/Notebook%20Project/src/templates/vocab.js)
 
-- [ ] **P5-12** Tạo `Views/Reader/Templates/ChartingPageView.swift`:
+- [x] **P5-12** Tạo `Views/Reader/Templates/ChartingPageView.swift` ✅:
   - 3 cột so sánh + Analysis section
   > Ref: [`templates/charting.js`](file:///Users/thaonv/Desktop/Notebook%20Project/src/templates/charting.js)
 
-- [ ] **P5-13** Tạo `Views/Reader/Templates/ReadingPageView.swift`:
+- [x] **P5-13** Tạo `Views/Reader/Templates/ReadingPageView.swift` ✅:
   - Ideas | Quotes | Reflection sections
   > Ref: [`templates/reading.js`](file:///Users/thaonv/Desktop/Notebook%20Project/src/templates/reading.js)
 
-- [ ] **P5-14** Tạo `Views/Reader/Templates/DotGridPageView.swift`:
+- [x] **P5-14** Tạo `Views/Reader/Templates/DotGridPageView.swift` ✅:
   - Dot grid background pattern + content overlay
   > Ref: [`templates/dotgrid.js`](file:///Users/thaonv/Desktop/Notebook%20Project/src/templates/dotgrid.js)
 
-- [ ] **P5-15** Tạo `Views/Reader/Templates/GridPageView.swift`:
+- [x] **P5-15** Tạo `Views/Reader/Templates/GridPageView.swift` ✅:
   - Square grid background + content overlay
   > Ref: [`templates/grid.js`](file:///Users/thaonv/Desktop/Notebook%20Project/src/templates/grid.js)
 
-- [ ] **P5-16** Tạo `Views/Reader/Templates/BlankPageView.swift`:
+- [x] **P5-16** Tạo `Views/Reader/Templates/BlankPageView.swift` ✅:
   - Clean white/cream surface + content
   > Ref: [`templates/blank.js`](file:///Users/thaonv/Desktop/Notebook%20Project/src/templates/blank.js)
 
-- [ ] **P5-17** Tạo `Views/Reader/Templates/EisenhowerPageView.swift`:
+- [x] **P5-17** Tạo `Views/Reader/Templates/EisenhowerPageView.swift` ✅:
   - 4 quadrants: Do | Schedule | Delegate | Eliminate
   > Ref: [`templates/quadrant.js`](file:///Users/thaonv/Desktop/Notebook%20Project/src/templates/quadrant.js)
 
-- [ ] **P5-18** Tạo `Views/Reader/Templates/TemplateRouter.swift`:
+- [x] **P5-18** Tạo `Views/Reader/Templates/TemplateRouter.swift` ✅:
   - Switch `page.template` → đúng View
   - Fallback về RuledPageView
 
 ### 5D: Reading Experience
 
-- [ ] **P5-19** Paper tone theming — áp dụng nền giấy theo setting:
+- [x] **P5-19** Paper tone theming — áp dụng nền giấy theo setting ✅:
   - Cream (`#faf5e8`), White (`#ffffff`), Dark (`#2a2520`)
   - Lấy từ notebook hoặc global setting
 
-- [ ] **P5-20** Font settings cho reader:
+- [x] **P5-20** Font settings cho reader ✅:
   - Chọn font family (Jakarta Sans, Serif, Mono)
   - Chọn cỡ chữ (slider 14-24pt)
   - Chọn line height
 
-- [ ] **P5-21** Pinch-to-zoom trên trang — `MagnificationGesture`
-- [ ] **P5-22** Bookmark button trên mỗi trang — toggle + haptic
-- [ ] **P5-23** Table of Contents drawer — list tất cả trang, tap nhảy đến trang
+- [x] **P5-21** Pinch-to-zoom trên trang — `MagnificationGesture` ✅
+- [x] **P5-22** Bookmark button trên mỗi trang — toggle + haptic ✅
+- [x] **P5-23** Table of Contents drawer — list tất cả trang, tap nhảy đến trang ✅
 
 ---
 

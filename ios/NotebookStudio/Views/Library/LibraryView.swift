@@ -67,8 +67,7 @@ struct LibraryView: View {
                 }
             }
             .navigationDestination(for: Notebook.self) { notebook in
-                // TODO: Phase 5 — ReaderView(notebook: notebook)
-                Text("Reader: \(notebook.title)")
+                ReaderView(notebook: notebook)
             }
             .task {
                 await viewModel.loadNotebooks()
