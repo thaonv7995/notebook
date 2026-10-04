@@ -54,7 +54,7 @@
 
 ---
 
-## Phase 2: Networking & Auth 🔐 `~3 ngày`
+## Phase 2: Networking & Auth 🔐 `~3 ngày` ✅ DONE
 
 > Backend API: [`server/api.js`](file:///Users/thaonv/Desktop/Notebook%20Project/server/api.js), Auth: [`server/auth.js`](file:///Users/thaonv/Desktop/Notebook%20Project/server/auth.js)
 
@@ -68,39 +68,11 @@
   - 401 → `unauthorizedNotification` → auto logout
   - Typed `APIError` enum with Vietnamese messages + `isOffline`/`isAuthError` helpers
 
-- [ ] **P2-3** Tạo `Services/AuthService.swift`:
-  | Method | API Endpoint | Ghi chú |
-  |:---|:---|:---|
-  | `login(username, password)` | `POST /api/auth/login` | Nhận JWT từ response body (không dùng cookie trên iOS) |
-  | `logout()` | `POST /api/auth/logout` | Xóa JWT local |
-  | `checkSession()` | `GET /api/auth/me` | Verify JWT còn valid |
-  | `changePassword(old, new)` | `POST /api/auth/change-password` | |
-
-  > ⚠️ Web dùng httpOnly cookie, iOS cần **sửa backend** để trả JWT trong response body, hoặc đọc `Set-Cookie` header.
-
-- [ ] **P2-4** Tạo `Services/KeychainManager.swift`:
-  - Lưu JWT token vào Keychain (không UserDefaults!)
-  - Lưu server URL
-  - Clear on logout
-
-- [ ] **P2-5** Tạo `Services/NotebookService.swift`:
-  | Method | API Endpoint | Mục đích |
-  |:---|:---|:---|
-  | `fetchAll()` | `GET /api/notebooks` | Tải toàn bộ thư viện |
-  | `getSyncMeta()` | `GET /api/notebooks/sync-meta` | Check server timestamp |
-  | `sync(notebooks, lastSyncedAt)` | `PUT /api/notebooks/sync` | Smart merge sync |
-
-- [ ] **P2-6** Tạo `ViewModels/AuthViewModel.swift`:
-  - `@Published var isLoggedIn: Bool`
-  - `@Published var isLoading: Bool`
-  - `@Published var error: String?`
-  - Auto-check session on app launch
-
-- [ ] **P2-7** **[BACKEND]** Sửa [`auth.js`](file:///Users/thaonv/Desktop/Notebook%20Project/server/auth.js) — trả JWT trong response body cho mobile:
-  ```javascript
-  // Thêm vào login response:
-  res.json({ ok: true, user: {...}, token: token });
-  ```
+- [x] **P2-3** Tạo `Services/AuthService.swift` ✅ — login/logout/checkSession/changePassword
+- [x] **P2-4** Tạo `Services/KeychainManager.swift` ✅ — JWT + username + serverURL in Keychain, restoreSession()
+- [x] **P2-5** Tạo `Services/NotebookService.swift` ✅ — fetchAll/getSyncMeta/sync/deleteNotebook
+- [x] **P2-6** Upgrade `ViewModels/AuthViewModel.swift` ✅ — real auth flow, optimistic launch, 401 listener
+- [x] **P2-7** **[BACKEND]** Sửa `auth.js` ✅ — thêm `token` vào login response body
 
 ---
 

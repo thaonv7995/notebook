@@ -87,7 +87,8 @@ export function authRoutes(app) {
 
     res.json({
       ok: true,
-      user: { id: user.id, username: user.username }
+      user: { id: user.id, username: user.username },
+      token: token  // Expose JWT for mobile clients (iOS uses Bearer header, not cookies)
     });
   });
 
