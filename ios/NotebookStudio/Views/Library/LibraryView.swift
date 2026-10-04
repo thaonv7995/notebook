@@ -106,12 +106,18 @@ struct LibraryView: View {
                                         NotebookBookCard(
                                             notebook: notebook,
                                             onSelect: {
+                                                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                                let lastPage = progressStore.lastPageIndex(for: notebook.id)
+                                                selectedReadingTarget = ReadingSessionTarget(notebook: notebook, pageIndex: lastPage)
+                                            },
+                                            onShowDetail: {
                                                 selectedNotebookForDetail = notebook
                                             },
                                             onTogglePriority: {
                                                 togglePin(notebook)
                                             },
                                             onStartReading: {
+                                                UIImpactFeedbackGenerator(style: .light).impactOccurred()
                                                 let lastPage = progressStore.lastPageIndex(for: notebook.id)
                                                 selectedReadingTarget = ReadingSessionTarget(notebook: notebook, pageIndex: lastPage)
                                             }

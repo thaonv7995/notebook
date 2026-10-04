@@ -188,6 +188,7 @@ struct ProgressRing: View {
 struct NotebookBookCard: View {
     let notebook: Notebook
     let onSelect: () -> Void
+    var onShowDetail: (() -> Void)? = nil
     let onTogglePriority: () -> Void
     let onStartReading: () -> Void
 
@@ -366,13 +367,15 @@ struct NotebookBookCard: View {
             Button {
                 onStartReading()
             } label: {
-                Label("Đọc tiếp", systemImage: "book.fill")
+                Label("Mở đọc ngay", systemImage: "book.fill")
             }
 
-            Button {
-                onSelect()
-            } label: {
-                Label("Chi tiết sổ tay", systemImage: "info.circle")
+            if let onShowDetail = onShowDetail {
+                Button {
+                    onShowDetail()
+                } label: {
+                    Label("Chi tiết & Mục lục", systemImage: "info.circle")
+                }
             }
 
             Button {

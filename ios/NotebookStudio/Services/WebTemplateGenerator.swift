@@ -361,15 +361,37 @@ final class WebTemplateGenerator {
                   }
                   return;
                 }
-              } else {
-                // Reading mode: tap anywhere to toggle chrome
-                if (window.getSelection && window.getSelection().toString().length > 0) return;
-                if (e.target.closest('a') || e.target.closest('button')) return;
-                if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.notebookReader) {
-                  window.webkit.messageHandlers.notebookReader.postMessage({ type: 'toggleChrome' });
-                }
               }
             });
+
+            // Reading mode: precise stationary tap detection (rejects swipes/page curl)
+            var tapStartX = 0, tapStartY = 0, tapStartTime = 0;
+            document.addEventListener('touchstart', function(e) {
+              if (e.touches && e.touches.length === 1) {
+                tapStartX = e.touches[0].clientX;
+                tapStartY = e.touches[0].clientY;
+                tapStartTime = Date.now();
+              }
+            }, { passive: true });
+
+            document.addEventListener('touchend', function(e) {
+              var isEdit = document.body && document.body.classList.contains('editing-mode');
+              if (!isEdit) {
+                if (e.changedTouches && e.changedTouches.length === 1) {
+                  var dx = Math.abs(e.changedTouches[0].clientX - tapStartX);
+                  var dy = Math.abs(e.changedTouches[0].clientY - tapStartY);
+                  var dt = Date.now() - tapStartTime;
+                  // Only treat as genuine tap if moved < 10px and duration < 350ms
+                  if (dx < 10 && dy < 10 && dt < 350) {
+                    if (window.getSelection && window.getSelection().toString().length > 0) return;
+                    if (e.target.closest('a') || e.target.closest('button') || e.target.closest('input')) return;
+                    if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.notebookReader) {
+                      window.webkit.messageHandlers.notebookReader.postMessage({ type: 'toggleChrome' });
+                    }
+                  }
+                }
+              }
+            }, { passive: true });
           </script>
         </head>
         <body class="\(isEditable ? "editing-mode" : "reading-mode")">

@@ -64,14 +64,6 @@ struct WKWebViewContainer: UIViewRepresentable {
         webView.scrollView.showsVerticalScrollIndicator = false
         webView.scrollView.isScrollEnabled = true
 
-        // Tap gesture to toggle chrome in reading mode
-        let tap = UITapGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.handleTap(_:)))
-        tap.numberOfTapsRequired = 1
-        tap.cancelsTouchesInView = false
-        tap.delegate = context.coordinator
-        webView.addGestureRecognizer(tap)
-        context.coordinator.tapGesture = tap
-
         context.coordinator.lastHTML = html
         webView.loadHTMLString(html, baseURL: URL(string: "https://notebook.thaonv.online"))
         return webView
@@ -79,7 +71,6 @@ struct WKWebViewContainer: UIViewRepresentable {
 
     func updateUIView(_ uiView: WKWebView, context: Context) {
         context.coordinator.onToggleChrome = onToggleChrome
-        context.coordinator.tapGesture?.isEnabled = !isEditable
 
         // Only reload if HTML actually changed
         if context.coordinator.lastHTML != html {
@@ -92,10 +83,10 @@ struct WKWebViewContainer: UIViewRepresentable {
         uiView.configuration.userContentController.removeScriptMessageHandler(forName: "notebookReader")
     }
 
-    final class Coordinator: NSObject, WKScriptMessageHandler, UIGestureRecognizerDelegate {
+    final class Coordinator: NSObject, WKScriptMessageHandler {
         var onToggleChrome: (() -> Void)?
         var lastHTML: String = ""
-        weak var tapGesture: UITapGestureRecognizer?
+        private var lastToggleTimestamp: TimeInterval = 0
 
         init(onToggleChrome: (() -> Void)?) {
             self.onToggleChrome = onToggleChrome
@@ -104,21 +95,15 @@ struct WKWebViewContainer: UIViewRepresentable {
         func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
             if message.name == "notebookReader" {
                 if let dict = message.body as? [String: Any], dict["type"] as? String == "toggleChrome" {
+                    let now = ProcessInfo.processInfo.systemUptime
+                    guard now - lastToggleTimestamp > 0.35 else { return }
+                    lastToggleTimestamp = now
+
                     DispatchQueue.main.async {
                         self.onToggleChrome?()
                     }
                 }
             }
-        }
-
-        @objc func handleTap(_ gesture: UITapGestureRecognizer) {
-            DispatchQueue.main.async {
-                self.onToggleChrome?()
-            }
-        }
-
-        func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
-            return true
         }
     }
 }

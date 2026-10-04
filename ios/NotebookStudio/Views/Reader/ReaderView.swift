@@ -70,6 +70,8 @@ struct ReaderView: View {
         return bookmarkStore.isBookmarked(pageId: page.id)
     }
 
+    @State private var lastToggleTimestamp: TimeInterval = 0
+
     var body: some View {
         GeometryReader { geometry in
             let isLargeScreen = !isPhone && geometry.size.width > 700
@@ -94,7 +96,10 @@ struct ReaderView: View {
                     revision: revision,
                     onToggleChrome: {
                         guard !isEditMode else { return }
-                        withAnimation(.easeInOut(duration: 0.22)) {
+                        let now = ProcessInfo.processInfo.systemUptime
+                        guard now - lastToggleTimestamp > 0.35 else { return }
+                        lastToggleTimestamp = now
+                        withAnimation(.easeInOut(duration: 0.24)) {
                             isFullScreen.toggle()
                         }
                     }
@@ -119,6 +124,7 @@ struct ReaderView: View {
                 .offset(y: isFullScreen || isPhone ? 0 : 20)
                 .clipShape(RoundedRectangle(cornerRadius: isFullScreen || isPhone ? 0 : 16, style: .continuous))
                 .shadow(color: Color.black.opacity(isFullScreen || isPhone ? 0 : 0.4), radius: isFullScreen || isPhone ? 0 : 20, x: 0, y: 10)
+                .animation(.easeInOut(duration: 0.24), value: isFullScreen)
 
                 // Sleek Top Header (matching bilingual-app ReaderHeaderView)
                 if !isFullScreen {
