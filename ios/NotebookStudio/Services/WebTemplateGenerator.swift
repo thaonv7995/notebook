@@ -100,9 +100,12 @@ final class WebTemplateGenerator {
             /* Auto-Enlarging CJK / Chinese Character Font Face */
             @font-face {
               font-family: 'CJK-Smart-Enlarged';
-              src: local('Kaiti SC'), local('STKaiti'), local('KaiTi'), local('SimKai'),
+              src: local('STKaitiSC-Regular'), local('STKaitiSC-Bold'),
+                   local('Kaiti SC'), local('STKaiti'), local('KaiTi'), local('SimKai'),
                    local('KaiTi_GB2312'), local('BiauKai'),
-                   local('Songti SC'), local('STSong');
+                   local('STSongti-SC-Regular'), local('STSongti-SC-Bold'),
+                   local('Songti SC'), local('STSong'),
+                   local('PingFang SC'), local('PingFangSC-Regular');
               unicode-range: U+2E80-2EFF, U+2F00-2FDF, U+3000-303F, U+3100-312F,
                              U+31C0-31EF, U+3200-32FF, U+3400-4DBF, U+4E00-9FFF,
                              U+F900-FAFF, U+FE30-FE4F, U+FF00-FFEF;
@@ -117,19 +120,15 @@ final class WebTemplateGenerator {
               --rule-accent: \(textHex);
               --ink-muted: \(secondaryHex);
               --notebook-font-size: \(fontSize)px;
-              --cjk-calligraphic-font: "CJK-Smart-Enlarged", "Kaiti SC", "STKaiti", "KaiTi", "SimKai", "KaiTi_GB2312", "BiauKai", "Ma Shan Zheng", "Noto Serif SC", "Songti SC", "STSong", serif;
+              --cjk-calligraphic-font: "CJK-Smart-Enlarged", "STKaitiSC-Regular", "Kaiti SC", "STKaiti", "KaiTi", "SimKai", "STSongti-SC-Regular", "Songti SC", "STSong", "Noto Serif SC", "PingFang SC", serif;
               --notebook-font-family: \(resolvedFontFamilyCSS);
             }
 
-            /* Chinese / Hanzi character optical alignment & calligraphic stroke contrast */
+            /* Chinese / Hanzi character optical alignment: EXACT match with web templates.css */
             .hanzi-cjk {
               display: inline;
               position: relative;
               top: -2px;
-              font-family: 'CJK-Smart-Enlarged', 'Ma Shan Zheng', 'Noto Serif SC', 'ZCOOL XiaoWei', 'Kaiti SC', 'Songti SC', serif;
-              font-size: 1.15em;
-              font-weight: 500;
-              line-height: 1;
             }
 
             .template-writing-area {
@@ -1175,27 +1174,27 @@ final class WebTemplateGenerator {
     func cssFontFamily(for key: String?) -> String {
         switch key?.lowercased() {
         case "vietnam":
-            return "'CJK-Smart-Enlarged', 'Be Vietnam Pro', 'Noto Serif SC', 'Ma Shan Zheng', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, serif"
+            return "'CJK-Smart-Enlarged', 'Be Vietnam Pro', 'Noto Serif SC', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, serif"
         case "serif":
-            return "'CJK-Smart-Enlarged', 'Cormorant Garamond', 'Noto Serif SC', 'Ma Shan Zheng', Georgia, serif"
+            return "'CJK-Smart-Enlarged', 'Cormorant Garamond', 'Noto Serif SC', Georgia, serif"
         case "kaiti":
-            return "'CJK-Smart-Enlarged', 'Kaiti SC', 'STKaiti', 'KaiTi', 'SimKai', 'Ma Shan Zheng', 'Noto Serif SC', 'ZCOOL XiaoWei', serif"
+            return "'CJK-Smart-Enlarged', 'STKaitiSC-Regular', 'Kaiti SC', 'STKaiti', 'KaiTi', 'SimKai', 'STSongti-SC-Regular', 'Songti SC', 'Noto Serif SC', serif"
         case "mono", "monospace":
-            return "'JetBrains Mono', 'CJK-Smart-Enlarged', 'Noto Serif SC', 'Ma Shan Zheng', 'Courier New', monospace"
+            return "'JetBrains Mono', 'CJK-Smart-Enlarged', 'Noto Serif SC', 'Courier New', monospace"
         case "dancing":
-            return "'Dancing Script', 'CJK-Smart-Enlarged', 'Ma Shan Zheng', 'Noto Serif SC', cursive"
+            return "'Dancing Script', 'CJK-Smart-Enlarged', 'Noto Serif SC', cursive"
         case "caveat":
-            return "'Caveat', 'CJK-Smart-Enlarged', 'Ma Shan Zheng', 'Noto Serif SC', cursive"
+            return "'Caveat', 'CJK-Smart-Enlarged', 'Noto Serif SC', cursive"
         case "patrickhand":
-            return "'Patrick Hand', 'CJK-Smart-Enlarged', 'Ma Shan Zheng', 'Noto Serif SC', cursive"
+            return "'Patrick Hand', 'CJK-Smart-Enlarged', 'Noto Serif SC', cursive"
         case "kalam":
-            return "'Kalam', 'CJK-Smart-Enlarged', 'Ma Shan Zheng', 'Noto Serif SC', cursive"
+            return "'Kalam', 'CJK-Smart-Enlarged', 'Noto Serif SC', cursive"
         case "indieflower":
-            return "'Indie Flower', 'CJK-Smart-Enlarged', 'Ma Shan Zheng', 'Noto Serif SC', cursive"
+            return "'Indie Flower', 'CJK-Smart-Enlarged', 'Noto Serif SC', cursive"
         case "sans", "jakarta":
             fallthrough
         default:
-            return "'CJK-Smart-Enlarged', 'Plus Jakarta Sans', 'Noto Serif SC', 'Ma Shan Zheng', var(--cjk-calligraphic-font)"
+            return "'CJK-Smart-Enlarged', 'Plus Jakarta Sans', 'Noto Serif SC', var(--cjk-calligraphic-font)"
         }
     }
 
@@ -1217,17 +1216,13 @@ final class WebTemplateGenerator {
             #cbd5e1 calc(var(--notebook-line-height, 28px) - 1px),
             #cbd5e1 var(--notebook-line-height, 28px)
           );
-          --cjk-calligraphic-font: "CJK-Smart-Enlarged", "Kaiti SC", "STKaiti", "KaiTi", "SimKai", "KaiTi_GB2312", "BiauKai", "Ma Shan Zheng", "Noto Serif SC", "Songti SC", "STSong", serif;
-          --notebook-font-family: 'CJK-Smart-Enlarged', 'Plus Jakarta Sans', 'Noto Serif SC', 'Ma Shan Zheng', var(--cjk-calligraphic-font);
+          --cjk-calligraphic-font: "CJK-Smart-Enlarged", "STKaitiSC-Regular", "Kaiti SC", "STKaiti", "KaiTi", "SimKai", "STSongti-SC-Regular", "Songti SC", "STSong", "Noto Serif SC", "PingFang SC", serif;
+          --notebook-font-family: 'CJK-Smart-Enlarged', 'Plus Jakarta Sans', 'Noto Serif SC', var(--cjk-calligraphic-font);
         }
         .hanzi-cjk {
           display: inline;
           position: relative;
           top: -2px;
-          font-family: 'CJK-Smart-Enlarged', 'Ma Shan Zheng', 'Noto Serif SC', 'ZCOOL XiaoWei', 'Kaiti SC', 'Songti SC', serif;
-          font-size: 1.15em;
-          font-weight: 500;
-          line-height: 1;
         }
         """
     }
