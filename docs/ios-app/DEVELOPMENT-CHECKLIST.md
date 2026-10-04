@@ -7,7 +7,7 @@
 
 ## Phase 0: Khởi tạo Project 🏗️ `~1 ngày`
 
-- [ ] **P0-1** Tạo Xcode project mới: SwiftUI, iOS 17+, tên "NotebookStudio"
+- [x] **P0-1** Tạo Xcode project mới: SwiftUI, iOS 17+, tên "NotebookStudio" ✅
 - [ ] **P0-2** Cấu hình Bundle ID, Team, Signing & Capabilities
 - [ ] **P0-3** Thêm Swift Packages:
   - `Lottie` (animations)
