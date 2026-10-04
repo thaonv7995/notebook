@@ -42,19 +42,12 @@ actor APIClient {
 
     // MARK: - Core Request
 
-    /// Perform a typed API request.
-    ///
-    /// - Parameters:
-    ///   - endpoint: The API endpoint to call.
-    ///   - body: Optional Encodable body for POST/PUT requests.
-    ///   - timeout: Custom timeout override. Defaults to endpoint-appropriate value.
-    /// - Returns: Decoded response of type `T`.
-    /// - Throws: `APIError` on failure.
-    func request<T: Decodable>(
+    /// Perform a typed API request and return both decoded model and the HTTPURLResponse.
+    func requestWithResponse<T: Decodable>(
         _ endpoint: APIConfig.Endpoint,
         body: (any Encodable)? = nil,
         timeout: TimeInterval? = nil
-    ) async throws -> T {
+    ) async throws -> (data: T, response: HTTPURLResponse) {
 
         guard let url = endpoint.url() else {
             throw APIError.invalidURL(endpoint.path)
@@ -128,7 +121,8 @@ actor APIClient {
 
         // Decode
         do {
-            return try JSONDecoder().decode(T.self, from: data)
+            let decoded = try JSONDecoder().decode(T.self, from: data)
+            return (decoded, httpResponse)
         } catch {
             #if DEBUG
             if let raw = String(data: data, encoding: .utf8) {
@@ -138,6 +132,23 @@ actor APIClient {
             #endif
             throw APIError.decodingFailed(String(describing: error))
         }
+    }
+
+    /// Perform a typed API request.
+    ///
+    /// - Parameters:
+    ///   - endpoint: The API endpoint to call.
+    ///   - body: Optional Encodable body for POST/PUT requests.
+    ///   - timeout: Custom timeout override. Defaults to endpoint-appropriate value.
+    /// - Returns: Decoded response of type `T`.
+    /// - Throws: `APIError` on failure.
+    func request<T: Decodable>(
+        _ endpoint: APIConfig.Endpoint,
+        body: (any Encodable)? = nil,
+        timeout: TimeInterval? = nil
+    ) async throws -> T {
+        let (data, _): (T, HTTPURLResponse) = try await requestWithResponse(endpoint, body: body, timeout: timeout)
+        return data
     }
 
     // MARK: - Convenience: Fire-and-forget (no response body needed)

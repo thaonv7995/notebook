@@ -30,7 +30,7 @@ enum AuthService {
             let password: String
         }
 
-        let response: LoginResponse = try await APIClient.shared.request(
+        let (response, httpResponse): (LoginResponse, HTTPURLResponse) = try await APIClient.shared.requestWithResponse(
             .login,
             body: LoginBody(username: username, password: password)
         )
@@ -39,16 +39,63 @@ enum AuthService {
             throw APIError.server("Đăng nhập thất bại")
         }
 
-        // 3. Save JWT token
-        guard let token = response.token else {
-            throw APIError.server("Server chưa hỗ trợ token cho mobile. Vui lòng cập nhật backend.")
+        // 3. Extract JWT token:
+        // Priority 1: JSON response body (.token)
+        // Priority 2: Set-Cookie header / HTTPCookieStorage (nb_token)
+        var token = response.token
+
+        if token == nil || token?.isEmpty == true {
+            token = extractCookieToken(from: httpResponse, serverURL: serverURL)
         }
 
-        try KeychainManager.saveToken(token)
+        guard let validToken = token, !validToken.isEmpty else {
+            throw APIError.server("Không tìm thấy mã xác thực (token/cookie) từ server. Vui lòng kiểm tra lại thông tin.")
+        }
+
+        // 4. Save JWT token & credentials
+        try KeychainManager.saveToken(validToken)
         try KeychainManager.saveUsername(user.username)
-        await APIClient.shared.setToken(token)
+        await APIClient.shared.setToken(validToken)
 
         return user
+    }
+
+    /// Extract nb_token cookie from HTTP response headers or URLSession cookie storage.
+    private static func extractCookieToken(from httpResponse: HTTPURLResponse, serverURL: String) -> String? {
+        // 1. Try URLSession's HTTPCookieStorage first
+        if let targetURL = URL(string: serverURL) {
+            if let cookies = HTTPCookieStorage.shared.cookies(for: targetURL),
+               let nbCookie = cookies.first(where: { $0.name == "nb_token" && !$0.value.isEmpty }) {
+                return nbCookie.value
+            }
+        }
+
+        // 2. Try HTTPCookie.cookiesWithResponseHeaderFields
+        let headers = httpResponse.allHeaderFields.reduce(into: [String: String]()) { acc, pair in
+            if let k = pair.key as? String, let v = pair.value as? String {
+                acc[k] = v
+            }
+        }
+        if let targetURL = URL(string: serverURL) {
+            let cookies = HTTPCookie.cookies(withResponseHeaderFields: headers, for: targetURL)
+            if let nbCookie = cookies.first(where: { $0.name == "nb_token" && !$0.value.isEmpty }) {
+                return nbCookie.value
+            }
+        }
+
+        // 3. Regex on raw Set-Cookie / set-cookie header
+        let setCookie = (httpResponse.value(forHTTPHeaderField: "Set-Cookie"))
+            ?? (httpResponse.value(forHTTPHeaderField: "set-cookie"))
+            ?? (httpResponse.allHeaderFields["Set-Cookie"] as? String)
+            ?? (httpResponse.allHeaderFields["set-cookie"] as? String)
+            ?? ""
+
+        if let match = setCookie.range(of: #"nb_token=([A-Za-z0-9\-_\.]+)"#, options: .regularExpression) {
+            let raw = String(setCookie[match])
+            return raw.replacingOccurrences(of: "nb_token=", with: "").trimmingCharacters(in: .whitespaces)
+        }
+
+        return nil
     }
 
     // MARK: - Logout
