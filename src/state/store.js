@@ -33,7 +33,8 @@ export function normalizeState(rawState) {
   const deletedNotebookSet = new Set(state.deletedNotebookIds);
   state.notebooks = (Array.isArray(state.notebooks) ? state.notebooks : []).filter(nb => nb && nb.id && !deletedNotebookSet.has(nb.id));
   delete state.trash;
-  state.pageMode = state.pageMode === '1-page' ? '1-page' : '2-page';
+  state.pageMode = ['1-page', 'study'].includes(state.pageMode) ? state.pageMode : '2-page';
+  state.studyLayout = (state.studyLayout === 'book-left') ? 'book-left' : 'book-right';
   state.zoomLevel = Number.isFinite(state.zoomLevel) ? Math.max(0.3, Math.min(state.zoomLevel, 3.5)) : 1;
   state.toolbarCollapsed = Boolean(state.toolbarCollapsed);
   state.toolbarAdvanced = Boolean(state.toolbarAdvanced);

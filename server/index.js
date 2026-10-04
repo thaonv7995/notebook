@@ -9,6 +9,7 @@
 
 import 'dotenv/config';
 import express from 'express';
+import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import { existsSync, mkdirSync, writeFileSync, unlinkSync } from 'fs';
 import { dirname, join } from 'path';
@@ -19,6 +20,7 @@ import { ensureAdminUser, authRoutes } from './auth.js';
 import { apiRoutes } from './api.js';
 import { aiRoutes } from './ai.js';
 import { pdfRoutes } from './pdf.js';
+import { bilingualRoutes } from './bilingual.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PORT = parseInt(process.env.PORT, 10) || 27972;
@@ -45,6 +47,7 @@ try {
 const app = express();
 
 // ─── Middleware ───
+app.use(cors({ origin: true, credentials: true }));
 app.use(express.json({ limit: '50mb' }));
 app.use(cookieParser());
 
@@ -53,6 +56,7 @@ authRoutes(app);
 apiRoutes(app);
 aiRoutes(app);
 pdfRoutes(app);
+bilingualRoutes(app);
 
 // ─── 404 Guard for API Routes (prevents HTML fallback) ───
 app.all('/api/{*path}', (req, res) => {

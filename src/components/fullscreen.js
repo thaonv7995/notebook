@@ -64,6 +64,9 @@ export function updateFullscreenRailControls() {
   if (els.btnFullscreenMode2Pages) {
     els.btnFullscreenMode2Pages.classList.toggle('is-active', currentPageMode === '2-page');
   }
+  if (els.btnFullscreenModeStudy) {
+    els.btnFullscreenModeStudy.classList.toggle('is-active', currentPageMode === 'study');
+  }
 
   if (els.fullscreenScaleValue) {
     els.fullscreenScaleValue.textContent = `${Math.round((state.zoomLevel || 1.0) * 100)}%`;
@@ -277,6 +280,12 @@ export function setupFullscreenListeners({
   if (els.btnFullscreenMode2Pages) {
     els.btnFullscreenMode2Pages.addEventListener('click', () => {
       if (onPageModeChange) onPageModeChange('2-page');
+      updateFullscreenRailControls();
+    });
+  }
+  if (els.btnFullscreenModeStudy) {
+    els.btnFullscreenModeStudy.addEventListener('click', () => {
+      if (onPageModeChange) onPageModeChange('study');
       updateFullscreenRailControls();
     });
   }

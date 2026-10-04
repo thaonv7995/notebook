@@ -58,6 +58,28 @@ export function findUserById(id) {
   return db.users.find(u => u.id === id) || null;
 }
 
+export function getActiveOrPrimaryUser(requestedIdentifier) {
+  if (requestedIdentifier) {
+    const byId = !isNaN(Number(requestedIdentifier)) ? findUserById(Number(requestedIdentifier)) : null;
+    if (byId) return byId;
+    const byName = findUserByUsername(String(requestedIdentifier));
+    if (byName) return byName;
+  }
+
+  // Find user with the most notebooks in db.notebooks
+  const entries = Object.entries(db.notebooks || {})
+    .filter(([_, list]) => Array.isArray(list) && list.length > 0)
+    .sort((a, b) => b[1].length - a[1].length);
+
+  if (entries.length > 0) {
+    const uid = parseInt(entries[0][0], 10);
+    const u = findUserById(uid);
+    if (u) return u;
+  }
+
+  return db.users[db.users.length - 1] || db.users[0] || { id: 1, username: 'admin' };
+}
+
 export function createUser(username, passwordHash) {
   const id = db.users.length > 0 ? Math.max(...db.users.map(u => u.id)) + 1 : 1;
   const user = {

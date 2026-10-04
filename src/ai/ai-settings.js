@@ -104,6 +104,28 @@ function createPanelHTML() {
 
         <div class="ai-settings-divider"></div>
 
+        <!-- 4. BILINGUAL APP INTEGRATION -->
+        <div class="ai-settings-section">
+          <label class="ai-settings-label" for="bilingualUrlInput">
+            📚 Liên kết Thư viện Bilingual App
+            <span class="ai-settings-sublabel">Địa chỉ máy chủ Bilingual App để đọc sách song song trong Study Mode</span>
+          </label>
+          <div class="ai-settings-key-row">
+            <input type="text" id="bilingualUrlInput" class="ai-settings-input"
+                   placeholder="http://127.0.0.1:27099" value="http://127.0.0.1:27099"
+                   autocomplete="off" spellcheck="false" />
+          </div>
+          <div class="ai-settings-key-status" id="bilingualStatus">
+            <span class="ai-key-saved">🔒 Kết nối qua Backend Proxy an toàn (Server-to-Server)</span>
+          </div>
+          <div class="ai-settings-key-actions">
+            <button id="bilingualSaveBtn" class="ai-settings-btn ai-settings-btn--primary" type="button">💾 Lưu cấu hình Sách</button>
+            <button id="bilingualTestBtn" class="ai-settings-btn" type="button">🧪 Test kết nối Sách</button>
+          </div>
+        </div>
+
+        <div class="ai-settings-divider"></div>
+
         <div class="ai-settings-section ai-settings-info">
           <p>🔒 <strong>Bảo mật tối đa</strong>: API Key và Base URL được lưu hoàn toàn trên trình duyệt của bạn (localStorage). Không bao giờ lưu vào CSDL máy chủ.</p>
           <p>💡 <strong>Gợi ý nhà cung cấp</strong>: Bạn có thể dùng <strong>DeepSeek</strong> cho chi phí siêu rẻ, <strong>OpenRouter</strong> để truy cập mọi mô hình thế giới, hoặc <strong>Ollama</strong> để chạy offline 100% không tốn một đồng nào.</p>
@@ -235,21 +257,103 @@ function bindSettingsEvents() {
   });
 
   customModelInput.addEventListener('change', updateFromCustomInput);
+
+  // ─── Bilingual App Integration Handlers ───
+  const bilingualUrlInput = panelEl.querySelector('#bilingualUrlInput');
+  const bilingualStatus = panelEl.querySelector('#bilingualStatus');
+  const bilingualSaveBtn = panelEl.querySelector('#bilingualSaveBtn');
+  const bilingualTestBtn = panelEl.querySelector('#bilingualTestBtn');
+
+  // Load current Bilingual App config from backend
+  if (bilingualUrlInput) {
+    fetch('/api/bilingual/config')
+      .then(res => res.json())
+      .then(data => {
+        if (data.ok && data.bilingualUrl) {
+          bilingualUrlInput.value = data.bilingualUrl;
+        }
+      })
+      .catch(() => {});
+  }
+
+  // Save Bilingual App URL
+  if (bilingualSaveBtn) {
+    bilingualSaveBtn.addEventListener('click', async () => {
+      const url = bilingualUrlInput.value.trim();
+      if (!url) return;
+      bilingualSaveBtn.disabled = true;
+      bilingualSaveBtn.textContent = '⏳ Đang lưu...';
+      try {
+        const res = await fetch('/api/bilingual/config', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ bilingualUrl: url })
+        });
+        const data = await res.json();
+        if (data.ok) {
+          bilingualStatus.innerHTML = '<span class="ai-key-saved">✓ Đã lưu cấu hình Bilingual URL thành công!</span>';
+        } else {
+          bilingualStatus.innerHTML = `<span class="ai-key-empty">✕ Lỗi: ${data.error || 'Không lưu được'}</span>`;
+        }
+      } catch (err) {
+        bilingualStatus.innerHTML = `<span class="ai-key-empty">✕ Lỗi kết nối: ${err.message}</span>`;
+      } finally {
+        bilingualSaveBtn.disabled = false;
+        bilingualSaveBtn.textContent = '💾 Lưu cấu hình Sách';
+      }
+    });
+  }
+
+  // Test Bilingual App Connection
+  if (bilingualTestBtn) {
+    bilingualTestBtn.addEventListener('click', async () => {
+      const url = bilingualUrlInput.value.trim();
+      bilingualTestBtn.disabled = true;
+      bilingualTestBtn.textContent = '⏳ Đang kiểm tra...';
+      bilingualStatus.innerHTML = '<span style="color: #94a3b8;">⏳ Đang gửi tín hiệu kiểm tra tới máy chủ...</span>';
+      try {
+        const res = await fetch(`/api/bilingual/test?url=${encodeURIComponent(url)}`);
+        const data = await res.json();
+        if (data.ok) {
+          bilingualStatus.innerHTML = `<span class="ai-key-saved">✓ ${data.message}</span>`;
+        } else {
+          bilingualStatus.innerHTML = `<span class="ai-key-empty">✕ ${data.error}</span>`;
+        }
+      } catch (err) {
+        bilingualStatus.innerHTML = `<span class="ai-key-empty">✕ Lỗi kết nối: ${err.message}</span>`;
+      } finally {
+        bilingualTestBtn.disabled = false;
+        bilingualTestBtn.textContent = '🧪 Test kết nối Sách';
+      }
+    });
+  }
 }
 
 export function openSettings() {
   ensurePanel();
-  // Refresh values from localStorage
+  // Refresh values from localStorage & backend
   const keyInput = panelEl.querySelector('#aiApiKeyInput');
   const baseUrlInput = panelEl.querySelector('#aiBaseUrlInput');
   const customModelInput = panelEl.querySelector('#aiCustomModelInput');
   const activeModelLabel = panelEl.querySelector('#aiActiveModelLabel');
+  const bilingualUrlInput = panelEl.querySelector('#bilingualUrlInput');
 
   if (keyInput) keyInput.value = getSavedApiKey();
   if (baseUrlInput) baseUrlInput.value = getSavedBaseUrl();
   const currentModel = getPreferredModel();
   if (customModelInput) customModelInput.value = currentModel;
   if (activeModelLabel) activeModelLabel.textContent = currentModel;
+
+  if (bilingualUrlInput) {
+    fetch('/api/bilingual/config')
+      .then(res => res.json())
+      .then(data => {
+        if (data.ok && data.bilingualUrl) {
+          bilingualUrlInput.value = data.bilingualUrl;
+        }
+      })
+      .catch(() => {});
+  }
 
   panelEl.classList.add('is-open');
 }

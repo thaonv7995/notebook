@@ -9,7 +9,7 @@
 import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
-import { findUserByUsername, findUserById, createUser, updateUserPassword } from './db.js';
+import { findUserByUsername, findUserById, createUser, updateUserPassword, getActiveOrPrimaryUser } from './db.js';
 
 let JWT_SECRET = (process.env.JWT_SECRET || '').trim();
 if (!JWT_SECRET || JWT_SECRET === 'notebook-studio-secret-change-me') {
@@ -56,6 +56,15 @@ function verifyToken(token) {
 // ─── Middleware: require auth ───
 
 export function requireAuth(req, res, next) {
+  // Allow integration via X-Client-ID header or query param
+  const clientId = req.headers['x-client-id'] || req.query.client_id;
+  if (clientId === 'notebook_client_v1') {
+    const requested = req.headers['x-notebook-user'] || req.headers['x-notebook-user-id'] || req.query.user_id || req.query.user;
+    const user = getActiveOrPrimaryUser(requested);
+    req.user = { id: user.id, username: user.username };
+    return next();
+  }
+
   // Check cookie first, then Authorization header
   const token = req.cookies?.[COOKIE_NAME]
     || (req.headers.authorization?.startsWith('Bearer ') ? req.headers.authorization.slice(7) : null);

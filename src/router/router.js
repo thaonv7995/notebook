@@ -57,11 +57,28 @@ export function parseRouteFromUrl() {
   try {
     if (window.location.search) {
       const params = new URLSearchParams(window.location.search);
-      const bookId = params.get('book') || params.get('id') || params.get('notebook');
+      let bookId = params.get('book') || params.get('id') || params.get('notebook');
+      const refBook = params.get('refBook') || params.get('bookSlug');
+      const bookPageParam = params.get('bookPage');
+      const state = getState();
+
+      if (!bookId && refBook) {
+        const found = (state.notebooks || []).find(n => n.bookSlug === refBook || (n.pages || []).some(p => p.project === refBook));
+        if (found) bookId = found.id;
+      }
+
       if (bookId) {
-        const rawPage = params.get('page') || params.get('p');
-        const parsedPage = rawPage ? parseInt(rawPage, 10) : 1;
-        const pageIndex = !isNaN(parsedPage) && parsedPage > 0 ? parsedPage - 1 : 0;
+        let pageIndex = 0;
+        const targetBook = (state.notebooks || []).find(n => n.id === bookId);
+        const rawTargetNum = parseInt(bookPageParam || params.get('page') || params.get('p') || '', 10);
+        if (targetBook && !isNaN(rawTargetNum)) {
+          const pageFoundIdx = (targetBook.pages || []).findIndex(p => p.bookPage === rawTargetNum || parseInt(p.no, 10) === rawTargetNum);
+          if (pageFoundIdx >= 0) {
+            pageIndex = pageFoundIdx;
+          } else {
+            pageIndex = Math.max(0, Math.min(rawTargetNum - 1, (targetBook.pages || []).length - 1));
+          }
+        }
         return { bookId: decodeURIComponent(bookId), pageIndex };
       }
     }

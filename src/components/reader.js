@@ -15,6 +15,7 @@ import { attachImageHandlersToSheet } from '../editor/image-manager.js';
 import { showStatus, showToast, openDeleteNotebookModal, showPromptModal, showConfirmModal, showAlertModal } from './modal.js';
 import { renderLibraryGrid, deleteBook } from './library.js';
 import { playPaperFlipSound, isSoundEnabled, toggleSound } from '../utils/audio.js';
+import { renderReferenceBookPanel } from './reference-book.js';
 
 let lastTypingTimestamp = 0;
 
@@ -82,7 +83,15 @@ export function getFocusedPageSide() {
 
 export function setFocusedPageSide(side) {
   const els = getEls();
-  if (currentPageMode === '1-page') side = 'left';
+  const state = getState();
+  const isStudy = (currentPageMode === 'study');
+  const isBookLeft = (state && state.studyLayout === 'book-left');
+
+  if (currentPageMode === '1-page') {
+    side = 'left';
+  } else if (isStudy) {
+    side = isBookLeft ? 'right' : 'left';
+  }
   focusedPageSide = (side === 'right') ? 'right' : 'left';
 
   if (els.bookSpreadCasing) {
@@ -93,7 +102,6 @@ export function setFocusedPageSide(side) {
   if (els.bookFocusRibbon) {
     els.bookFocusRibbon.classList.remove('focus-left', 'focus-right');
     els.bookFocusRibbon.classList.add(`focus-${focusedPageSide}`);
-    const state = getState();
     const curIdx = state.activePageIndex;
     const leftPageNum = curIdx + 1;
     const rightPageNum = curIdx + 2;
@@ -257,18 +265,29 @@ export function saveActivePages() {
   const curIdx = state.activePageIndex;
   showStatus('Đang lưu', 'loading');
 
-  // Save left page
-  if (nb.pages[curIdx]) {
-    const leftPage = nb.pages[curIdx];
-    extractTemplateDataFromSheet(els.leftPageSheet, leftPage);
-    leftPage.updatedAt = new Date().toISOString();
-  }
+  // Save active note page
+  if (currentPageMode === 'study') {
+    const isBookLeft = (state && state.studyLayout === 'book-left');
+    const noteSheet = isBookLeft ? els.rightPageSheet : els.leftPageSheet;
+    if (nb.pages[curIdx]) {
+      const activePage = nb.pages[curIdx];
+      extractTemplateDataFromSheet(noteSheet, activePage);
+      activePage.updatedAt = new Date().toISOString();
+    }
+  } else {
+    // Save left page
+    if (nb.pages[curIdx]) {
+      const leftPage = nb.pages[curIdx];
+      extractTemplateDataFromSheet(els.leftPageSheet, leftPage);
+      leftPage.updatedAt = new Date().toISOString();
+    }
 
-  // Save right page if in 2-page mode
-  if (currentPageMode === '2-page' && nb.pages[curIdx + 1]) {
-    const rightPage = nb.pages[curIdx + 1];
-    extractTemplateDataFromSheet(els.rightPageSheet, rightPage);
-    rightPage.updatedAt = new Date().toISOString();
+    // Save right page if in 2-page mode
+    if (currentPageMode === '2-page' && nb.pages[curIdx + 1]) {
+      const rightPage = nb.pages[curIdx + 1];
+      extractTemplateDataFromSheet(els.rightPageSheet, rightPage);
+      rightPage.updatedAt = new Date().toISOString();
+    }
   }
 
   nb.lastPageIndex = curIdx;
@@ -341,11 +360,20 @@ export function renderBookPages() {
   applyPaperTone(state.paperTone || 'cream', false);
   applyPaperTexture(state.paperTexture || 'grain', false);
 
-  // Render Left Page Sheet
-  renderSheetContent(els.leftPageSheet, leftPage, curIdx + 1, true, attachTemplateInputListeners);
-
-  // Render Right Page Sheet if in 2-page mode
-  if (currentPageMode === '2-page') {
+  // Render sheets based on mode
+  if (currentPageMode === 'study') {
+    const isBookLeft = (state && state.studyLayout === 'book-left');
+    if (isBookLeft) {
+      renderReferenceBookPanel(els.leftPageSheet, nb);
+      renderSheetContent(els.rightPageSheet, leftPage, curIdx + 1, false, attachTemplateInputListeners);
+      setFocusedPageSide('right');
+    } else {
+      renderSheetContent(els.leftPageSheet, leftPage, curIdx + 1, true, attachTemplateInputListeners);
+      renderReferenceBookPanel(els.rightPageSheet, nb);
+      setFocusedPageSide('left');
+    }
+  } else if (currentPageMode === '2-page') {
+    renderSheetContent(els.leftPageSheet, leftPage, curIdx + 1, true, attachTemplateInputListeners);
     if (rightPage) {
       renderSheetContent(els.rightPageSheet, rightPage, curIdx + 2, false, attachTemplateInputListeners);
     } else {
@@ -359,8 +387,11 @@ export function renderBookPages() {
         placeCaretAtStart(els.rightPageSheet.querySelector(selector));
       });
     }
+    setFocusedPageSide(focusedPageSide);
+  } else {
+    renderSheetContent(els.leftPageSheet, leftPage, curIdx + 1, true, attachTemplateInputListeners);
+    setFocusedPageSide('left');
   }
-  setFocusedPageSide(focusedPageSide);
 
   if (els.pageNavDrawer && els.pageNavDrawer.classList.contains('is-open')) {
     renderPageDrawerList(els.pageDrawerSearch ? els.pageDrawerSearch.value : '');
@@ -656,18 +687,44 @@ export function applyPageMode(mode, persistPreference = true) {
   const els = getEls();
   currentPageMode = mode;
   if (persistPreference) setState({ pageMode: mode });
+
+  els.bookSpreadCasing.classList.remove('mode-1-page', 'mode-study', 'study-book-left', 'study-book-right');
+  if (els.btnMode1Page) els.btnMode1Page.classList.remove('active');
+  if (els.btnMode2Pages) els.btnMode2Pages.classList.remove('active');
+  if (els.btnModeStudy) els.btnModeStudy.classList.remove('active');
+
   if (mode === '1-page') {
     els.bookSpreadCasing.classList.add('mode-1-page');
-    els.btnMode1Page.classList.add('active');
-    els.btnMode2Pages.classList.remove('active');
+    if (els.btnMode1Page) els.btnMode1Page.classList.add('active');
+  } else if (mode === 'study') {
+    const state = getState();
+    const isBookLeft = (state && state.studyLayout === 'book-left');
+    els.bookSpreadCasing.classList.add('mode-study');
+    els.bookSpreadCasing.classList.add(isBookLeft ? 'study-book-left' : 'study-book-right');
+    if (els.btnModeStudy) els.btnModeStudy.classList.add('active');
   } else {
-    els.bookSpreadCasing.classList.remove('mode-1-page');
-    els.btnMode2Pages.classList.add('active');
-    els.btnMode1Page.classList.remove('active');
+    if (els.btnMode2Pages) els.btnMode2Pages.classList.add('active');
   }
   if (persistPreference) persistState();
   renderBookPages();
 }
+
+export function toggleStudyLayout() {
+  const state = getState();
+  const currentLayout = state.studyLayout || 'book-right';
+  const nextLayout = (currentLayout === 'book-left') ? 'book-right' : 'book-left';
+
+  saveActivePages();
+  setState({ studyLayout: nextLayout });
+  persistState();
+
+  applyPageMode('study');
+
+  const label = (nextLayout === 'book-left') ? 'Sách bên Trái, Sổ bên Phải' : 'Sổ bên Trái, Sách bên Phải';
+  showToast(`⇆ Bố cục: ${label}`);
+}
+
+window.addEventListener('notebook:toggle-study-layout', toggleStudyLayout);
 
 export function applyZoom(scale, persistPreference = true) {
   const els = getEls();
@@ -826,11 +883,12 @@ export function addPageToCurrentBook() {
 export function changePageTemplate(templateKey) {
   const nb = getActiveNotebook();
   if (!nb) return;
-  const els = getEls();
   const state = getState();
-  const isRightTarget = currentPageMode === '2-page' && focusedPageSide === 'right' && nb.pages[state.activePageIndex + 1];
+  const els = getEls();
+  const isStudyBookLeft = (currentPageMode === 'study' && state && state.studyLayout === 'book-left');
+  const isRightTarget = (currentPageMode === '2-page' && focusedPageSide === 'right' && nb.pages[state.activePageIndex + 1]);
   const targetIdx = isRightTarget ? state.activePageIndex + 1 : state.activePageIndex;
-  const targetSheet = isRightTarget ? els.rightPageSheet : els.leftPageSheet;
+  const targetSheet = (isRightTarget || isStudyBookLeft) ? els.rightPageSheet : els.leftPageSheet;
   const curPage = nb.pages[targetIdx];
   if (!curPage) return;
 
@@ -1330,6 +1388,11 @@ export function setupReaderListeners({ onCopyBookLink } = {}) {
     els.btnMode2Pages.addEventListener('click', () => {
       applyPageMode('2-page');
       setFocusedPageSide(focusedPageSide);
+    });
+  }
+  if (els.btnModeStudy) {
+    els.btnModeStudy.addEventListener('click', () => {
+      applyPageMode('study');
     });
   }
 

@@ -790,8 +790,7 @@ function startSyncListeners() {
       saveActivePages();
       pushToServerNow();
     } else {
-      // Returning to tab → save any local edits, then pull latest from server if not editing
-      saveActivePages();
+      // Returning to tab → pull latest from server immediately if not typing
       if (!isUserActivelyEditing()) {
         pullFromServer();
       }
@@ -803,7 +802,7 @@ function startSyncListeners() {
   window.addEventListener('focus', () => {
     if (isAuthenticated) {
       const now = Date.now();
-      if (now - lastFocusPullTime > 10000 && !isUserActivelyEditing()) {
+      if (now - lastFocusPullTime > 3000 && !isUserActivelyEditing()) {
         lastFocusPullTime = now;
         pullFromServer();
       }

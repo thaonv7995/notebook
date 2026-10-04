@@ -29,7 +29,7 @@ export function getActiveEditableArea(focusedPageSide = 'left', currentPageMode 
   if (act && act.classList && act.classList.contains('template-writing-area')) {
     return act;
   }
-  const targetSheet = (focusedPageSide === 'right' && currentPageMode === '2-page' && els.rightPageSheet)
+  const targetSheet = (focusedPageSide === 'right' && (currentPageMode === '2-page' || currentPageMode === 'study') && els.rightPageSheet)
     ? els.rightPageSheet
     : els.leftPageSheet;
   if (targetSheet) {
