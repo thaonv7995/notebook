@@ -6,6 +6,15 @@ struct FavoritesView: View {
     @ObservedObject private var bookmarkStore = BookmarkStore.shared
     @State private var selectedNotebookForReader: Notebook? = nil
 
+    @State private var filter: FavoriteFilter = .all
+
+    enum FavoriteFilter: String, CaseIterable, Identifiable {
+        case all = "Tất cả"
+        case pinned = "Sổ đã ghim"
+        case bookmarks = "Trang đánh dấu"
+        var id: String { rawValue }
+    }
+
     private var pinnedNotebooks: [Notebook] {
         notebooks.filter { $0.isPinned }
     }
@@ -29,31 +38,56 @@ struct FavoritesView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                Color(.systemGroupedBackground)
+                Color(hex: "0f172a")
                     .ignoresSafeArea()
 
                 if !hasFavorites {
                     emptyFavoritesView
                 } else {
                     ScrollView {
-                        VStack(alignment: .leading, spacing: DesignTokens.spacingLG) {
+                        VStack(alignment: .leading, spacing: 20) {
+                            // Filter Segment Bar
+                            HStack(spacing: 8) {
+                                ForEach(FavoriteFilter.allCases) { item in
+                                    Button {
+                                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                        filter = item
+                                    } label: {
+                                        Text(item.rawValue)
+                                            .font(.system(size: 12, weight: filter == item ? .bold : .medium))
+                                            .foregroundColor(filter == item ? .white : Color(hex: "94a3b8"))
+                                            .padding(.horizontal, 14)
+                                            .padding(.vertical, 6)
+                                            .background(filter == item ? Color(hex: "d97706") : Color(hex: "1e293b"))
+                                            .cornerRadius(16)
+                                            .overlay(
+                                                RoundedRectangle(cornerRadius: 16)
+                                                    .stroke(filter == item ? Color.clear : Color.white.opacity(0.08), lineWidth: 1)
+                                            )
+                                    }
+                                }
+                            }
+                            .padding(.horizontal, 20)
+                            .padding(.top, 4)
+
                             // Section 1: Pinned Notebooks
-                            if !pinnedNotebooks.isEmpty {
-                                VStack(alignment: .leading, spacing: DesignTokens.spacingSM) {
+                            if (filter == .all || filter == .pinned) && !pinnedNotebooks.isEmpty {
+                                VStack(alignment: .leading, spacing: 10) {
                                     HStack(spacing: 6) {
                                         Image(systemName: "pin.fill")
                                             .font(.system(size: 13))
-                                            .foregroundStyle(DesignTokens.accentLight)
+                                            .foregroundColor(Color(hex: "fbbf24"))
 
                                         Text("Sổ tay đã ghim (\(pinnedNotebooks.count))")
-                                            .font(.jakartaSans(size: 14, weight: .bold))
-                                            .foregroundStyle(.secondary)
+                                            .font(.system(size: 14, weight: .bold))
+                                            .foregroundColor(.white)
                                     }
-                                    .padding(.horizontal, DesignTokens.spacingLG)
+                                    .padding(.horizontal, 20)
 
-                                    LazyVStack(spacing: DesignTokens.spacingSM) {
+                                    LazyVStack(spacing: 12) {
                                         ForEach(pinnedNotebooks) { nb in
                                             Button {
+                                                UIImpactFeedbackGenerator(style: .light).impactOccurred()
                                                 var activeNb = nb
                                                 activeNb.lastPageIndex = ReadingProgressStore.shared.lastPageIndex(for: nb.id)
                                                 selectedNotebookForReader = activeNb
@@ -63,28 +97,28 @@ struct FavoritesView: View {
                                             .buttonStyle(.plain)
                                         }
                                     }
-                                    .padding(.horizontal, DesignTokens.spacingLG)
+                                    .padding(.horizontal, 20)
                                 }
-                                .padding(.top, DesignTokens.spacingSM)
                             }
 
                             // Section 2: Bookmarked Pages
-                            if !bookmarkedItems.isEmpty {
-                                VStack(alignment: .leading, spacing: DesignTokens.spacingSM) {
+                            if (filter == .all || filter == .bookmarks) && !bookmarkedItems.isEmpty {
+                                VStack(alignment: .leading, spacing: 10) {
                                     HStack(spacing: 6) {
                                         Image(systemName: "bookmark.fill")
                                             .font(.system(size: 13))
-                                            .foregroundStyle(.orange)
+                                            .foregroundColor(Color(hex: "f59e0b"))
 
                                         Text("Trang đã đánh dấu (\(bookmarkedItems.count))")
-                                            .font(.jakartaSans(size: 14, weight: .bold))
-                                            .foregroundStyle(.secondary)
+                                            .font(.system(size: 14, weight: .bold))
+                                            .foregroundColor(.white)
                                     }
-                                    .padding(.horizontal, DesignTokens.spacingLG)
+                                    .padding(.horizontal, 20)
 
-                                    LazyVStack(spacing: DesignTokens.spacingSM) {
+                                    LazyVStack(spacing: 10) {
                                         ForEach(bookmarkedItems, id: \.page.id) { item in
                                             Button {
+                                                UIImpactFeedbackGenerator(style: .light).impactOccurred()
                                                 var activeNb = item.notebook
                                                 activeNb.lastPageIndex = item.index
                                                 selectedNotebookForReader = activeNb
@@ -101,11 +135,11 @@ struct FavoritesView: View {
                                             .buttonStyle(.plain)
                                         }
                                     }
-                                    .padding(.horizontal, DesignTokens.spacingLG)
+                                    .padding(.horizontal, 20)
                                 }
                             }
                         }
-                        .padding(.bottom, DesignTokens.spacingXXL)
+                        .padding(.bottom, 36)
                     }
                     .refreshable {
                         await refreshData()
@@ -113,11 +147,12 @@ struct FavoritesView: View {
                 }
             }
             .navigationTitle("Yêu thích")
+            .navigationBarTitleDisplayMode(.inline)
             .task {
                 loadData()
             }
-            .navigationDestination(item: $selectedNotebookForReader) { nb in
-                ReaderView(notebook: nb)
+            .fullScreenCover(item: $selectedNotebookForReader) { nb in
+                ReaderView(notebook: nb, initialPageIndex: nb.lastPageIndex)
             }
         }
     }
@@ -125,22 +160,22 @@ struct FavoritesView: View {
     // MARK: - Empty State
 
     private var emptyFavoritesView: some View {
-        VStack(spacing: DesignTokens.spacingLG) {
+        VStack(spacing: 16) {
             Image(systemName: "star.slash")
                 .font(.system(size: 54))
-                .foregroundStyle(DesignTokens.accentLight.opacity(0.5))
+                .foregroundColor(Color(hex: "475569"))
 
             Text("Chưa có mục yêu thích")
-                .font(.jakartaSans(size: 17, weight: .semibold))
-                .foregroundStyle(.primary)
+                .font(.system(size: 17, weight: .bold))
+                .foregroundColor(.white)
 
             Text("Ghim sổ tay quan trọng từ thư viện hoặc chạm biểu tượng bookmark khi đọc trang để lưu vào đây.")
-                .font(.jakartaSans(size: 13))
-                .foregroundStyle(.secondary)
+                .font(.system(size: 13))
+                .foregroundColor(Color(hex: "94a3b8"))
                 .multilineTextAlignment(.center)
-                .padding(.horizontal, DesignTokens.spacingXXL)
+                .padding(.horizontal, 32)
         }
-        .padding()
+        .padding(24)
     }
 
     // MARK: - Data Loading

@@ -9,60 +9,79 @@ struct TableOfContentsView: View {
 
     var body: some View {
         NavigationStack {
-            List {
-                ForEach(Array(notebook.pages.enumerated()), id: \.element.id) { index, page in
-                    Button {
-                        currentPageIndex = index
-                        dismiss()
-                    } label: {
-                        HStack(spacing: DesignTokens.spacingMD) {
-                            // Page number badge
-                            Text(String(format: "%02d", index + 1))
-                                .font(.jakartaSans(size: 12, weight: .bold))
-                                .foregroundStyle(index == currentPageIndex ? DesignTokens.accentLight : .secondary)
-                                .frame(width: 28, height: 28)
-                                .background(
-                                    (index == currentPageIndex ? DesignTokens.accentLight.opacity(0.15) : Color.gray.opacity(0.1)),
-                                    in: Circle()
+            ZStack {
+                Color(hex: "0f172a")
+                    .ignoresSafeArea()
+
+                ScrollView {
+                    VStack(spacing: 8) {
+                        ForEach(Array(notebook.pages.enumerated()), id: \.element.id) { index, page in
+                            Button {
+                                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                currentPageIndex = index
+                                dismiss()
+                            } label: {
+                                HStack(spacing: 12) {
+                                    // Page number badge
+                                    Text("\(index + 1)")
+                                        .font(.system(size: 12, weight: .bold))
+                                        .foregroundColor(index == currentPageIndex ? Color(hex: "2dd4bf") : .white)
+                                        .frame(width: 28, height: 28)
+                                        .background(index == currentPageIndex ? Color(hex: "2dd4bf").opacity(0.2) : Color.white.opacity(0.08))
+                                        .clipShape(Circle())
+
+                                    // Template icon
+                                    Image(systemName: page.template.iconName)
+                                        .font(.system(size: 13))
+                                        .foregroundColor(Color(hex: "38bdf8"))
+                                        .frame(width: 20)
+
+                                    // Title & Template Name
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text((page.topic ?? page.title ?? "Trang \(index + 1)").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "Trang \(index + 1)" : (page.topic ?? page.title ?? "Trang \(index + 1)"))
+                                            .font(.system(size: 14, weight: index == currentPageIndex ? .bold : .medium))
+                                            .foregroundColor(.white)
+                                            .lineLimit(1)
+
+                                        Text(page.template.displayName)
+                                            .font(.system(size: 11))
+                                            .foregroundColor(Color(hex: "94a3b8"))
+                                    }
+
+                                    Spacer()
+
+                                    // Bookmark indicator
+                                    if bookmarkStore.isBookmarked(pageId: page.id) {
+                                        Image(systemName: "bookmark.fill")
+                                            .font(.system(size: 13))
+                                            .foregroundColor(Color(hex: "f59e0b"))
+                                    }
+
+                                    // Current page indicator
+                                    if index == currentPageIndex {
+                                        Text("Đang đọc")
+                                            .font(.system(size: 11, weight: .bold))
+                                            .foregroundColor(Color(hex: "2dd4bf"))
+                                            .padding(.horizontal, 8)
+                                            .padding(.vertical, 3)
+                                            .background(Color(hex: "2dd4bf").opacity(0.15))
+                                            .clipShape(Capsule())
+                                    }
+                                }
+                                .padding(.horizontal, 14)
+                                .padding(.vertical, 10)
+                                .background(Color(hex: "1e293b"))
+                                .clipShape(RoundedRectangle(cornerRadius: 10))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 10)
+                                        .stroke(index == currentPageIndex ? Color(hex: "2dd4bf").opacity(0.4) : Color.white.opacity(0.06), lineWidth: 1)
                                 )
-
-                            // Template icon
-                            Image(systemName: page.template.iconName)
-                                .font(.system(size: 14))
-                                .foregroundStyle(DesignTokens.accentLight)
-                                .frame(width: 20)
-
-                            // Title & Template Name
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text((page.topic ?? page.title ?? "Trang \(index + 1)").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "Trang \(index + 1)" : (page.topic ?? page.title ?? "Trang \(index + 1)"))
-                                    .font(.jakartaSans(size: 15, weight: index == currentPageIndex ? .bold : .medium))
-                                    .foregroundStyle(index == currentPageIndex ? DesignTokens.accentLight : .primary)
-                                    .lineLimit(1)
-
-                                Text(page.template.displayName)
-                                    .font(.jakartaSans(size: 11))
-                                    .foregroundStyle(.secondary)
                             }
-
-                            Spacer()
-
-                            // Bookmark indicator
-                            if bookmarkStore.isBookmarked(pageId: page.id) {
-                                Image(systemName: "bookmark.fill")
-                                    .font(.system(size: 13))
-                                    .foregroundStyle(.orange)
-                            }
-
-                            // Current page arrow indicator
-                            if index == currentPageIndex {
-                                Image(systemName: "checkmark")
-                                    .font(.system(size: 12, weight: .bold))
-                                    .foregroundStyle(DesignTokens.accentLight)
-                            }
+                            .buttonStyle(.plain)
                         }
-                        .padding(.vertical, 4)
                     }
-                    .buttonStyle(.plain)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
                 }
             }
             .navigationTitle("Mục lục (\(notebook.pages.count) trang)")
@@ -72,8 +91,8 @@ struct TableOfContentsView: View {
                     Button("Đóng") {
                         dismiss()
                     }
-                    .font(.jakartaSans(size: 15, weight: .semibold))
-                    .foregroundStyle(DesignTokens.accentLight)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundColor(Color(hex: "38bdf8"))
                 }
             }
         }

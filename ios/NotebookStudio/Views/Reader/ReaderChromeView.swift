@@ -32,28 +32,36 @@ struct ReaderChromeView: View {
     var body: some View {
         HStack(spacing: 8) {
             // Back Button
-            Button(action: onBack) {
+            Button(action: {
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                onBack()
+            }) {
                 Image(systemName: "chevron.left")
-                    .font(.system(size: 16, weight: .bold))
+                    .font(.system(size: 15, weight: .bold))
                     .foregroundColor(.white)
-                    .frame(width: 28, height: 28)
+                    .frame(width: 32, height: 32)
+                    .background(Color.white.opacity(0.08))
+                    .clipShape(Circle())
             }
 
             // Notebook Title
             Text(title)
-                .font(.system(size: 14, weight: .semibold))
+                .font(.system(size: 15, weight: .bold))
                 .foregroundColor(.white)
                 .lineLimit(1)
                 .frame(maxWidth: .infinity, alignment: .leading)
 
-            // Font Stepper Buttons (A- / A+)
-            if onDecreaseFont != nil || onIncreaseFont != nil {
+            // iPad-only: Font Stepper Buttons (A- / A+)
+            if !isPhone && (onDecreaseFont != nil || onIncreaseFont != nil) {
                 HStack(spacing: 0) {
-                    Button(action: { onDecreaseFont?() }) {
+                    Button(action: {
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        onDecreaseFont?()
+                    }) {
                         Text("A-")
                             .font(.system(size: 11, weight: .bold))
                             .foregroundColor(.white.opacity(0.85))
-                            .frame(width: 26, height: 28)
+                            .frame(width: 28, height: 28)
                             .contentShape(Rectangle())
                     }
 
@@ -61,11 +69,14 @@ struct ReaderChromeView: View {
                         .fill(Color.white.opacity(0.15))
                         .frame(width: 1, height: 14)
 
-                    Button(action: { onIncreaseFont?() }) {
+                    Button(action: {
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        onIncreaseFont?()
+                    }) {
                         Text("A+")
                             .font(.system(size: 12, weight: .bold))
                             .foregroundColor(.white.opacity(0.85))
-                            .frame(width: 26, height: 28)
+                            .frame(width: 28, height: 28)
                             .contentShape(Rectangle())
                     }
                 }
@@ -80,24 +91,28 @@ struct ReaderChromeView: View {
 
             // Tappable Page Counter Pill (Jump to Page Dialog)
             Button(action: {
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
                 onOpenJumpToPage?()
             }) {
                 Text("\(currentPageIndex + 1)/\(max(1, totalPages))")
                     .font(.system(size: 12, weight: .bold))
                     .foregroundColor(.white)
-                    .padding(.horizontal, 8)
+                    .padding(.horizontal, 10)
                     .frame(height: 28)
                     .background(Color(hex: "1e293b"))
                     .cornerRadius(6)
                     .overlay(
                         RoundedRectangle(cornerRadius: 6)
-                            .stroke(Color.white.opacity(0.1), lineWidth: 1)
+                            .stroke(Color.white.opacity(0.12), lineWidth: 1)
                     )
             }
 
             // Edit Mode Toggle Button
             if let onToggleEditMode = onToggleEditMode {
-                Button(action: onToggleEditMode) {
+                Button(action: {
+                    UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                    onToggleEditMode()
+                }) {
                     Group {
                         if isEditMode {
                             HStack(spacing: 4) {
@@ -120,31 +135,68 @@ struct ReaderChromeView: View {
                                 .cornerRadius(6)
                                 .overlay(
                                     RoundedRectangle(cornerRadius: 6)
-                                        .stroke(Color.white.opacity(0.1), lineWidth: 1)
+                                        .stroke(Color.white.opacity(0.12), lineWidth: 1)
                                 )
                         }
                     }
                 }
             }
 
-            // Bookmark Button
-            Button(action: onToggleBookmark) {
-                Image(systemName: isBookmarked ? "bookmark.fill" : "bookmark")
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundColor(isBookmarked ? Color(hex: "f59e0b") : .white)
-                    .frame(width: 28, height: 28)
+            // iPad-only direct TOC & Bookmark buttons
+            if !isPhone {
+                Button(action: {
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    onToggleBookmark()
+                }) {
+                    Image(systemName: isBookmarked ? "bookmark.fill" : "bookmark")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(isBookmarked ? Color(hex: "f59e0b") : .white)
+                        .frame(width: 28, height: 28)
+                }
+
+                Button(action: {
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    onOpenTOC()
+                }) {
+                    Image(systemName: "list.bullet")
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundColor(.white)
+                        .frame(width: 28, height: 28)
+                }
             }
 
-            // Table of Contents Button
-            Button(action: onOpenTOC) {
-                Image(systemName: "list.bullet")
-                    .font(.system(size: 14, weight: .bold))
-                    .foregroundColor(.white)
-                    .frame(width: 28, height: 28)
-            }
-
-            // More Options Menu (Quick Note, Share, Settings)
+            // More Options Menu (Streamlined, no clutter)
             Menu {
+                // If on Phone, include Bookmark and TOC in Menu
+                if isPhone {
+                    Button(action: onToggleBookmark) {
+                        Label(
+                            isBookmarked ? "Bỏ đánh dấu trang này" : "Đánh dấu trang này",
+                            systemImage: isBookmarked ? "bookmark.fill" : "bookmark"
+                        )
+                    }
+
+                    Button(action: onOpenTOC) {
+                        Label("Mục lục (\(totalPages) trang)", systemImage: "list.bullet")
+                    }
+
+                    Divider()
+
+                    if let onIncrease = onIncreaseFont {
+                        Button(action: onIncrease) {
+                            Label("Chữ to hơn (A+)", systemImage: "textformat.size.larger")
+                        }
+                    }
+
+                    if let onDecrease = onDecreaseFont {
+                        Button(action: onDecrease) {
+                            Label("Chữ nhỏ hơn (A-)", systemImage: "textformat.size.smaller")
+                        }
+                    }
+
+                    Divider()
+                }
+
                 if let onOpenQuickNote = onOpenQuickNote {
                     Button(action: onOpenQuickNote) {
                         Label("Ghi chú nhanh", systemImage: "square.and.pencil")
@@ -158,16 +210,22 @@ struct ReaderChromeView: View {
                 }
 
                 Button(action: onOpenSettings) {
-                    Label("Tùy biến hiển thị", systemImage: "textformat.size")
+                    Label("Tùy biến hiển thị", systemImage: "slider.horizontal.3")
                 }
             } label: {
                 Image(systemName: "ellipsis")
                     .font(.system(size: 14, weight: .bold))
                     .foregroundColor(.white)
-                    .frame(width: 28, height: 28)
+                    .frame(width: 32, height: 28)
+                    .background(Color(hex: "1e293b"))
+                    .cornerRadius(6)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 6)
+                            .stroke(Color.white.opacity(0.12), lineWidth: 1)
+                    )
             }
         }
-        .padding(.horizontal, 12)
+        .padding(.horizontal, 14)
         .padding(.vertical, 8)
         .background(Color(hex: "0f172a"))
         .overlay(alignment: .bottom) {

@@ -20,7 +20,7 @@ struct SearchView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                Color(.systemGroupedBackground)
+                Color(hex: "0f172a")
                     .ignoresSafeArea()
 
                 if searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
@@ -35,6 +35,7 @@ struct SearchView: View {
                 }
             }
             .navigationTitle("Tìm kiếm")
+            .navigationBarTitleDisplayMode(.inline)
             .searchable(
                 text: $searchText,
                 prompt: "Tìm tiêu đề, nội dung, ghi chú..."
@@ -49,8 +50,8 @@ struct SearchView: View {
                 loadNotebooks()
                 loadRecentSearches()
             }
-            .navigationDestination(item: $selectedNotebookForReader) { nb in
-                ReaderView(notebook: nb)
+            .fullScreenCover(item: $selectedNotebookForReader) { nb in
+                ReaderView(notebook: nb, initialPageIndex: nb.lastPageIndex)
             }
         }
     }
@@ -59,22 +60,22 @@ struct SearchView: View {
 
     private var emptySearchDashboard: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: DesignTokens.spacingLG) {
+            VStack(alignment: .leading, spacing: 24) {
                 // Recent Searches Section
                 if !recentSearches.isEmpty {
-                    VStack(alignment: .leading, spacing: DesignTokens.spacingSM) {
+                    VStack(alignment: .leading, spacing: 10) {
                         HStack {
                             Text("Tìm kiếm gần đây")
-                                .font(.jakartaSans(size: 13, weight: .bold))
-                                .foregroundStyle(.secondary)
+                                .font(.system(size: 13, weight: .bold))
+                                .foregroundColor(Color(hex: "94a3b8"))
 
                             Spacer()
 
                             Button("Xóa") {
                                 clearRecentSearches()
                             }
-                            .font(.jakartaSans(size: 12))
-                            .foregroundStyle(DesignTokens.accentLight)
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundColor(Color(hex: "38bdf8"))
                         }
 
                         // Flow chips
@@ -82,40 +83,48 @@ struct SearchView: View {
                             HStack(spacing: 8) {
                                 ForEach(recentSearches, id: \.self) { query in
                                     Button {
+                                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
                                         searchText = query
                                         performSearch(query: query)
                                     } label: {
-                                        HStack(spacing: 4) {
+                                        HStack(spacing: 6) {
                                             Image(systemName: "clock.arrow.circlepath")
                                                 .font(.system(size: 11))
+                                                .foregroundColor(Color(hex: "38bdf8"))
                                             Text(query)
-                                                .font(.jakartaSans(size: 13, weight: .medium))
+                                                .font(.system(size: 13, weight: .medium))
+                                                .foregroundColor(.white)
                                         }
                                         .padding(.horizontal, 12)
                                         .padding(.vertical, 7)
-                                        .background(Color(.secondarySystemGroupedBackground), in: Capsule())
-                                        .foregroundStyle(.primary)
+                                        .background(Color(hex: "1e293b"))
+                                        .clipShape(Capsule())
+                                        .overlay(
+                                            Capsule()
+                                                .stroke(Color.white.opacity(0.08), lineWidth: 1)
+                                        )
                                     }
                                 }
                             }
                         }
                     }
-                    .padding(.horizontal, DesignTokens.spacingLG)
-                    .padding(.top, DesignTokens.spacingMD)
+                    .padding(.horizontal, 20)
+                    .padding(.top, 12)
                 }
 
                 // Quick Access Section (Recent notebooks)
                 if !notebooks.isEmpty {
-                    VStack(alignment: .leading, spacing: DesignTokens.spacingSM) {
+                    VStack(alignment: .leading, spacing: 12) {
                         Text("Truy cập nhanh")
-                            .font(.jakartaSans(size: 13, weight: .bold))
-                            .foregroundStyle(.secondary)
-                            .padding(.horizontal, DesignTokens.spacingLG)
+                            .font(.system(size: 13, weight: .bold))
+                            .foregroundColor(Color(hex: "94a3b8"))
+                            .padding(.horizontal, 20)
 
                         ScrollView(.horizontal, showsIndicators: false) {
-                            HStack(spacing: DesignTokens.spacingMD) {
+                            HStack(spacing: 14) {
                                 ForEach(notebooks.prefix(6)) { nb in
                                     Button {
+                                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
                                         var activeNb = nb
                                         activeNb.lastPageIndex = ReadingProgressStore.shared.lastPageIndex(for: nb.id)
                                         selectedNotebookForReader = activeNb
@@ -125,12 +134,12 @@ struct SearchView: View {
                                     .buttonStyle(.plain)
                                 }
                             }
-                            .padding(.horizontal, DesignTokens.spacingLG)
+                            .padding(.horizontal, 20)
                         }
                     }
                 }
             }
-            .padding(.bottom, DesignTokens.spacingXXL)
+            .padding(.bottom, 36)
         }
     }
 
@@ -140,48 +149,55 @@ struct SearchView: View {
             ZStack(alignment: .bottomLeading) {
                 RoundedRectangle(cornerRadius: 8)
                     .fill(GradientParser.gradient(from: nb.coverGradient))
-                    .frame(width: 120, height: 75)
+                    .frame(width: 126, height: 78)
 
                 Text(nb.category)
-                    .font(.jakartaSans(size: 9, weight: .bold))
-                    .foregroundStyle(.white)
+                    .font(.system(size: 9, weight: .bold))
+                    .foregroundColor(.white)
                     .padding(.horizontal, 6)
                     .padding(.vertical, 2)
-                    .background(.black.opacity(0.4), in: Capsule())
+                    .background(Color.black.opacity(0.45))
+                    .clipShape(Capsule())
                     .padding(6)
             }
 
             Text(nb.title)
-                .font(.jakartaSans(size: 13, weight: .semibold))
-                .foregroundStyle(.primary)
+                .font(.system(size: 13, weight: .bold))
+                .foregroundColor(.white)
                 .lineLimit(1)
-                .frame(width: 120, alignment: .leading)
+                .frame(width: 126, alignment: .leading)
 
             let lastPage = ReadingProgressStore.shared.lastPageIndex(for: nb.id)
             Text("Đang ở trang \(lastPage + 1)/\(max(1, nb.pages.count))")
-                .font(.jakartaSans(size: 10))
-                .foregroundStyle(.secondary)
-                .frame(width: 120, alignment: .leading)
+                .font(.system(size: 10, weight: .medium))
+                .foregroundColor(Color(hex: "2dd4bf"))
+                .frame(width: 126, alignment: .leading)
         }
-        .padding(8)
-        .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: DesignTokens.radiusMD))
+        .padding(10)
+        .background(Color(hex: "1e293b"))
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(Color.white.opacity(0.08), lineWidth: 1)
+        )
     }
 
     // MARK: - Search Results List
 
     private var searchResultsList: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: DesignTokens.spacingSM) {
+            VStack(alignment: .leading, spacing: 10) {
                 // Header with result count
                 Text("Tìm thấy \(searchResults.count) kết quả")
-                    .font(.jakartaSans(size: 13, weight: .medium))
-                    .foregroundStyle(.secondary)
-                    .padding(.horizontal, DesignTokens.spacingLG)
-                    .padding(.top, DesignTokens.spacingSM)
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundColor(Color(hex: "94a3b8"))
+                    .padding(.horizontal, 20)
+                    .padding(.top, 8)
 
-                LazyVStack(spacing: DesignTokens.spacingSM) {
+                LazyVStack(spacing: 10) {
                     ForEach(searchResults) { result in
                         Button {
+                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
                             saveRecentSearch(searchText)
                             var activeNb = result.notebook
                             activeNb.lastPageIndex = result.pageIndex
@@ -192,8 +208,8 @@ struct SearchView: View {
                         .buttonStyle(.plain)
                     }
                 }
-                .padding(.horizontal, DesignTokens.spacingLG)
-                .padding(.bottom, DesignTokens.spacingXXL)
+                .padding(.horizontal, 20)
+                .padding(.bottom, 36)
             }
         }
     }
@@ -201,20 +217,20 @@ struct SearchView: View {
     // MARK: - No Results View
 
     private var noResultsView: some View {
-        VStack(spacing: DesignTokens.spacingMD) {
+        VStack(spacing: 16) {
             Image(systemName: "magnifyingglass")
-                .font(.system(size: 44))
-                .foregroundStyle(.secondary.opacity(0.5))
+                .font(.system(size: 48))
+                .foregroundColor(Color(hex: "475569"))
 
             Text("Không tìm thấy kết quả")
-                .font(.jakartaSans(size: 16, weight: .semibold))
-                .foregroundStyle(.primary)
+                .font(.system(size: 17, weight: .bold))
+                .foregroundColor(.white)
 
             Text("Không có trang hoặc sổ tay nào khớp với \"\(searchText)\". Hãy thử từ khóa khác.")
-                .font(.jakartaSans(size: 13))
-                .foregroundStyle(.secondary)
+                .font(.system(size: 13))
+                .foregroundColor(Color(hex: "94a3b8"))
                 .multilineTextAlignment(.center)
-                .padding(.horizontal, DesignTokens.spacingXXL)
+                .padding(.horizontal, 32)
         }
         .padding()
     }

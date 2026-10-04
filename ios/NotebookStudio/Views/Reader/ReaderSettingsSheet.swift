@@ -99,17 +99,19 @@ struct ReaderSettingsSheet: View {
             }
             .navigationTitle("Tùy biến hiển thị")
             .navigationBarTitleDisplayMode(.inline)
+            .scrollContentBackground(.hidden)
+            .background(Color(hex: "0f172a").ignoresSafeArea())
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Xong") {
                         dismiss()
                     }
-                    .font(.jakartaSans(size: 15, weight: .semibold))
-                    .foregroundStyle(DesignTokens.accentLight)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundColor(Color(hex: "38bdf8"))
                 }
             }
         }
-        .presentationDetents([.medium])
+        .presentationDetents([.medium, .large])
     }
 }
 

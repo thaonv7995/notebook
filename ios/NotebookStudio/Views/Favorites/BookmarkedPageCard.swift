@@ -17,25 +17,25 @@ struct BookmarkedPageCard: View {
                     .frame(width: 26, height: 26)
                     .background(DesignTokens.accentLight.opacity(0.12), in: Circle())
 
-                VStack(alignment: .leading, spacing: 1) {
+                VStack(alignment: .leading, spacing: 2) {
                     Text((page.topic ?? page.title ?? "Trang \(pageIndex + 1)").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "Trang \(pageIndex + 1)" : (page.topic ?? page.title ?? "Trang \(pageIndex + 1)"))
-                        .font(.jakartaSans(size: 14, weight: .bold))
-                        .foregroundStyle(.primary)
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundColor(.white)
                         .lineLimit(1)
 
                     HStack(spacing: 4) {
                         Text(notebook.title)
-                            .font(.jakartaSans(size: 11, weight: .medium))
-                            .foregroundStyle(.secondary)
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundColor(Color(hex: "94a3b8"))
                             .lineLimit(1)
 
                         Text("·")
-                            .font(.jakartaSans(size: 11))
-                            .foregroundStyle(.secondary)
+                            .font(.system(size: 11))
+                            .foregroundColor(Color(hex: "64748b"))
 
                         Text("Trang \(pageIndex + 1)")
-                            .font(.jakartaSans(size: 11, weight: .semibold))
-                            .foregroundStyle(DesignTokens.accentLight)
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundColor(Color(hex: "2dd4bf"))
                     }
                 }
 
@@ -43,22 +43,27 @@ struct BookmarkedPageCard: View {
 
                 // Bookmark icon badge
                 Image(systemName: "bookmark.fill")
-                    .font(.system(size: 14))
-                    .foregroundStyle(.orange)
+                    .font(.system(size: 15))
+                    .foregroundColor(Color(hex: "f59e0b"))
             }
 
             // Preview snippet
             let snippet = cleanPreviewText
             if !snippet.isEmpty {
                 Text(snippet)
-                    .font(.jakartaSans(size: 13))
-                    .foregroundStyle(.secondary)
+                    .font(.system(size: 13))
+                    .foregroundColor(Color(hex: "cbd5e1"))
                     .lineLimit(2)
-                    .lineSpacing(2)
+                    .lineSpacing(3)
             }
         }
-        .padding(DesignTokens.spacingMD)
-        .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: DesignTokens.radiusMD))
+        .padding(14)
+        .background(Color(hex: "1e293b"))
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(Color.white.opacity(0.08), lineWidth: 1)
+        )
         .swipeActions(edge: .trailing, allowsFullSwipe: true) {
             Button(role: .destructive) {
                 UIImpactFeedbackGenerator(style: .medium).impactOccurred()

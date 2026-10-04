@@ -16,24 +16,24 @@ struct SearchResultView: View {
                     .background(DesignTokens.accentLight.opacity(0.12), in: Circle())
 
                 // Notebook & Page location
-                VStack(alignment: .leading, spacing: 1) {
+                VStack(alignment: .leading, spacing: 2) {
                     Text(result.notebook.title)
-                        .font(.jakartaSans(size: 14, weight: .bold))
-                        .foregroundStyle(.primary)
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundColor(.white)
                         .lineLimit(1)
 
                     HStack(spacing: 4) {
                         Text("Trang \(result.pageIndex + 1)")
-                            .font(.jakartaSans(size: 11, weight: .semibold))
-                            .foregroundStyle(DesignTokens.accentLight)
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundColor(Color(hex: "2dd4bf"))
 
                         Text("·")
-                            .font(.jakartaSans(size: 11))
-                            .foregroundStyle(.secondary)
+                            .font(.system(size: 11))
+                            .foregroundColor(Color(hex: "64748b"))
 
                         Text(result.page.template.displayName)
-                            .font(.jakartaSans(size: 11))
-                            .foregroundStyle(.secondary)
+                            .font(.system(size: 11))
+                            .foregroundColor(Color(hex: "94a3b8"))
                     }
                 }
 
@@ -41,25 +41,27 @@ struct SearchResultView: View {
 
                 // Matched field tag
                 Text(result.matchField)
-                    .font(.jakartaSans(size: 10, weight: .medium))
-                    .foregroundStyle(.secondary)
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundColor(Color(hex: "38bdf8"))
                     .padding(.horizontal, 8)
                     .padding(.vertical, 3)
-                    .background(Color(.tertiarySystemFill), in: Capsule())
+                    .background(Color(hex: "38bdf8").opacity(0.15))
+                    .clipShape(Capsule())
             }
 
             // Snippet with Highlight
             Text(highlightedSnippet)
-                .font(.jakartaSans(size: 13))
-                .lineSpacing(3)
-                .foregroundStyle(.secondary)
+                .font(.system(size: 13))
+                .lineSpacing(4)
+                .foregroundColor(Color(hex: "cbd5e1"))
                 .lineLimit(3)
         }
-        .padding(DesignTokens.spacingMD)
-        .background(.background, in: RoundedRectangle(cornerRadius: DesignTokens.radiusMD))
+        .padding(14)
+        .background(Color(hex: "1e293b"))
+        .clipShape(RoundedRectangle(cornerRadius: 12))
         .overlay(
-            RoundedRectangle(cornerRadius: DesignTokens.radiusMD)
-                .stroke(Color.primary.opacity(0.06), lineWidth: 1)
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(Color.white.opacity(0.08), lineWidth: 1)
         )
     }
 

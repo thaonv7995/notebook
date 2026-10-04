@@ -150,6 +150,9 @@ struct SettingsView: View {
                 }
             }
             .navigationTitle("Cài đặt")
+            .navigationBarTitleDisplayMode(.inline)
+            .scrollContentBackground(.hidden)
+            .background(Color(hex: "0f172a").ignoresSafeArea())
             .sheet(isPresented: $viewModel.showChangePasswordSheet) {
                 changePasswordSheet
             }

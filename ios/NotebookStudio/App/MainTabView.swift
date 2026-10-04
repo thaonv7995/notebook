@@ -11,22 +11,54 @@ struct MainTabView: View {
     @AppStorage("app_color_scheme") private var colorSchemeRaw: String = "system"
 
     init() {
+        // Tab Bar Dark Slate Appearance (#0f172a)
         let tabBarAppearance = UITabBarAppearance()
-        tabBarAppearance.configureWithDefaultBackground()
-        let accentUIColor = UIColor(red: 201.0/255.0, green: 168.0/255.0, blue: 76.0/255.0, alpha: 1.0)
-        tabBarAppearance.stackedLayoutAppearance.selected.iconColor = accentUIColor
-        tabBarAppearance.stackedLayoutAppearance.selected.titleTextAttributes = [.foregroundColor: accentUIColor]
-        tabBarAppearance.stackedLayoutAppearance.normal.iconColor = UIColor.secondaryLabel
-        tabBarAppearance.stackedLayoutAppearance.normal.titleTextAttributes = [.foregroundColor: UIColor.secondaryLabel]
+        tabBarAppearance.configureWithOpaqueBackground()
+        tabBarAppearance.backgroundColor = UIColor(red: 15.0/255.0, green: 23.0/255.0, blue: 42.0/255.0, alpha: 1.0)
+        tabBarAppearance.shadowColor = UIColor.white.withAlphaComponent(0.08)
+
+        let activeColor = UIColor(red: 56.0/255.0, green: 189.0/255.0, blue: 248.0/255.0, alpha: 1.0) // #38bdf8 (Sky Blue)
+        let inactiveColor = UIColor(red: 148.0/255.0, green: 163.0/255.0, blue: 184.0/255.0, alpha: 1.0) // #94a3b8 (Slate 400)
+
+        tabBarAppearance.stackedLayoutAppearance.selected.iconColor = activeColor
+        tabBarAppearance.stackedLayoutAppearance.selected.titleTextAttributes = [
+            .foregroundColor: activeColor,
+            .font: UIFont.systemFont(ofSize: 10, weight: .bold)
+        ]
+        tabBarAppearance.stackedLayoutAppearance.normal.iconColor = inactiveColor
+        tabBarAppearance.stackedLayoutAppearance.normal.titleTextAttributes = [
+            .foregroundColor: inactiveColor,
+            .font: UIFont.systemFont(ofSize: 10, weight: .medium)
+        ]
+
         UITabBar.appearance().standardAppearance = tabBarAppearance
         UITabBar.appearance().scrollEdgeAppearance = tabBarAppearance
+
+        // Navigation Bar Dark Slate Appearance (#0f172a)
+        let navAppearance = UINavigationBarAppearance()
+        navAppearance.configureWithOpaqueBackground()
+        navAppearance.backgroundColor = UIColor(red: 15.0/255.0, green: 23.0/255.0, blue: 42.0/255.0, alpha: 1.0)
+        navAppearance.shadowColor = UIColor.white.withAlphaComponent(0.08)
+        navAppearance.titleTextAttributes = [
+            .foregroundColor: UIColor.white,
+            .font: UIFont.systemFont(ofSize: 17, weight: .semibold)
+        ]
+        navAppearance.largeTitleTextAttributes = [
+            .foregroundColor: UIColor.white,
+            .font: UIFont.systemFont(ofSize: 28, weight: .bold)
+        ]
+
+        UINavigationBar.appearance().standardAppearance = navAppearance
+        UINavigationBar.appearance().scrollEdgeAppearance = navAppearance
+        UINavigationBar.appearance().compactAppearance = navAppearance
+        UINavigationBar.appearance().tintColor = activeColor
     }
 
     private var selectedColorScheme: ColorScheme? {
         switch colorSchemeRaw {
         case "light": return .light
         case "dark": return .dark
-        default: return nil
+        default: return .dark // Default to dark studio theme
         }
     }
 
@@ -56,7 +88,7 @@ struct MainTabView: View {
                 }
                 .tag(Tab.settings)
         }
-        .tint(DesignTokens.accent)
+        .tint(Color(hex: "38bdf8"))
         .preferredColorScheme(selectedColorScheme)
     }
 }
