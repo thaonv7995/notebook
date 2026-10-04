@@ -64,7 +64,7 @@ struct ReaderSettingsSheet: View {
                             Text(family.displayName).tag(family)
                         }
                     }
-                    .pickerStyle(.segmented)
+                    .pickerStyle(.menu)
                 }
 
                 // Section 3: Font Size

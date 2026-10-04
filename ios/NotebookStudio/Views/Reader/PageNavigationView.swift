@@ -5,6 +5,7 @@ import SwiftUI
 struct PageNavigationView: View {
     let pages: [Page]
     var author: String? = "@thaonv"
+    var fontFamily: String? = nil
     @Binding var currentPageIndex: Int
     @Binding var zoomScale: CGFloat
     var isEditable: Bool = false
@@ -25,6 +26,7 @@ struct PageNavigationView: View {
                     page: pages[index],
                     author: author,
                     pageNumber: index + 1,
+                    fontFamily: fontFamily,
                     isEditable: isEditable,
                     onToggleChrome: onToggleChrome
                 )

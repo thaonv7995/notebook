@@ -8,6 +8,7 @@ struct WebTemplatePageView: View {
     let page: Page
     var author: String? = "@thaonv"
     var pageNum: Int = 1
+    var fontFamily: String? = nil
     var isEditable: Bool = false
     var onToggleChrome: (() -> Void)? = nil
 
@@ -25,6 +26,7 @@ struct WebTemplatePageView: View {
                     pageNum: pageNum,
                     paperTone: settings.paperTone,
                     fontSize: Int(settings.fontSize),
+                    fontFamily: (settings.fontFamily != .plusJakartaSans ? settings.fontFamily.rawValue : fontFamily) ?? settings.fontFamily.rawValue,
                     isEditable: isEditable
                 ),
                 isEditable: isEditable,
@@ -68,7 +70,7 @@ struct WKWebViewContainer: UIViewRepresentable {
         webView.scrollView.isScrollEnabled = isEditable
 
         context.coordinator.lastHTML = html
-        webView.loadHTMLString(html, baseURL: nil)
+        webView.loadHTMLString(html, baseURL: URL(string: "https://notebook.thaonv.online"))
         return webView
     }
 
@@ -80,7 +82,7 @@ struct WKWebViewContainer: UIViewRepresentable {
         // Only reload if HTML actually changed
         if context.coordinator.lastHTML != html {
             context.coordinator.lastHTML = html
-            uiView.loadHTMLString(html, baseURL: nil)
+            uiView.loadHTMLString(html, baseURL: URL(string: "https://notebook.thaonv.online"))
         }
     }
 

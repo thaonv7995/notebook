@@ -73,6 +73,7 @@ struct ReaderView: View {
                 PageNavigationView(
                     pages: pages,
                     author: notebook.author,
+                    fontFamily: notebook.fontFamily,
                     currentPageIndex: $currentPageIndex,
                     zoomScale: $zoomScale,
                     isEditable: isEditMode,

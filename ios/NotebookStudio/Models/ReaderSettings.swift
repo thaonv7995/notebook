@@ -62,7 +62,9 @@ enum PaperTone: String, CaseIterable, Identifiable, Codable {
 /// Font family options for reader view.
 enum ReaderFontFamily: String, CaseIterable, Identifiable, Codable {
     case plusJakartaSans = "jakarta"
+    case vietnam = "vietnam"
     case serif = "serif"
+    case kaiti = "kaiti"
     case monospace = "mono"
 
     var id: String { rawValue }
@@ -70,8 +72,25 @@ enum ReaderFontFamily: String, CaseIterable, Identifiable, Codable {
     var displayName: String {
         switch self {
         case .plusJakartaSans: return "Plus Jakarta"
-        case .serif:           return "Serif"
-        case .monospace:       return "Monospace"
+        case .vietnam:         return "Be Vietnam Pro"
+        case .serif:           return "Cormorant Serif"
+        case .kaiti:           return "Khải Thư / KaiTi (Hán tự)"
+        case .monospace:       return "JetBrains Mono"
+        }
+    }
+
+    var cssValue: String {
+        switch self {
+        case .plusJakartaSans:
+            return "'CJK-Smart-Enlarged', 'Plus Jakarta Sans', 'Noto Serif SC', 'Ma Shan Zheng', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, serif"
+        case .vietnam:
+            return "'CJK-Smart-Enlarged', 'Be Vietnam Pro', 'Noto Serif SC', 'Ma Shan Zheng', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, serif"
+        case .serif:
+            return "'CJK-Smart-Enlarged', 'Cormorant Garamond', 'Noto Serif SC', 'Ma Shan Zheng', Georgia, serif"
+        case .kaiti:
+            return "'CJK-Smart-Enlarged', 'Kaiti SC', 'STKaiti', 'KaiTi', 'SimKai', 'Ma Shan Zheng', 'Noto Serif SC', 'ZCOOL XiaoWei', serif"
+        case .monospace:
+            return "'JetBrains Mono', 'CJK-Smart-Enlarged', 'Noto Serif SC', 'Ma Shan Zheng', 'Courier New', monospace"
         }
     }
 
@@ -79,7 +98,11 @@ enum ReaderFontFamily: String, CaseIterable, Identifiable, Codable {
         switch self {
         case .plusJakartaSans:
             return .jakartaSans(size: size, weight: weight)
+        case .vietnam:
+            return .system(size: size, weight: weight, design: .default)
         case .serif:
+            return .system(size: size, weight: weight, design: .serif)
+        case .kaiti:
             return .system(size: size, weight: weight, design: .serif)
         case .monospace:
             return .system(size: size, weight: weight, design: .monospaced)

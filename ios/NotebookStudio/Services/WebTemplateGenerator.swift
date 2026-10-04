@@ -47,11 +47,13 @@ final class WebTemplateGenerator {
         pageNum: Int = 1,
         paperTone: PaperTone = .cream,
         fontSize: Int = 15,
+        fontFamily: String? = nil,
         isEditable: Bool = false
     ) -> String {
         let css = getCombinedCSS()
         let authorHandle = formatAuthorHandle(author)
         let templateContent = generateTemplateBody(for: page, authorHandle: authorHandle, pageNum: pageNum, isEditable: isEditable)
+        let resolvedFontFamilyCSS = cssFontFamily(for: fontFamily)
 
         let bgHex: String
         let textHex: String
@@ -89,9 +91,22 @@ final class WebTemplateGenerator {
           <meta name="viewport" content="width=680, initial-scale=1.0, maximum-scale=3.0, user-scalable=yes">
           <link rel="preconnect" href="https://fonts.googleapis.com">
           <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-          <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=JetBrains+Mono:wght@500;700&family=Plus+Jakarta+Sans:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
+          <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Cormorant+Garamond:ital,wght@0,600;0,700;1,600&family=Plus+Jakarta+Sans:wght@500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&family=Noto+Serif+SC:wght@400;600;700;900&family=Dancing+Script:wght@400;500;600;700&family=Caveat:wght@400;500;600;700&family=Patrick+Hand&family=Kalam:wght@300;400;700&family=Indie+Flower&family=Ma+Shan+Zheng&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
           <style>
             \(css)
+
+            /* Auto-Enlarging CJK / Chinese Character Font Face */
+            @font-face {
+              font-family: 'CJK-Smart-Enlarged';
+              src: local('Kaiti SC'), local('STKaiti'), local('KaiTi'), local('SimKai'),
+                   local('KaiTi_GB2312'), local('BiauKai'),
+                   local('Songti SC'), local('STSong');
+              unicode-range: U+2E80-2EFF, U+2F00-2FDF, U+3000-303F, U+3100-312F,
+                             U+31C0-31EF, U+3200-32FF, U+3400-4DBF, U+4E00-9FFF,
+                             U+F900-FAFF, U+FE30-FE4F, U+FF00-FFEF;
+              size-adjust: 140%;
+              font-display: swap;
+            }
 
             :root {
               --paper-cream: \(bgHex);
@@ -100,6 +115,28 @@ final class WebTemplateGenerator {
               --rule-accent: \(textHex);
               --ink-muted: \(secondaryHex);
               --notebook-font-size: \(fontSize)px;
+              --cjk-calligraphic-font: "CJK-Smart-Enlarged", "Kaiti SC", "STKaiti", "KaiTi", "SimKai", "KaiTi_GB2312", "BiauKai", "Ma Shan Zheng", "Noto Serif SC", "Songti SC", "STSong", serif;
+              --notebook-font-family: \(resolvedFontFamilyCSS);
+            }
+
+            /* Chinese / Hanzi character optical alignment & calligraphic stroke contrast */
+            .hanzi-cjk {
+              display: inline;
+              position: relative;
+              top: -2px;
+              font-family: 'CJK-Smart-Enlarged', 'Ma Shan Zheng', 'Noto Serif SC', 'ZCOOL XiaoWei', 'Kaiti SC', 'Songti SC', serif;
+              font-size: 1.15em;
+              font-weight: 500;
+              line-height: 1;
+            }
+
+            .template-writing-area {
+              font-family: var(--notebook-font-family);
+            }
+
+            .template-writing-area div {
+              line-height: var(--notebook-line-height, 28px);
+              min-height: var(--notebook-line-height, 28px);
             }
 
             * {
@@ -197,6 +234,46 @@ final class WebTemplateGenerator {
             window.addEventListener('resize', fitScale);
             window.addEventListener('DOMContentLoaded', fitScale);
             setTimeout(fitScale, 50);
+
+            // Dynamic CJK / Hanzi Auto-aligner for interactive typing
+            var CJK_REGEX = /([\\u4E00-\\u9FFF\\u3400-\\u4DBF\\uF900-\\uFAFF\\u2E80-\\u2EFF\\u3000-\\u303F\\uFF00-\\uFFEF]+)/;
+            function wrapHanziInContainer(container) {
+              if (!container) return;
+              var walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT, {
+                acceptNode: function(node) {
+                  if (!node.nodeValue || !CJK_REGEX.test(node.nodeValue)) return NodeFilter.FILTER_REJECT;
+                  if (node.parentElement && node.parentElement.closest('.hanzi-cjk')) return NodeFilter.FILTER_REJECT;
+                  return NodeFilter.FILTER_ACCEPT;
+                }
+              });
+              var textNodes = [];
+              while (walker.nextNode()) textNodes.push(walker.currentNode);
+              if (textNodes.length === 0) return;
+              textNodes.forEach(function(node) {
+                var parent = node.parentNode;
+                if (!parent) return;
+                var parts = node.nodeValue.split(CJK_REGEX);
+                var frag = document.createDocumentFragment();
+                parts.forEach(function(part) {
+                  if (!part) return;
+                  if (CJK_REGEX.test(part)) {
+                    var span = document.createElement('span');
+                    span.className = 'hanzi-cjk';
+                    span.textContent = part;
+                    frag.appendChild(span);
+                  } else {
+                    frag.appendChild(document.createTextNode(part));
+                  }
+                });
+                parent.replaceChild(frag, node);
+              });
+            }
+
+            document.addEventListener('input', function(e) {
+              if (e.target && e.target.classList.contains('template-writing-area')) {
+                wrapHanziInContainer(e.target);
+              }
+            });
 
             // Interactive handlers (Active only in edit mode)
             document.addEventListener('click', function(e) {
@@ -354,16 +431,16 @@ final class WebTemplateGenerator {
             <div class="cornell-body-split">
               <div class="cornell-cue-col">
                 <div class="col-guide-bar"><span class="section-guide-badge">CUES & QUESTIONS</span></div>
-                <div \(edAttr(isEditable)) class="template-writing-area cornell-cues-text">\(page.cues ?? "")</div>
+                <div \(edAttr(isEditable)) class="template-writing-area cornell-cues-text">\(formatContentToHtml(page.cues))</div>
               </div>
               <div class="cornell-notes-col">
                 <div class="col-guide-bar"><span class="section-guide-badge">NOTES</span></div>
-                <div \(edAttr(isEditable)) class="template-writing-area cornell-notes-text">\((page.notes?.isEmpty ?? true) ? (page.content ?? "") : (page.notes ?? ""))</div>
+                <div \(edAttr(isEditable)) class="template-writing-area cornell-notes-text">\(formatContentToHtml((page.notes?.isEmpty ?? true) ? page.content : page.notes))</div>
               </div>
             </div>
             <div class="cornell-summary-area">
               <div class="col-guide-bar"><span class="section-guide-badge">SUMMARY & SYNTHESIS</span></div>
-              <div \(edAttr(isEditable)) class="template-writing-area cornell-summary-text">\(page.summary ?? "")</div>
+              <div \(edAttr(isEditable)) class="template-writing-area cornell-summary-text">\(formatContentToHtml(page.summary))</div>
             </div>
           </div>
 
@@ -436,11 +513,11 @@ final class WebTemplateGenerator {
             <div class="work-body-split">
               <div class="work-side-col">
                 <div class="col-guide-bar"><span class="section-guide-badge">AGENDA & DECISIONS</span></div>
-                <div \(edAttr(isEditable)) class="template-writing-area work-agenda-text">\(page.agenda ?? "")</div>
+                <div \(edAttr(isEditable)) class="template-writing-area work-agenda-text">\(formatContentToHtml(page.agenda))</div>
               </div>
               <div class="work-notes-col">
                 <div class="col-guide-bar"><span class="section-guide-badge">NOTES & DISCUSSIONS</span></div>
-                <div \(edAttr(isEditable)) class="template-writing-area work-notes-text">\((page.discussions?.isEmpty ?? true) ? (page.content ?? "") : (page.discussions ?? ""))</div>
+                <div \(edAttr(isEditable)) class="template-writing-area work-notes-text">\(formatContentToHtml((page.discussions?.isEmpty ?? true) ? page.content : page.discussions))</div>
               </div>
             </div>
             <div class="work-action-area">
@@ -490,7 +567,7 @@ final class WebTemplateGenerator {
           </div>
 
           <div class="ruled-full-canvas">
-            <div \(edAttr(isEditable)) class="template-writing-area ruled-canvas-text">\(page.content ?? "")</div>
+            <div \(edAttr(isEditable)) class="template-writing-area ruled-canvas-text">\(formatContentToHtml(page.content))</div>
           </div>
 
           <div class="scholar-footer">
@@ -544,21 +621,21 @@ final class WebTemplateGenerator {
             <div class="quadrant-row">
               <div class="quadrant-cell quadrant-tl eisenhower-do">
                 <div class="col-guide-bar eisenhower-bar do-bar"><span class="section-guide-badge eisenhower-badge do-badge">🔴 DO FIRST — Urgent & Important</span></div>
-                <div \(edAttr(isEditable)) class="template-writing-area quadrant-text quadrant-q1-text">\(q.q1 ?? "")</div>
+                <div \(edAttr(isEditable)) class="template-writing-area quadrant-text quadrant-q1-text">\(formatContentToHtml(q.q1))</div>
               </div>
               <div class="quadrant-cell quadrant-tr eisenhower-schedule">
                 <div class="col-guide-bar eisenhower-bar schedule-bar"><span class="section-guide-badge eisenhower-badge schedule-badge">🟡 SCHEDULE — Important, Not Urgent</span></div>
-                <div \(edAttr(isEditable)) class="template-writing-area quadrant-text quadrant-q2-text">\(q.q2 ?? "")</div>
+                <div \(edAttr(isEditable)) class="template-writing-area quadrant-text quadrant-q2-text">\(formatContentToHtml(q.q2))</div>
               </div>
             </div>
             <div class="quadrant-row">
               <div class="quadrant-cell quadrant-bl eisenhower-delegate">
                 <div class="col-guide-bar eisenhower-bar delegate-bar"><span class="section-guide-badge eisenhower-badge delegate-badge">🟠 DELEGATE — Urgent, Not Important</span></div>
-                <div \(edAttr(isEditable)) class="template-writing-area quadrant-text quadrant-q3-text">\(q.q3 ?? "")</div>
+                <div \(edAttr(isEditable)) class="template-writing-area quadrant-text quadrant-q3-text">\(formatContentToHtml(q.q3))</div>
               </div>
               <div class="quadrant-cell quadrant-br eisenhower-eliminate">
                 <div class="col-guide-bar eisenhower-bar eliminate-bar"><span class="section-guide-badge eisenhower-badge eliminate-badge">⚪ ELIMINATE — Not Urgent, Not Important</span></div>
-                <div \(edAttr(isEditable)) class="template-writing-area quadrant-text quadrant-q4-text">\(q.q4 ?? "")</div>
+                <div \(edAttr(isEditable)) class="template-writing-area quadrant-text quadrant-q4-text">\(formatContentToHtml(q.q4))</div>
               </div>
             </div>
           </div>
@@ -610,20 +687,20 @@ final class WebTemplateGenerator {
             <div class="vocab-body-split">
               <div class="vocab-word-col">
                 <div class="col-guide-bar"><span class="section-guide-badge">WORD / PHRASE</span></div>
-                <div \(edAttr(isEditable)) class="template-writing-area vocab-word-text">\(page.vocabWord ?? "")</div>
+                <div \(edAttr(isEditable)) class="template-writing-area vocab-word-text">\(formatContentToHtml(page.vocabWord))</div>
               </div>
               <div class="vocab-meaning-col">
                 <div class="col-guide-bar"><span class="section-guide-badge">MEANING · PRONUNCIATION</span></div>
-                <div \(edAttr(isEditable)) class="template-writing-area vocab-meaning-text">\(page.vocabMeaning ?? "")</div>
+                <div \(edAttr(isEditable)) class="template-writing-area vocab-meaning-text">\(formatContentToHtml(page.vocabMeaning))</div>
               </div>
               <div class="vocab-example-col">
                 <div class="col-guide-bar"><span class="section-guide-badge">EXAMPLE SENTENCE</span></div>
-                <div \(edAttr(isEditable)) class="template-writing-area vocab-example-text">\((page.vocabExample?.isEmpty ?? true) ? (page.content ?? "") : (page.vocabExample ?? ""))</div>
+                <div \(edAttr(isEditable)) class="template-writing-area vocab-example-text">\(formatContentToHtml((page.vocabExample?.isEmpty ?? true) ? page.content : page.vocabExample))</div>
               </div>
             </div>
             <div class="vocab-review-area">
               <div class="col-guide-bar"><span class="section-guide-badge">REVIEW NOTES · MEMORY TIPS</span></div>
-              <div \(edAttr(isEditable)) class="template-writing-area vocab-review-text">\(page.vocabReview ?? "")</div>
+              <div \(edAttr(isEditable)) class="template-writing-area vocab-review-text">\(formatContentToHtml(page.vocabReview))</div>
             </div>
           </div>
 
@@ -672,16 +749,16 @@ final class WebTemplateGenerator {
             <div class="reading-body-split">
               <div class="reading-ideas-col">
                 <div class="col-guide-bar"><span class="section-guide-badge">KEY IDEAS & TAKEAWAYS</span></div>
-                <div \(edAttr(isEditable)) class="template-writing-area reading-ideas-text">\(page.cues ?? "")</div>
+                <div \(edAttr(isEditable)) class="template-writing-area reading-ideas-text">\(formatContentToHtml(page.cues))</div>
               </div>
               <div class="reading-quotes-col">
                 <div class="col-guide-bar"><span class="section-guide-badge">QUOTES & HIGHLIGHTS</span></div>
-                <div \(edAttr(isEditable)) class="template-writing-area reading-quotes-text">\((page.notes?.isEmpty ?? true) ? (page.content ?? "") : (page.notes ?? ""))</div>
+                <div \(edAttr(isEditable)) class="template-writing-area reading-quotes-text">\(formatContentToHtml((page.notes?.isEmpty ?? true) ? page.content : page.notes))</div>
               </div>
             </div>
             <div class="reading-summary-area">
               <div class="col-guide-bar"><span class="section-guide-badge">SUMMARY & PERSONAL REFLECTION</span></div>
-              <div \(edAttr(isEditable)) class="template-writing-area reading-summary-text">\(page.summary ?? "")</div>
+              <div \(edAttr(isEditable)) class="template-writing-area reading-summary-text">\(formatContentToHtml(page.summary))</div>
             </div>
           </div>
 
@@ -732,20 +809,20 @@ final class WebTemplateGenerator {
             <div class="charting-columns">
               <div class="charting-col">
                 <div class="col-guide-bar"><span class="section-guide-badge">COLUMN A</span></div>
-                <div \(edAttr(isEditable)) class="template-writing-area charting-col1-text">\(chart.col1 ?? "")</div>
+                <div \(edAttr(isEditable)) class="template-writing-area charting-col1-text">\(formatContentToHtml(chart.col1))</div>
               </div>
               <div class="charting-col">
                 <div class="col-guide-bar"><span class="section-guide-badge">COLUMN B</span></div>
-                <div \(edAttr(isEditable)) class="template-writing-area charting-col2-text">\(chart.col2 ?? "")</div>
+                <div \(edAttr(isEditable)) class="template-writing-area charting-col2-text">\(formatContentToHtml(chart.col2))</div>
               </div>
               <div class="charting-col charting-col-last">
                 <div class="col-guide-bar"><span class="section-guide-badge">COLUMN C</span></div>
-                <div \(edAttr(isEditable)) class="template-writing-area charting-col3-text">\(chart.col3 ?? "")</div>
+                <div \(edAttr(isEditable)) class="template-writing-area charting-col3-text">\(formatContentToHtml(chart.col3))</div>
               </div>
             </div>
             <div class="charting-notes-area">
               <div class="col-guide-bar"><span class="section-guide-badge">ANALYSIS & CONCLUSIONS</span></div>
-              <div \(edAttr(isEditable)) class="template-writing-area charting-notes-text">\((page.summary?.isEmpty ?? true) ? (page.content ?? "") : (page.summary ?? ""))</div>
+              <div \(edAttr(isEditable)) class="template-writing-area charting-notes-text">\(formatContentToHtml((page.summary?.isEmpty ?? true) ? page.content : page.summary))</div>
             </div>
           </div>
 
@@ -791,7 +868,7 @@ final class WebTemplateGenerator {
           </div>
 
           <div class="dotgrid-container">
-            <div \(edAttr(isEditable)) class="template-writing-area dotgrid-canvas-text">\(page.content ?? "")</div>
+            <div \(edAttr(isEditable)) class="template-writing-area dotgrid-canvas-text">\(formatContentToHtml(page.content))</div>
           </div>
 
           <div class="scholar-footer">
@@ -836,7 +913,7 @@ final class WebTemplateGenerator {
           </div>
 
           <div class="grid-container">
-            <div \(edAttr(isEditable)) class="template-writing-area grid-canvas-text">\(page.content ?? "")</div>
+            <div \(edAttr(isEditable)) class="template-writing-area grid-canvas-text">\(formatContentToHtml(page.content))</div>
           </div>
 
           <div class="scholar-footer">
@@ -881,7 +958,7 @@ final class WebTemplateGenerator {
           </div>
 
           <div class="blank-container">
-            <div \(edAttr(isEditable)) class="template-writing-area blank-canvas-text">\(page.content ?? "")</div>
+            <div \(edAttr(isEditable)) class="template-writing-area blank-canvas-text">\(formatContentToHtml(page.content))</div>
           </div>
 
           <div class="scholar-footer">
@@ -916,6 +993,146 @@ final class WebTemplateGenerator {
         return a.hasPrefix("@") ? a : "@\(a)"
     }
 
+    // MARK: - CJK Optical Alignment & Text Formatting (matching src/editor/hanzi-aligner.js & sanitizer.js)
+
+    /// Wraps Chinese / CJK ideographs in `<span class="hanzi-cjk">` for optical centering and calligraphic rendering.
+    func wrapHanziInHtml(_ html: String) -> String {
+        guard !html.isEmpty else { return "" }
+
+        // Strip existing hanzi-cjk tags to avoid nested spans
+        let cleaned = html.replacingOccurrences(
+            of: #"<span class="hanzi-cjk">([\s\S]*?)</span>"#,
+            with: "$1",
+            options: .regularExpression
+        )
+
+        let pattern = #"(<[^>]+>)|([\u{4E00}-\u{9FFF}\u{3400}-\u{4DBF}\u{F900}-\u{FAFF}\u{2E80}-\u{2EFF}\u{3000}-\u{303F}\u{FF00}-\u{FFEF}]+)"#
+        guard let regex = try? NSRegularExpression(pattern: pattern, options: []) else {
+            return cleaned
+        }
+
+        let nsString = cleaned as NSString
+        let matches = regex.matches(in: cleaned, options: [], range: NSRange(location: 0, length: nsString.length))
+
+        var result = ""
+        var lastIndex = 0
+
+        for match in matches {
+            if match.range.location > lastIndex {
+                result += nsString.substring(with: NSRange(location: lastIndex, length: match.range.location - lastIndex))
+            }
+
+            let tagRange = match.range(at: 1)
+            let cjkRange = match.range(at: 2)
+
+            if tagRange.location != NSNotFound {
+                result += nsString.substring(with: tagRange)
+            } else if cjkRange.location != NSNotFound {
+                let cjkText = nsString.substring(with: cjkRange)
+                result += "<span class=\"hanzi-cjk\">\(cjkText)</span>"
+            }
+
+            lastIndex = match.range.location + match.range.length
+        }
+
+        if lastIndex < nsString.length {
+            result += nsString.substring(with: NSRange(location: lastIndex, length: nsString.length - lastIndex))
+        }
+
+        return result
+    }
+
+    /// Formats content to block HTML elements on ruled lines with Hanzi CJK optical elevation.
+    func formatContentToHtml(_ raw: String?) -> String {
+        guard let raw = raw?.trimmingCharacters(in: .whitespacesAndNewlines), !raw.isEmpty else {
+            return ""
+        }
+
+        var html = raw
+
+        // Decode accidentally escaped markup
+        html = html.replacingOccurrences(of: "&lt;strong&gt;", with: "<strong>", options: .caseInsensitive)
+        html = html.replacingOccurrences(of: "&lt;/strong&gt;", with: "</strong>", options: .caseInsensitive)
+        html = html.replacingOccurrences(of: "&lt;b&gt;", with: "<b>", options: .caseInsensitive)
+        html = html.replacingOccurrences(of: "&lt;/b&gt;", with: "</b>", options: .caseInsensitive)
+        html = html.replacingOccurrences(of: "&lt;i&gt;", with: "<i>", options: .caseInsensitive)
+        html = html.replacingOccurrences(of: "&lt;/i&gt;", with: "</i>", options: .caseInsensitive)
+        html = html.replacingOccurrences(of: "&lt;em&gt;", with: "<em>", options: .caseInsensitive)
+        html = html.replacingOccurrences(of: "&lt;/em&gt;", with: "</em>", options: .caseInsensitive)
+
+        // Check if content already contains block elements (preformatted rich text)
+        let blockTagPattern = #"<(p|div|blockquote|ul|ol|h[1-6]|figure|img)[^>]*>"#
+        if html.range(of: blockTagPattern, options: .regularExpression) != nil {
+            return wrapHanziInHtml(html)
+        }
+
+        // Process line-by-line for ruled notebook lines
+        let rawLines = html.components(separatedBy: "\n")
+        var processedLines: [String] = []
+
+        for rawLine in rawLines {
+            var line = rawLine
+
+            // Markdown inline
+            line = line.replacingOccurrences(of: #"\*\*(.+?)\*\*"#, with: "<strong>$1</strong>", options: .regularExpression)
+            line = line.replacingOccurrences(of: "**", with: "")
+            line = line.replacingOccurrences(of: #"(^|[^\*])\*([^\*\n]+)\*([^\*]|$)"#, with: "$1<em>$2</em>$3", options: .regularExpression)
+            line = line.replacingOccurrences(of: #"~~(.+?)~~"#, with: "<s>$1</s>", options: .regularExpression)
+            line = line.replacingOccurrences(of: #"`([^`]+)`"#, with: "<code>$1</code>", options: .regularExpression)
+
+            // Block levels
+            if line.range(of: #"^###\s+"#, options: .regularExpression) != nil {
+                line = line.replacingOccurrences(of: #"^###\s+(.*)$"#, with: "<h3>$1</h3>", options: .regularExpression)
+                processedLines.append(line)
+            } else if line.range(of: #"^##?\s+"#, options: .regularExpression) != nil {
+                line = line.replacingOccurrences(of: #"^##?\s+(.*)$"#, with: "<h2>$1</h2>", options: .regularExpression)
+                processedLines.append(line)
+            } else if line.range(of: #"^>\s+"#, options: .regularExpression) != nil {
+                line = line.replacingOccurrences(of: #"^>\s+(.*)$"#, with: "<blockquote>$1</blockquote>", options: .regularExpression)
+                processedLines.append(line)
+            } else if line.range(of: #"^([-\*]|\•)\s+"#, options: .regularExpression) != nil {
+                line = line.replacingOccurrences(of: #"^([-\*]|\•)\s+(.*)$"#, with: "<div>• $2</div>", options: .regularExpression)
+                processedLines.append(line)
+            } else if line.range(of: #"^\d+[\.\)]\s+"#, options: .regularExpression) != nil {
+                processedLines.append("<div>\(line)</div>")
+            } else {
+                let content = line.isEmpty ? "<br>" : line
+                processedLines.append("<div>\(content)</div>")
+            }
+        }
+
+        let combined = processedLines.joined()
+        return wrapHanziInHtml(combined)
+    }
+
+    /// Resolves CSS font stack matching `src/config/constants.js`.
+    func cssFontFamily(for key: String?) -> String {
+        switch key?.lowercased() {
+        case "vietnam":
+            return "'CJK-Smart-Enlarged', 'Be Vietnam Pro', 'Noto Serif SC', 'Ma Shan Zheng', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, serif"
+        case "serif":
+            return "'CJK-Smart-Enlarged', 'Cormorant Garamond', 'Noto Serif SC', 'Ma Shan Zheng', Georgia, serif"
+        case "kaiti":
+            return "'CJK-Smart-Enlarged', 'Kaiti SC', 'STKaiti', 'KaiTi', 'SimKai', 'Ma Shan Zheng', 'Noto Serif SC', 'ZCOOL XiaoWei', serif"
+        case "mono", "monospace":
+            return "'JetBrains Mono', 'CJK-Smart-Enlarged', 'Noto Serif SC', 'Ma Shan Zheng', 'Courier New', monospace"
+        case "dancing":
+            return "'Dancing Script', 'CJK-Smart-Enlarged', 'Ma Shan Zheng', 'Noto Serif SC', cursive"
+        case "caveat":
+            return "'Caveat', 'CJK-Smart-Enlarged', 'Ma Shan Zheng', 'Noto Serif SC', cursive"
+        case "patrickhand":
+            return "'Patrick Hand', 'CJK-Smart-Enlarged', 'Ma Shan Zheng', 'Noto Serif SC', cursive"
+        case "kalam":
+            return "'Kalam', 'CJK-Smart-Enlarged', 'Ma Shan Zheng', 'Noto Serif SC', cursive"
+        case "indieflower":
+            return "'Indie Flower', 'CJK-Smart-Enlarged', 'Ma Shan Zheng', 'Noto Serif SC', cursive"
+        case "sans", "jakarta":
+            fallthrough
+        default:
+            return "'CJK-Smart-Enlarged', 'Plus Jakarta Sans', 'Noto Serif SC', 'Ma Shan Zheng', var(--cjk-calligraphic-font)"
+        }
+    }
+
     // Fallback CSS if file not found in bundle
     private var defaultEmbeddedCSS: String {
         """
@@ -934,7 +1151,17 @@ final class WebTemplateGenerator {
             #cbd5e1 calc(var(--notebook-line-height, 28px) - 1px),
             #cbd5e1 var(--notebook-line-height, 28px)
           );
-          --notebook-font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
+          --cjk-calligraphic-font: "CJK-Smart-Enlarged", "Kaiti SC", "STKaiti", "KaiTi", "SimKai", "KaiTi_GB2312", "BiauKai", "Ma Shan Zheng", "Noto Serif SC", "Songti SC", "STSong", serif;
+          --notebook-font-family: 'CJK-Smart-Enlarged', 'Plus Jakarta Sans', 'Noto Serif SC', 'Ma Shan Zheng', var(--cjk-calligraphic-font);
+        }
+        .hanzi-cjk {
+          display: inline;
+          position: relative;
+          top: -2px;
+          font-family: 'CJK-Smart-Enlarged', 'Ma Shan Zheng', 'Noto Serif SC', 'ZCOOL XiaoWei', 'Kaiti SC', 'Songti SC', serif;
+          font-size: 1.15em;
+          font-weight: 500;
+          line-height: 1;
         }
         """
     }

@@ -7,6 +7,7 @@ struct TemplateRouter: View {
     let page: Page
     var author: String? = "@thaonv"
     var pageNumber: Int = 1
+    var fontFamily: String? = nil
     var isEditable: Bool = false
     var onToggleChrome: (() -> Void)? = nil
 
@@ -20,6 +21,7 @@ struct TemplateRouter: View {
                 page: page,
                 author: author,
                 pageNum: pageNumber,
+                fontFamily: fontFamily,
                 isEditable: isEditable,
                 onToggleChrome: onToggleChrome
             )
