@@ -20,6 +20,8 @@ struct ReaderChromeView: View {
     let onToggleBookmark: () -> Void
     var onToggleEditMode: (() -> Void)? = nil
     var onOpenJumpToPage: (() -> Void)? = nil
+    var onDecreaseFont: (() -> Void)? = nil
+    var onIncreaseFont: (() -> Void)? = nil
     let onOpenTOC: () -> Void
     let onOpenSettings: () -> Void
     var onOpenQuickNote: (() -> Void)? = nil
@@ -28,7 +30,7 @@ struct ReaderChromeView: View {
     private let isPhone = UIDevice.current.userInterfaceIdiom == .phone
 
     var body: some View {
-        HStack(spacing: 10) {
+        HStack(spacing: 8) {
             // Back Button
             Button(action: onBack) {
                 Image(systemName: "chevron.left")
@@ -44,6 +46,38 @@ struct ReaderChromeView: View {
                 .lineLimit(1)
                 .frame(maxWidth: .infinity, alignment: .leading)
 
+            // Font Stepper Buttons (A- / A+)
+            if onDecreaseFont != nil || onIncreaseFont != nil {
+                HStack(spacing: 0) {
+                    Button(action: { onDecreaseFont?() }) {
+                        Text("A-")
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundColor(.white.opacity(0.85))
+                            .frame(width: 26, height: 28)
+                            .contentShape(Rectangle())
+                    }
+
+                    Rectangle()
+                        .fill(Color.white.opacity(0.15))
+                        .frame(width: 1, height: 14)
+
+                    Button(action: { onIncreaseFont?() }) {
+                        Text("A+")
+                            .font(.system(size: 12, weight: .bold))
+                            .foregroundColor(.white.opacity(0.85))
+                            .frame(width: 26, height: 28)
+                            .contentShape(Rectangle())
+                    }
+                }
+                .frame(height: 28)
+                .background(Color(hex: "1e293b"))
+                .cornerRadius(6)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 6)
+                        .stroke(Color.white.opacity(0.12), lineWidth: 1)
+                )
+            }
+
             // Tappable Page Counter Pill (Jump to Page Dialog)
             Button(action: {
                 onOpenJumpToPage?()
@@ -51,7 +85,7 @@ struct ReaderChromeView: View {
                 Text("\(currentPageIndex + 1)/\(max(1, totalPages))")
                     .font(.system(size: 12, weight: .bold))
                     .foregroundColor(.white)
-                    .padding(.horizontal, 10)
+                    .padding(.horizontal, 8)
                     .frame(height: 28)
                     .background(Color(hex: "1e293b"))
                     .cornerRadius(6)

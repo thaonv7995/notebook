@@ -51,6 +51,10 @@ struct WKWebViewContainer: UIViewRepresentable {
         let config = WKWebViewConfiguration()
         config.allowsInlineMediaPlayback = true
 
+        let contentController = WKUserContentController()
+        contentController.add(context.coordinator, name: "notebookReader")
+        config.userContentController = contentController
+
         let webView = WKWebView(frame: .zero, configuration: config)
         webView.isOpaque = false
         webView.backgroundColor = .clear
@@ -58,16 +62,15 @@ struct WKWebViewContainer: UIViewRepresentable {
         webView.scrollView.bounces = true
         webView.scrollView.showsHorizontalScrollIndicator = false
         webView.scrollView.showsVerticalScrollIndicator = false
+        webView.scrollView.isScrollEnabled = true
 
         // Tap gesture to toggle chrome in reading mode
         let tap = UITapGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.handleTap(_:)))
         tap.numberOfTapsRequired = 1
         tap.cancelsTouchesInView = false
+        tap.delegate = context.coordinator
         webView.addGestureRecognizer(tap)
         context.coordinator.tapGesture = tap
-
-        // In reading mode, disable webview scrollview so UIPageViewController page curl pan gesture works instantly
-        webView.scrollView.isScrollEnabled = isEditable
 
         context.coordinator.lastHTML = html
         webView.loadHTMLString(html, baseURL: URL(string: "https://notebook.thaonv.online"))
@@ -76,7 +79,6 @@ struct WKWebViewContainer: UIViewRepresentable {
 
     func updateUIView(_ uiView: WKWebView, context: Context) {
         context.coordinator.onToggleChrome = onToggleChrome
-        uiView.scrollView.isScrollEnabled = isEditable
         context.coordinator.tapGesture?.isEnabled = !isEditable
 
         // Only reload if HTML actually changed
@@ -86,7 +88,11 @@ struct WKWebViewContainer: UIViewRepresentable {
         }
     }
 
-    final class Coordinator: NSObject {
+    static func dismantleUIView(_ uiView: WKWebView, coordinator: Coordinator) {
+        uiView.configuration.userContentController.removeScriptMessageHandler(forName: "notebookReader")
+    }
+
+    final class Coordinator: NSObject, WKScriptMessageHandler, UIGestureRecognizerDelegate {
         var onToggleChrome: (() -> Void)?
         var lastHTML: String = ""
         weak var tapGesture: UITapGestureRecognizer?
@@ -95,10 +101,24 @@ struct WKWebViewContainer: UIViewRepresentable {
             self.onToggleChrome = onToggleChrome
         }
 
+        func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
+            if message.name == "notebookReader" {
+                if let dict = message.body as? [String: Any], dict["type"] as? String == "toggleChrome" {
+                    DispatchQueue.main.async {
+                        self.onToggleChrome?()
+                    }
+                }
+            }
+        }
+
         @objc func handleTap(_ gesture: UITapGestureRecognizer) {
             DispatchQueue.main.async {
                 self.onToggleChrome?()
             }
+        }
+
+        func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
+            return true
         }
     }
 }

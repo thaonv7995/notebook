@@ -62,7 +62,10 @@ struct ReaderView: View {
 
     var body: some View {
         GeometryReader { geometry in
+            let isLargeScreen = !isPhone && geometry.size.width > 700
             let isLandscape = geometry.size.width > geometry.size.height
+            let isLargeAndLandscape = isLargeScreen && isLandscape
+            let useDoubleSided = isLargeAndLandscape && !isEditMode
 
             ZStack(alignment: .top) {
                 // Dark Slate Desk Background (bilingual-app #0f172a)
@@ -77,6 +80,7 @@ struct ReaderView: View {
                     currentPageIndex: $currentPageIndex,
                     zoomScale: $zoomScale,
                     isEditable: isEditMode,
+                    isDoubleSided: useDoubleSided,
                     revision: revision,
                     onToggleChrome: {
                         guard !isEditMode else { return }
@@ -127,6 +131,12 @@ struct ReaderView: View {
                             onOpenJumpToPage: {
                                 inputPageString = "\(currentPageIndex + 1)"
                                 showJumpToPageDialog = true
+                            },
+                            onDecreaseFont: {
+                                adjustFontSize(by: -1)
+                            },
+                            onIncreaseFont: {
+                                adjustFontSize(by: 1)
                             },
                             onOpenTOC: {
                                 showTOC = true
@@ -329,6 +339,14 @@ struct ReaderView: View {
                 isFullScreen = false
             }
         }
+    }
+
+    private func adjustFontSize(by delta: Double) {
+        let newSize = max(13.0, min(26.0, readerSettings.fontSize + delta))
+        guard newSize != readerSettings.fontSize else { return }
+        readerSettings.fontSize = newSize
+        revision += 1
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
     }
 }
 

@@ -17,18 +17,21 @@ final class PageHostingController: UIHostingController<AnyView> {
 }
 
 /// UIViewControllerRepresentable wrapping UIPageViewController with realistic 3D book page curl animation.
-/// Inspired by the reader architecture in bilingual-app with page caching and seamless 0-indexed page flips.
+/// Modeled faithfully after bilingual-app BookPagerView with page caching, double-sided landscape/iPad reading mode,
+/// and seamless 0-indexed page flips.
 struct BookPagerView<Content: View>: UIViewControllerRepresentable {
     var pageCount: Int
     @Binding var currentPage: Int
     var transitionStyle: UIPageViewController.TransitionStyle = .pageCurl
+    var isDoubleSided: Bool = false
     var revision: Int = 0
     @ViewBuilder var content: (Int) -> Content
 
     func makeUIViewController(context: Context) -> UIPageViewController {
+        let isDouble = isDoubleSided && transitionStyle == .pageCurl
         let options: [UIPageViewController.OptionsKey: Any]
         if transitionStyle == .pageCurl {
-            options = [UIPageViewController.OptionsKey.spineLocation: UIPageViewController.SpineLocation.min.rawValue]
+            options = [UIPageViewController.OptionsKey.spineLocation: (isDouble ? UIPageViewController.SpineLocation.mid : UIPageViewController.SpineLocation.min).rawValue]
         } else {
             options = [UIPageViewController.OptionsKey.interPageSpacing: 16]
         }
@@ -42,8 +45,18 @@ struct BookPagerView<Content: View>: UIViewControllerRepresentable {
         pvc.delegate = context.coordinator
         pvc.view.backgroundColor = UIColor(red: 15/255, green: 23/255, blue: 42/255, alpha: 1)
 
-        let initialVC = context.coordinator.createVC(page: currentPage)
-        pvc.setViewControllers([initialVC], direction: .forward, animated: false)
+        if isDouble {
+            pvc.isDoubleSided = true
+            let leftPage = (currentPage / 2) * 2
+            let rightPage = leftPage + 1
+            let leftVC = context.coordinator.createVC(page: leftPage)
+            let rightVC = context.coordinator.createVC(page: rightPage)
+            pvc.setViewControllers([leftVC, rightVC], direction: .forward, animated: false)
+        } else {
+            pvc.isDoubleSided = false
+            let initialVC = context.coordinator.createVC(page: currentPage)
+            pvc.setViewControllers([initialVC], direction: .forward, animated: false)
+        }
 
         return pvc
     }
@@ -57,26 +70,71 @@ struct BookPagerView<Content: View>: UIViewControllerRepresentable {
         }
 
         let currentVCs = uiViewController.viewControllers ?? []
-        if let currentVC = currentVCs.first as? PageHostingController {
-            if currentVC.pageIndex == currentPage {
-                if context.coordinator.lastRevision != revision {
-                    context.coordinator.pruneAllCache()
-                    currentVC.rootView = AnyView(content(currentPage))
-                    context.coordinator.lastRevision = revision
+        let isDouble = isDoubleSided && transitionStyle == .pageCurl
+
+        if isDouble {
+            let leftPage = (currentPage / 2) * 2
+            let rightPage = leftPage + 1
+
+            var needsUpdate = true
+            if currentVCs.count == 2,
+               let leftVC = currentVCs[0] as? PageHostingController,
+               let rightVC = currentVCs[1] as? PageHostingController {
+                if leftVC.pageIndex == leftPage && rightVC.pageIndex == rightPage {
+                    if context.coordinator.lastRevision != revision {
+                        leftVC.rootView = AnyView(content(leftPage))
+                        if rightPage < pageCount {
+                            rightVC.rootView = AnyView(content(rightPage))
+                        }
+                        context.coordinator.lastRevision = revision
+                    }
+                    needsUpdate = false
                 }
-                return
             }
-        }
 
-        // Programmatic jump to page (from scrubber, TOC, bookmark)
-        let dir: UIPageViewController.NavigationDirection = (currentPage >= context.coordinator.lastPage) ? .forward : .reverse
-        context.coordinator.lastPage = currentPage
-        context.coordinator.lastRevision = revision
-        let vc = context.coordinator.createVC(page: currentPage)
-        uiViewController.setViewControllers([vc], direction: dir, animated: true)
+            if needsUpdate {
+                let dir: UIPageViewController.NavigationDirection = (leftPage >= context.coordinator.lastPage) ? .forward : .reverse
+                context.coordinator.lastPage = leftPage
+                context.coordinator.lastRevision = revision
+                let leftVC = context.coordinator.createVC(page: leftPage)
+                let rightVC = context.coordinator.createVC(page: rightPage)
 
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-            context.coordinator.preloadNeighbors()
+                if uiViewController.spineLocation == .mid {
+                    uiViewController.setViewControllers([leftVC, rightVC], direction: dir, animated: false)
+                }
+
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    context.coordinator.preloadNeighbors()
+                }
+            }
+        } else {
+            var needsUpdate = true
+            if currentVCs.count == 1,
+               let vc = currentVCs[0] as? PageHostingController {
+                if vc.pageIndex == currentPage {
+                    if context.coordinator.lastRevision != revision {
+                        context.coordinator.pruneAllCache()
+                        vc.rootView = AnyView(content(currentPage))
+                        context.coordinator.lastRevision = revision
+                    }
+                    needsUpdate = false
+                }
+            }
+
+            if needsUpdate {
+                let dir: UIPageViewController.NavigationDirection = (currentPage >= context.coordinator.lastPage) ? .forward : .reverse
+                context.coordinator.lastPage = currentPage
+                context.coordinator.lastRevision = revision
+                let vc = context.coordinator.createVC(page: currentPage)
+
+                if uiViewController.spineLocation != .mid {
+                    uiViewController.setViewControllers([vc], direction: dir, animated: true)
+                }
+
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    context.coordinator.preloadNeighbors()
+                }
+            }
         }
     }
 
@@ -103,7 +161,7 @@ struct BookPagerView<Content: View>: UIViewControllerRepresentable {
 
         func pruneCache() {
             let center = parent.currentPage
-            let threshold = 3
+            let threshold = parent.isDoubleSided ? 6 : 3
             let keys = cachedVCs.keys
             for key in keys {
                 if abs(key - center) > threshold {
@@ -114,11 +172,24 @@ struct BookPagerView<Content: View>: UIViewControllerRepresentable {
 
         func preloadNeighbors() {
             let p = parent.currentPage
-            if p > 0 {
-                _ = createVC(page: p - 1).view
-            }
-            if p < parent.pageCount - 1 {
-                _ = createVC(page: p + 1).view
+            if parent.isDoubleSided && parent.transitionStyle == .pageCurl {
+                let leftPage = (p / 2) * 2
+                let rightPage = leftPage + 1
+                if leftPage >= 2 {
+                    _ = createVC(page: leftPage - 2).view
+                    _ = createVC(page: leftPage - 1).view
+                }
+                if rightPage + 2 < parent.pageCount {
+                    _ = createVC(page: rightPage + 1).view
+                    _ = createVC(page: rightPage + 2).view
+                }
+            } else {
+                if p > 0 {
+                    _ = createVC(page: p - 1).view
+                }
+                if p < parent.pageCount - 1 {
+                    _ = createVC(page: p + 1).view
+                }
             }
         }
 
@@ -138,7 +209,10 @@ struct BookPagerView<Content: View>: UIViewControllerRepresentable {
                 pruneCache()
                 return vc
             } else {
-                let empty = AnyView(Color(red: 15/255, green: 23/255, blue: 42/255))
+                let empty = AnyView(
+                    Color(hex: "0f172a")
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                )
                 return PageHostingController(pageIndex: page, rootView: empty)
             }
         }
@@ -153,8 +227,15 @@ struct BookPagerView<Content: View>: UIViewControllerRepresentable {
 
         func pageViewController(_ pageViewController: UIPageViewController, viewControllerAfter viewController: UIViewController) -> UIViewController? {
             guard let currentVC = viewController as? PageHostingController else { return nil }
-            if currentVC.pageIndex < parent.pageCount - 1 {
-                return createVC(page: currentVC.pageIndex + 1)
+            if parent.isDoubleSided && parent.transitionStyle == .pageCurl {
+                let maxPage = parent.pageCount % 2 == 1 ? parent.pageCount : parent.pageCount - 1
+                if currentVC.pageIndex < maxPage {
+                    return createVC(page: currentVC.pageIndex + 1)
+                }
+            } else {
+                if currentVC.pageIndex < parent.pageCount - 1 {
+                    return createVC(page: currentVC.pageIndex + 1)
+                }
             }
             return nil
         }
@@ -167,8 +248,9 @@ struct BookPagerView<Content: View>: UIViewControllerRepresentable {
 
         func pageViewController(_ pageViewController: UIPageViewController, didFinishAnimating finished: Bool, previousViewControllers: [UIViewController], transitionCompleted completed: Bool) {
             if completed, let p = pendingPage {
-                parent.currentPage = p
-                lastPage = p
+                let normalized = (parent.isDoubleSided && parent.transitionStyle == .pageCurl) ? ((p / 2) * 2) : p
+                parent.currentPage = normalized
+                lastPage = normalized
                 UIImpactFeedbackGenerator(style: .light).impactOccurred()
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
                     self?.preloadNeighbors()
@@ -178,8 +260,28 @@ struct BookPagerView<Content: View>: UIViewControllerRepresentable {
         }
 
         func pageViewController(_ pageViewController: UIPageViewController, spineLocationFor orientation: UIInterfaceOrientation) -> UIPageViewController.SpineLocation {
-            pageViewController.isDoubleSided = false
-            return .min
+            let isDouble = parent.isDoubleSided && parent.transitionStyle == .pageCurl
+            if isDouble {
+                pageViewController.isDoubleSided = true
+                let leftPage = (parent.currentPage / 2) * 2
+                let rightPage = leftPage + 1
+
+                let currentVCs = pageViewController.viewControllers ?? []
+                if currentVCs.count != 2 {
+                    let leftVC = createVC(page: leftPage)
+                    let rightVC = createVC(page: rightPage)
+                    pageViewController.setViewControllers([leftVC, rightVC], direction: .forward, animated: false)
+                }
+                return .mid
+            } else {
+                pageViewController.isDoubleSided = false
+                let currentVCs = pageViewController.viewControllers ?? []
+                if currentVCs.count != 1 {
+                    let vc = createVC(page: parent.currentPage)
+                    pageViewController.setViewControllers([vc], direction: .forward, animated: false)
+                }
+                return .min
+            }
         }
     }
 }

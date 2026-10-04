@@ -88,7 +88,7 @@ final class WebTemplateGenerator {
         <html lang="vi">
         <head>
           <meta charset="UTF-8">
-          <meta name="viewport" content="width=680, initial-scale=1.0, maximum-scale=3.0, user-scalable=yes">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=3.0, user-scalable=yes">
           <link rel="preconnect" href="https://fonts.googleapis.com">
           <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
           <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Cormorant+Garamond:ital,wght@0,600;0,700;1,600&family=Plus+Jakarta+Sans:wght@500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&family=Noto+Serif+SC:wght@400;600;700;900&family=Dancing+Script:wght@400;500;600;700&family=Caveat:wght@400;500;600;700&family=Patrick+Hand&family=Kalam:wght@300;400;700&family=Indie+Flower&family=Ma+Shan+Zheng&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
@@ -156,6 +156,7 @@ final class WebTemplateGenerator {
               overflow-x: hidden;
             }
 
+            /* Desktop / iPad Floating Sheet (> 640px) */
             .book-desk-scaler {
               width: 660px;
               min-height: 820px;
@@ -170,6 +171,54 @@ final class WebTemplateGenerator {
               min-height: 820px !important;
               padding: 22px 20px 16px 36px !important;
               border-radius: 4px;
+            }
+
+            /* --- Mobile Full-Bleed Reading Experience (<= 640px) --- */
+            @media (max-width: 640px) {
+              html, body {
+                padding: 0 !important;
+                margin: 0 !important;
+                width: 100% !important;
+                min-height: 100% !important;
+                overflow-x: hidden !important;
+                background: transparent !important;
+              }
+
+              .book-desk-scaler {
+                width: 100% !important;
+                max-width: 100% !important;
+                min-height: 100vh !important;
+                margin: 0 !important;
+                transform: none !important;
+                box-shadow: none !important;
+                border-radius: 0 !important;
+              }
+
+              .a4-template-sheet {
+                width: 100% !important;
+                max-width: 100% !important;
+                min-height: 100vh !important;
+                margin: 0 !important;
+                padding: 16px 14px 28px 16px !important;
+                box-shadow: none !important;
+                border-radius: 0 !important;
+              }
+
+              /* Hide punch margin line and edge notches on phone so the page has maximum usable reading space */
+              .punch-margin-line,
+              .edge-index-markers {
+                display: none !important;
+              }
+
+              /* Ruled lines and writing area typography on mobile */
+              .template-writing-area {
+                font-size: var(--notebook-font-size, 16px) !important;
+              }
+
+              .template-writing-area div {
+                min-height: 30px !important;
+                line-height: 30px !important;
+              }
             }
 
             /* --- Reading Mode Optimization --- */
@@ -223,10 +272,16 @@ final class WebTemplateGenerator {
           </style>
           <script>
             function fitScale() {
-              var w = window.innerWidth - 12;
-              var scale = Math.min(w / 660, 1.0);
+              var w = window.innerWidth;
               var scaler = document.getElementById('sheetContainer');
-              if (scaler) {
+              if (!scaler) return;
+              if (w <= 640) {
+                // Mobile phone mode: full bleed, 1:1 true point size
+                scaler.style.transform = 'none';
+                scaler.style.marginBottom = '0px';
+              } else {
+                // iPad / Desktop mode: scale authentic A4 sheet to fit desk
+                var scale = Math.min((w - 16) / 660, 1.0);
                 scaler.style.transform = 'scale(' + scale + ')';
                 scaler.style.marginBottom = (820 * (scale - 1)) + 'px';
               }
@@ -275,34 +330,43 @@ final class WebTemplateGenerator {
               }
             });
 
-            // Interactive handlers (Active only in edit mode)
+            // Interactive handlers & Tap-to-Toggle Chrome
             document.addEventListener('click', function(e) {
               var isEdit = \(isEditable ? "true" : "false");
-              if (!isEdit) return;
-
-              // Status pill click
-              var pill = e.target.closest('.status-pill-btn');
-              if (pill) {
-                var group = pill.closest('.status-pills');
-                if (group) {
-                  group.querySelectorAll('.status-pill-btn').forEach(function(b) {
-                    b.classList.remove('active-todo', 'active-wip', 'active-done');
-                  });
-                  var st = pill.getAttribute('data-status');
-                  if (st === 'TODO') pill.classList.add('active-todo');
-                  if (st === 'WIP') pill.classList.add('active-wip');
-                  if (st === 'DONE') pill.classList.add('active-done');
+              if (isEdit) {
+                // Status pill click
+                var pill = e.target.closest('.status-pill-btn');
+                if (pill) {
+                  var group = pill.closest('.status-pills');
+                  if (group) {
+                    group.querySelectorAll('.status-pill-btn').forEach(function(b) {
+                      b.classList.remove('active-todo', 'active-wip', 'active-done');
+                    });
+                    var st = pill.getAttribute('data-status');
+                    if (st === 'TODO') pill.classList.add('active-todo');
+                    if (st === 'WIP') pill.classList.add('active-wip');
+                    if (st === 'DONE') pill.classList.add('active-done');
+                  }
+                  return;
                 }
-              }
 
-              // Checkbox click
-              var checkBtn = e.target.closest('.action-check-square');
-              if (checkBtn) {
-                checkBtn.classList.toggle('checked');
-                var row = checkBtn.closest('.action-row');
-                if (row) {
-                  var input = row.querySelector('.action-line-input');
-                  if (input) input.classList.toggle('done-line');
+                // Checkbox click
+                var checkBtn = e.target.closest('.action-check-square');
+                if (checkBtn) {
+                  checkBtn.classList.toggle('checked');
+                  var row = checkBtn.closest('.action-row');
+                  if (row) {
+                    var input = row.querySelector('.action-line-input');
+                    if (input) input.classList.toggle('done-line');
+                  }
+                  return;
+                }
+              } else {
+                // Reading mode: tap anywhere to toggle chrome
+                if (window.getSelection && window.getSelection().toString().length > 0) return;
+                if (e.target.closest('a') || e.target.closest('button')) return;
+                if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.notebookReader) {
+                  window.webkit.messageHandlers.notebookReader.postMessage({ type: 'toggleChrome' });
                 }
               }
             });
