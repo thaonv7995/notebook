@@ -58,10 +58,10 @@
 
 > Backend API: [`server/api.js`](file:///Users/thaonv/Desktop/Notebook%20Project/server/api.js), Auth: [`server/auth.js`](file:///Users/thaonv/Desktop/Notebook%20Project/server/auth.js)
 
-- [ ] **P2-1** Tạo `Services/APIConfig.swift`:
-  - Base URL (configurable, default "https://your-server.com")
-  - Timeout settings
-  - Common headers
+- [x] **P2-1** Tạo `Services/APIConfig.swift` ✅:
+  - Server URL persisted in UserDefaults, all endpoints enum with path + method
+  - 3 timeout tiers (request 30s, sync 60s, ping 10s)
+  - Common headers, auth header builder, URLSessionConfiguration
 
 - [ ] **P2-2** Tạo `Services/APIClient.swift` — URLSession wrapper:
   - `func request<T: Decodable>(_ endpoint, method, body) async throws -> T`

@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		0E51160FF4BAAED4C30FB2B4 /* APIConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5EF99B2C2CA2F9625C5D2C5 /* APIConfig.swift */; };
 		10DC2EF7CB1A024137C2C303 /* PlusJakartaSans-Italic[wght].ttf in Resources */ = {isa = PBXBuildFile; fileRef = 94AACCF24A0FDCEF59C6BC1F /* PlusJakartaSans-Italic[wght].ttf */; };
 		12F7D239A60EDF5B5AE1309D /* SearchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8B795505730AF44002BE0D85 /* SearchView.swift */; };
 		15A6638A3FDA20366964D373 /* FavoritesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A30A2916613C52F6D808109 /* FavoritesView.swift */; };
@@ -55,6 +56,7 @@
 		94AACCF24A0FDCEF59C6BC1F /* PlusJakartaSans-Italic[wght].ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "PlusJakartaSans-Italic[wght].ttf"; sourceTree = "<group>"; };
 		9A30A2916613C52F6D808109 /* FavoritesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FavoritesView.swift; sourceTree = "<group>"; };
 		9E654D3E6BB937FB329D6C3B /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		A5EF99B2C2CA2F9625C5D2C5 /* APIConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIConfig.swift; sourceTree = "<group>"; };
 		A7C290DAD3E868C8C0DCB32B /* MainTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainTabView.swift; sourceTree = "<group>"; };
 		AE6B50A69093E8535A28E94A /* LibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryView.swift; sourceTree = "<group>"; };
 		BA2339F2840F320C74C2DA3C /* FontExtensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FontExtensions.swift; sourceTree = "<group>"; };
@@ -171,6 +173,7 @@
 		671DDF79A9B7EA900ADF56C7 /* Services */ = {
 			isa = PBXGroup;
 			children = (
+				A5EF99B2C2CA2F9625C5D2C5 /* APIConfig.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -389,6 +392,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				0E51160FF4BAAED4C30FB2B4 /* APIConfig.swift in Sources */,
 				438B94364AEF08DD15B98E4A /* APIResponse.swift in Sources */,
 				B186E89C6BC5233955BE81DF /* ActionItem.swift in Sources */,
 				56024419C490425A3492B880 /* AuthViewModel.swift in Sources */,
