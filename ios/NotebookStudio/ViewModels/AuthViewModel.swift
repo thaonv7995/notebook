@@ -105,10 +105,18 @@ class AuthViewModel: ObservableObject {
         isCheckingSession = false
 
         // 3. Verify with server in background
-        let user = await AuthService.checkSession()
-        if user == nil {
-            // Token expired — force re-login
+        do {
+            let user = try await AuthService.verifySession()
+            self.username = user.username
+        } catch let apiError as APIError where apiError.isAuthError {
+            // Token expired (401) — force re-login
             handleUnauthorized()
+        } catch {
+            // Device is offline or network unreachable:
+            // KEEP optimistic login state so user can continue reading cached notebooks!
+            #if DEBUG
+            print("ℹ️ Session check skipped (device offline / network unreachable): \(error.localizedDescription)")
+            #endif
         }
     }
 

@@ -18,6 +18,9 @@ import { loadFullState } from './db.js';
 
 const PORT = parseInt(process.env.PORT, 10) || 27972;
 
+let activePdfExports = 0;
+const MAX_CONCURRENT_PDF = 1;
+
 /**
  * Detect system-installed Chrome/Chromium if available
  */
@@ -54,6 +57,13 @@ function findChromeExecutable() {
  */
 export function pdfRoutes(app) {
   app.get('/api/notebooks/:id/pdf', requireAuth, async (req, res) => {
+    if (activePdfExports >= MAX_CONCURRENT_PDF) {
+      return res.status(429).json({
+        error: 'Server đang xử lý một tác vụ xuất PDF khác. Vui lòng đợi trong giây lát rồi thử lại.'
+      });
+    }
+
+    activePdfExports++;
     let browser = null;
     let tempProfileDir = null;
     try {
@@ -61,6 +71,10 @@ export function pdfRoutes(app) {
       const notebook = notebooks.find(nb => nb.id === req.params.id);
       if (!notebook) {
         return res.status(404).json({ error: 'Không tìm thấy cuốn sổ' });
+      }
+
+      if (notebook.pages && notebook.pages.length > 100) {
+        return res.status(400).json({ error: 'Cuốn sổ vượt quá giới hạn 100 trang để xuất PDF.' });
       }
 
       const cover = req.query.cover === '1' ? '1' : '0';
@@ -106,20 +120,11 @@ export function pdfRoutes(app) {
         browser = await puppeteer.default.launch(launchOptions);
       } catch (launchErr) {
         if (launchErr.message.includes('Could not find Chrome')) {
-          console.warn('  ⚠ Chrome missing for Puppeteer. Attempting auto-install...');
-          try {
-            execSync('npx puppeteer browsers install chrome', {
-              stdio: 'inherit',
-              env: { ...process.env, HOME: os.homedir() },
-              timeout: 180000,
-            });
-            browser = await puppeteer.default.launch(launchOptions);
-          } catch {
-            throw new Error('Chưa cài đặt Chrome trên server. Vui lòng chạy lệnh: npx puppeteer browsers install chrome');
-          }
-        } else {
-          throw launchErr;
+          return res.status(503).json({
+            error: 'Chưa cài đặt Chrome trên server để xuất PDF. Vui lòng chạy lệnh: npx puppeteer browsers install chrome'
+          });
         }
+        throw launchErr;
       }
 
       const browserPage = await browser.newPage();
@@ -271,6 +276,7 @@ export function pdfRoutes(app) {
           fs.rmSync(tempProfileDir, { recursive: true, force: true });
         } catch {}
       }
+      activePdfExports = Math.max(0, activePdfExports - 1);
     }
   });
 }

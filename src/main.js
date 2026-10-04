@@ -450,12 +450,20 @@ async function loadFromServer() {
   try {
     const data = await fetchNotebooks();
     if (data.ok && Array.isArray(data.notebooks)) {
-      // Track server's sync timestamp
+      // Track server's sync timestamp and deleted notebook tombstones
       if (data.lastSyncedAt) lastSyncedAt = data.lastSyncedAt;
 
-      const serverNotebooks = data.notebooks;
       const localState = getState();
-      const localNotebooks = localState.notebooks || [];
+      if (Array.isArray(data.deletedNotebookIds)) {
+        localState.deletedNotebookIds = Array.from(new Set([
+          ...(Array.isArray(localState.deletedNotebookIds) ? localState.deletedNotebookIds : []),
+          ...data.deletedNotebookIds
+        ])).slice(-200);
+      }
+      const deletedSet = new Set(localState.deletedNotebookIds || []);
+
+      const serverNotebooks = (data.notebooks || []).filter(nb => !deletedSet.has(nb.id));
+      const localNotebooks = (localState.notebooks || []).filter(nb => !deletedSet.has(nb.id));
 
       let mergedNotebooks;
 
@@ -552,18 +560,25 @@ async function pullFromServer() {
     const localJson = JSON.stringify(localNotebooks);
     if (serverJson === localJson) return false;
 
-    // Deep merge at page level — exclude sample notebooks from local
+    const deletedNotebookSet = new Set([
+      ...(Array.isArray(currentState.deletedNotebookIds) ? currentState.deletedNotebookIds : []),
+      ...(Array.isArray(data.deletedNotebookIds) ? data.deletedNotebookIds : [])
+    ]);
+
+    // Deep merge at page level — exclude sample notebooks and deleted notebooks from local
     const sampleNotebookIds = new Set(
       INITIAL_LIBRARY_DATA.notebooks.map(nb => nb.id)
     );
 
     const serverMap = new Map();
-    serverNotebooks.forEach(nb => serverMap.set(nb.id, nb));
+    serverNotebooks.forEach(nb => {
+      if (!deletedNotebookSet.has(nb.id)) serverMap.set(nb.id, nb);
+    });
 
     const localMap = new Map();
     localNotebooks.forEach(nb => {
-      // Only include non-sample notebooks in local merge set
-      if (!sampleNotebookIds.has(nb.id)) {
+      // Only include non-sample and non-deleted notebooks in local merge set
+      if (!sampleNotebookIds.has(nb.id) && !deletedNotebookSet.has(nb.id)) {
         localMap.set(nb.id, nb);
       }
     });
@@ -675,10 +690,15 @@ async function doSyncToServer() {
 
   isSyncing = true;
   try {
-    const result = await syncNotebooks(state.notebooks, lastSyncedAt);
+    const result = await syncNotebooks(state.notebooks, lastSyncedAt, state.deletedNotebookIds || []);
 
     // Update lastSyncedAt from server response
     if (result.savedAt) lastSyncedAt = result.savedAt;
+
+    // Update deletedNotebookIds if returned by server
+    if (Array.isArray(result.deletedNotebookIds)) {
+      state.deletedNotebookIds = result.deletedNotebookIds;
+    }
 
     // Mark as pushed
     lastPushedJson = currentJson;
@@ -802,13 +822,22 @@ function startSyncListeners() {
     const currentJson = JSON.stringify(state.notebooks);
     if (currentJson === lastPushedJson) return;
 
-    // sendBeacon is fire-and-forget — guaranteed to be sent even if page closes
+    // sendBeacon is fire-and-forget; fallback to fetch keepalive if >64KB or rejected
     try {
       const payload = JSON.stringify({
         notebooks: state.notebooks,
-        lastSyncedAt
+        lastSyncedAt,
+        deletedNotebookIds: state.deletedNotebookIds || []
       });
-      navigator.sendBeacon('/api/notebooks/sync-beacon', payload);
+      const sent = navigator.sendBeacon && navigator.sendBeacon('/api/notebooks/sync-beacon', payload);
+      if (!sent) {
+        fetch('/api/notebooks/sync-beacon', {
+          method: 'POST',
+          body: payload,
+          headers: { 'Content-Type': 'text/plain' },
+          keepalive: true
+        }).catch(() => {});
+      }
     } catch {
       // Fallback: try regular push (may be killed by browser)
       pushToServerNow();

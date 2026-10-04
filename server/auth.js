@@ -6,13 +6,25 @@
  * - JWT stored in httpOnly cookie for security
  */
 
+import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import { findUserByUsername, findUserById, createUser, updateUserPassword } from './db.js';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'notebook-studio-secret-change-me';
+let JWT_SECRET = (process.env.JWT_SECRET || '').trim();
+if (!JWT_SECRET || JWT_SECRET === 'notebook-studio-secret-change-me') {
+  if (process.env.NODE_ENV === 'production') {
+    console.warn('  ⚠ CẢNH BÁO BẢO MẬT: Chưa cấu hình JWT_SECRET trong .env. Khởi tạo secret ngẫu nhiên cho phiên này để chống giả mạo token.');
+    JWT_SECRET = crypto.randomBytes(32).toString('hex');
+  } else {
+    JWT_SECRET = 'notebook-studio-dev-secret-key-123456';
+  }
+}
 const TOKEN_EXPIRY = '7d';
 const COOKIE_NAME = 'nb_token';
+
+// In-memory brute force rate limiter for login
+const loginAttempts = new Map(); // ip -> { count, resetAt }
 
 // ─── Bootstrap: create admin user if none exists ───
 
@@ -21,7 +33,7 @@ export function ensureAdminUser() {
   const password = process.env.ADMIN_PASSWORD || 'admin123';
   const existing = findUserByUsername(username);
   if (!existing) {
-    const hash = bcrypt.hashSync(password, 12);
+    const hash = bcrypt.hashSync(password, 10);
     createUser(username, hash);
     console.log(`✓ Admin user "${username}" created.`);
   }
@@ -66,16 +78,31 @@ export function requireAuth(req, res, next) {
 
 export function authRoutes(app) {
   // POST /api/auth/login
-  app.post('/api/auth/login', (req, res) => {
+  app.post('/api/auth/login', async (req, res) => {
+    const clientIp = req.ip || req.headers['x-forwarded-for'] || 'unknown';
+    const now = Date.now();
+    const record = loginAttempts.get(clientIp);
+    if (record && now < record.resetAt && record.count >= 6) {
+      return res.status(429).json({ error: 'Quá nhiều lần đăng nhập không thành công. Vui lòng thử lại sau 1 phút.' });
+    }
+
     const { username, password } = req.body || {};
     if (!username || !password) {
       return res.status(400).json({ error: 'Thiếu tên đăng nhập hoặc mật khẩu' });
     }
 
     const user = findUserByUsername(username);
-    if (!user || !bcrypt.compareSync(password, user.password_hash)) {
+    const isValid = user && (await bcrypt.compare(password, user.password_hash));
+    if (!isValid) {
+      if (!record || now >= record.resetAt) {
+        loginAttempts.set(clientIp, { count: 1, resetAt: now + 60000 });
+      } else {
+        record.count++;
+      }
       return res.status(401).json({ error: 'Sai tên đăng nhập hoặc mật khẩu' });
     }
+
+    loginAttempts.delete(clientIp);
 
     const token = signToken(user);
     res.cookie(COOKIE_NAME, token, {
@@ -107,7 +134,7 @@ export function authRoutes(app) {
   });
 
   // POST /api/auth/change-password
-  app.post('/api/auth/change-password', requireAuth, (req, res) => {
+  app.post('/api/auth/change-password', requireAuth, async (req, res) => {
     const { oldPassword, newPassword } = req.body || {};
     if (!oldPassword || !newPassword) {
       return res.status(400).json({ error: 'Vui lòng nhập mật khẩu hiện tại và mật khẩu mới' });
@@ -117,11 +144,12 @@ export function authRoutes(app) {
     }
 
     const user = findUserById(req.user.id);
-    if (!user || !bcrypt.compareSync(oldPassword, user.password_hash)) {
+    const isValid = user && (await bcrypt.compare(oldPassword, user.password_hash));
+    if (!isValid) {
       return res.status(400).json({ error: 'Mật khẩu hiện tại không chính xác' });
     }
 
-    const newHash = bcrypt.hashSync(newPassword, 12);
+    const newHash = await bcrypt.hash(newPassword, 10);
     updateUserPassword(user.id, newHash);
     res.json({ ok: true, message: 'Đổi mật khẩu thành công' });
   });

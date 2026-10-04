@@ -109,26 +109,13 @@ class ReadingProgressStore: ObservableObject {
 
             guard !Task.isCancelled else { return }
 
-            // Build minimal notebook with updated progress for sync
-            if var notebook = LocalStorageManager.shared.getNotebook(id: notebookId) {
-                notebook = Notebook(
-                    id: notebook.id,
-                    title: notebook.title,
-                    author: notebook.author,
-                    category: notebook.category,
-                    lang: notebook.lang,
-                    fontFamily: notebook.fontFamily,
-                    lineHeight: notebook.lineHeight,
-                    coverGradient: notebook.coverGradient,
-                    coverTextColor: notebook.coverTextColor,
-                    isPinned: notebook.isPinned,
-                    lastPageIndex: pageIndex,
-                    deletedPageIds: notebook.deletedPageIds,
-                    pages: notebook.pages,
-                    createdAt: notebook.createdAt,
-                    updatedAt: notebook.updatedAt
-                )
-                SyncManager.shared.syncReadingProgress(notebooks: [notebook])
+            // Update local storage first
+            LocalStorageManager.shared.updateReadingProgress(notebookId: notebookId, pageIndex: pageIndex)
+
+            // Sync with all cached notebooks so the server never misinterprets a partial array as deletions
+            let allNotebooks = LocalStorageManager.shared.loadNotebooks()
+            if !allNotebooks.isEmpty {
+                SyncManager.shared.syncReadingProgress(notebooks: allNotebooks)
             }
         }
     }

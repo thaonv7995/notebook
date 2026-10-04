@@ -8,7 +8,59 @@
 
 import { requireAuth } from './auth.js';
 
-function resolveApiKey(req) {
+const DEFAULT_BASE_URL = (process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1').replace(/\/+$/, '');
+
+function validateAndResolveEndpoint(req, path = '/chat/completions') {
+  const headerBase = req.headers['x-base-url'];
+  const bodyBase = req.body && req.body.baseUrl;
+  const rawBase = (headerBase || bodyBase || DEFAULT_BASE_URL).trim();
+
+  let parsedUrl;
+  try {
+    parsedUrl = new URL(rawBase);
+  } catch {
+    throw new Error('Base URL không hợp lệ: ' + rawBase);
+  }
+
+  // Only allow HTTP/HTTPS
+  if (parsedUrl.protocol !== 'http:' && parsedUrl.protocol !== 'https:') {
+    throw new Error('Giao thức không được hỗ trợ. Chỉ chấp nhận http: hoặc https:.');
+  }
+
+  const hostname = parsedUrl.hostname.toLowerCase();
+  const isLocal = hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1';
+
+  // SSRF Protection: Block cloud metadata and dangerous internal addresses
+  const isCloudMetadata = hostname === '169.254.169.254'
+    || hostname === 'metadata.google.internal'
+    || hostname.startsWith('169.254.')
+    || hostname === '100.100.100.200';
+
+  if (isCloudMetadata) {
+    throw new Error('Địa chỉ Base URL bị từ chối vì lý do an toàn bảo mật (SSRF Guard).');
+  }
+
+  // In production, block private internal networks unless explicitly allowed
+  if (process.env.NODE_ENV === 'production' && process.env.ALLOW_LOCAL_AI !== 'true') {
+    const isPrivateIp = /^10\./.test(hostname)
+      || /^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(hostname)
+      || /^192\.168\./.test(hostname)
+      || hostname === '0.0.0.0';
+
+    if (isPrivateIp) {
+      throw new Error('Không thể kết nối đến địa chỉ mạng nội bộ trong môi trường production.');
+    }
+  }
+
+  let normalizedBase = rawBase.replace(/\/+$/, '');
+  let finalUrl = normalizedBase.endsWith(path) ? normalizedBase : `${normalizedBase}${path}`;
+
+  const isCustomBaseUrl = normalizedBase !== DEFAULT_BASE_URL;
+
+  return { endpointUrl: finalUrl, isCustomBaseUrl, isLocal };
+}
+
+function resolveApiKey(req, isCustomBaseUrl = false) {
   const headerKey = req.headers['x-api-key'];
   if (typeof headerKey === 'string' && headerKey.trim().length > 0) {
     return headerKey.trim();
@@ -17,22 +69,13 @@ function resolveApiKey(req) {
   if (typeof bodyKey === 'string' && bodyKey.trim().length > 0) {
     return bodyKey.trim();
   }
+
+  // CRITICAL SECURITY: Never leak server master OPENAI_API_KEY to custom base URLs!
+  if (isCustomBaseUrl) {
+    return '';
+  }
+
   return (process.env.OPENAI_API_KEY || '').trim();
-}
-
-function resolveEndpointUrl(req, path = '/chat/completions') {
-  const headerBase = req.headers['x-base-url'];
-  const bodyBase = req.body && req.body.baseUrl;
-  let base = (headerBase || bodyBase || process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1').trim();
-  if (!base) base = 'https://api.openai.com/v1';
-
-  // Normalize: remove trailing slashes
-  base = base.replace(/\/+$/, '');
-
-  // If already pointing to the exact path
-  if (base.endsWith(path)) return base;
-
-  return `${base}${path}`;
 }
 
 function buildSystemPrompt(action, template, targetLang, constraints = {}) {
@@ -265,12 +308,16 @@ export function aiRoutes(app) {
   // ─── POST /api/ai/test-key — Test AI API Key & Base URL validity ───
   app.post('/api/ai/test-key', requireAuth, async (req, res) => {
     try {
-      const apiKey = resolveApiKey(req);
-      const chatUrl = resolveEndpointUrl(req, '/chat/completions');
-      const isLocal = chatUrl.includes('localhost') || chatUrl.includes('127.0.0.1');
+      const { endpointUrl: chatUrl, isCustomBaseUrl, isLocal } = validateAndResolveEndpoint(req, '/chat/completions');
+      const apiKey = resolveApiKey(req, isCustomBaseUrl);
 
       if (!apiKey && !isLocal) {
-        return res.status(400).json({ ok: false, error: 'Chưa cung cấp API Key.' });
+        return res.status(400).json({
+          ok: false,
+          error: isCustomBaseUrl
+            ? 'Vui lòng cung cấp API Key cá nhân khi kết nối đến Custom Base URL.'
+            : 'Chưa cung cấp API Key.'
+        });
       }
 
       const { model = 'gpt-4o-mini' } = req.body || {};
@@ -313,14 +360,15 @@ export function aiRoutes(app) {
   // ─── POST /api/ai/stream — Stream AI output via Server-Sent Events (SSE) ───
   app.post('/api/ai/stream', requireAuth, async (req, res) => {
     try {
-      const apiKey = resolveApiKey(req);
-      const chatUrl = resolveEndpointUrl(req, '/chat/completions');
-      const isLocal = chatUrl.includes('localhost') || chatUrl.includes('127.0.0.1');
+      const { endpointUrl: chatUrl, isCustomBaseUrl, isLocal } = validateAndResolveEndpoint(req, '/chat/completions');
+      const apiKey = resolveApiKey(req, isCustomBaseUrl);
 
       if (!apiKey && !isLocal) {
         return res.status(400).json({
           ok: false,
-          error: 'Chưa có API Key. Hãy cấu hình OPENAI_API_KEY trong file .env hoặc bấm nút Cài đặt AI ⚙️ để nhập Key cá nhân.'
+          error: isCustomBaseUrl
+            ? 'Vui lòng cung cấp API Key cá nhân khi sử dụng Custom Base URL.'
+            : 'Chưa có API Key. Hãy cấu hình OPENAI_API_KEY trong file .env hoặc bấm nút Cài đặt AI ⚙️ để nhập Key cá nhân.'
         });
       }
 
@@ -428,14 +476,15 @@ export function aiRoutes(app) {
   // ─── POST /api/ai/process — Execute AI prompt / transform ───
   app.post('/api/ai/process', requireAuth, async (req, res) => {
     try {
-      const apiKey = resolveApiKey(req);
-      const chatUrl = resolveEndpointUrl(req, '/chat/completions');
-      const isLocal = chatUrl.includes('localhost') || chatUrl.includes('127.0.0.1');
+      const { endpointUrl: chatUrl, isCustomBaseUrl, isLocal } = validateAndResolveEndpoint(req, '/chat/completions');
+      const apiKey = resolveApiKey(req, isCustomBaseUrl);
 
       if (!apiKey && !isLocal) {
         return res.status(400).json({
           ok: false,
-          error: 'Chưa có API Key. Hãy cấu hình OPENAI_API_KEY trong file .env hoặc bấm nút Cài đặt AI ⚙️ để nhập Key cá nhân.'
+          error: isCustomBaseUrl
+            ? 'Vui lòng cung cấp API Key cá nhân khi sử dụng Custom Base URL.'
+            : 'Chưa có API Key. Hãy cấu hình OPENAI_API_KEY trong file .env hoặc bấm nút Cài đặt AI ⚙️ để nhập Key cá nhân.'
         });
       }
 

@@ -29,7 +29,9 @@ export function normalizeState(rawState) {
   const state = rawState && typeof rawState === 'object' ? rawState : {};
   const previousVersion = Number(state.version) || 0;
   state.version = STATE_VERSION;
-  state.notebooks = Array.isArray(state.notebooks) ? state.notebooks : [];
+  state.deletedNotebookIds = Array.isArray(state.deletedNotebookIds) ? state.deletedNotebookIds.slice(-200) : [];
+  const deletedNotebookSet = new Set(state.deletedNotebookIds);
+  state.notebooks = (Array.isArray(state.notebooks) ? state.notebooks : []).filter(nb => nb && nb.id && !deletedNotebookSet.has(nb.id));
   delete state.trash;
   state.pageMode = state.pageMode === '1-page' ? '1-page' : '2-page';
   state.zoomLevel = Number.isFinite(state.zoomLevel) ? Math.max(0.3, Math.min(state.zoomLevel, 3.5)) : 1;

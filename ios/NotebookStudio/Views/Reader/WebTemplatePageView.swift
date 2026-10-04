@@ -75,7 +75,7 @@ struct WKWebViewContainer: UIViewRepresentable {
         webView.scrollView.isScrollEnabled = true
 
         context.coordinator.lastHTML = html
-        webView.loadHTMLString(html, baseURL: URL(string: "https://notebook.thaonv.online"))
+        webView.loadHTMLString(html, baseURL: Bundle.main.resourceURL)
         return webView
     }
 
@@ -89,7 +89,7 @@ struct WKWebViewContainer: UIViewRepresentable {
         // Only reload if HTML actually changed
         if context.coordinator.lastHTML != html {
             context.coordinator.lastHTML = html
-            uiView.loadHTMLString(html, baseURL: URL(string: "https://notebook.thaonv.online"))
+            uiView.loadHTMLString(html, baseURL: Bundle.main.resourceURL)
         }
     }
 

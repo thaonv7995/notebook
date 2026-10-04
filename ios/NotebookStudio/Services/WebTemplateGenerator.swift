@@ -1131,6 +1131,27 @@ final class WebTemplateGenerator {
         return cleaned.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
+    /// Sanitizes HTML to strip dangerous elements (script, iframe, object, embed) and inline event handlers
+    func sanitizeRichHtml(_ html: String) -> String {
+        guard !html.isEmpty else { return "" }
+        var sanitized = html
+
+        // 1. Strip script, iframe, object, embed tags and their contents
+        sanitized = sanitized.replacingOccurrences(of: #"(?i)<script[\s\S]*?</script>"#, with: "", options: .regularExpression)
+        sanitized = sanitized.replacingOccurrences(of: #"(?i)<iframe[\s\S]*?</iframe>"#, with: "", options: .regularExpression)
+        sanitized = sanitized.replacingOccurrences(of: #"(?i)<object[\s\S]*?</object>"#, with: "", options: .regularExpression)
+        sanitized = sanitized.replacingOccurrences(of: #"(?i)<embed[^>]*>"#, with: "", options: .regularExpression)
+        sanitized = sanitized.replacingOccurrences(of: #"(?i)<applet[\s\S]*?</applet>"#, with: "", options: .regularExpression)
+
+        // 2. Strip inline event handlers (onerror, onload, onclick, onmouseover, etc.)
+        sanitized = sanitized.replacingOccurrences(of: #"(?i)\s+on[a-z]+\s*=\s*(?:'[^']*'|"[^"]*"|[^\s>]+)"#, with: "", options: .regularExpression)
+
+        // 3. Strip javascript: pseudo-protocol in href or src
+        sanitized = sanitized.replacingOccurrences(of: #"(?i)(href|src)\s*=\s*['"]\s*javascript:[^'"]*['"]"#, with: "", options: .regularExpression)
+
+        return sanitized
+    }
+
     /// Formats content to block HTML elements on ruled lines with Hanzi CJK optical elevation.
     func formatContentToHtml(_ raw: String?) -> String {
         guard let raw = raw?.trimmingCharacters(in: .whitespacesAndNewlines), !raw.isEmpty else {
@@ -1153,7 +1174,7 @@ final class WebTemplateGenerator {
         // Check if content already contains block elements (preformatted rich text)
         let blockTagPattern = #"<(p|div|blockquote|ul|ol|h[1-6]|figure|img)[^>]*>"#
         if html.range(of: blockTagPattern, options: .regularExpression) != nil {
-            return wrapHanziInHtml(html)
+            return wrapHanziInHtml(sanitizeRichHtml(html))
         }
 
         // Process line-by-line for ruled notebook lines
@@ -1191,7 +1212,7 @@ final class WebTemplateGenerator {
             }
         }
 
-        let combined = processedLines.joined()
+        let combined = sanitizeRichHtml(processedLines.joined())
         return wrapHanziInHtml(combined)
     }
 

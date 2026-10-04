@@ -12,7 +12,7 @@
 
 import express from 'express';
 import { requireAuth } from './auth.js';
-import { loadFullState, saveFullState, deleteNotebookById, mergeAndSaveState, getLastSyncedAt } from './db.js';
+import { loadFullState, saveFullState, deleteNotebookById, mergeAndSaveState, getLastSyncedAt, getDeletedNotebookIds, updateNotebookProgress } from './db.js';
 
 export function apiRoutes(app) {
   // ─── GET /api/notebooks — Load full library ───
@@ -20,7 +20,8 @@ export function apiRoutes(app) {
     try {
       const notebooks = loadFullState(req.user.id);
       const lastSyncedAt = getLastSyncedAt(req.user.id);
-      res.json({ ok: true, notebooks, lastSyncedAt });
+      const deletedNotebookIds = getDeletedNotebookIds(req.user.id);
+      res.json({ ok: true, notebooks, lastSyncedAt, deletedNotebookIds });
     } catch (err) {
       console.error('Error loading notebooks:', err);
       res.status(500).json({ error: 'Lỗi tải dữ liệu' });
@@ -40,15 +41,15 @@ export function apiRoutes(app) {
   // ─── PUT /api/notebooks/sync — Smart merge sync ───
   app.put('/api/notebooks/sync', requireAuth, (req, res) => {
     try {
-      const { notebooks, lastSyncedAt: clientLastSyncedAt } = req.body;
+      const { notebooks, lastSyncedAt: clientLastSyncedAt, deletedNotebookIds = [] } = req.body;
       if (!Array.isArray(notebooks)) {
         return res.status(400).json({ error: 'Dữ liệu không hợp lệ' });
       }
 
-      // Reject push of empty notebooks when server has data
+      // Reject push of empty notebooks when server has data AND no deletedNotebookIds
       // (prevents stale/cold clients from wiping content)
       const existing = loadFullState(req.user.id);
-      if (notebooks.length === 0 && existing.length > 0) {
+      if (notebooks.length === 0 && existing.length > 0 && (!Array.isArray(deletedNotebookIds) || deletedNotebookIds.length === 0)) {
         return res.status(409).json({
           error: 'Không thể đồng bộ danh sách rỗng khi server có dữ liệu. Hãy tải lại trang.',
           code: 'EMPTY_SYNC_BLOCKED',
@@ -56,12 +57,13 @@ export function apiRoutes(app) {
         });
       }
 
-      const { merged, savedAt } = mergeAndSaveState(req.user.id, notebooks, clientLastSyncedAt);
+      const { merged, savedAt, deletedNotebookIds: serverDeletedIds } = mergeAndSaveState(req.user.id, notebooks, clientLastSyncedAt, deletedNotebookIds);
       res.json({
         ok: true,
         savedAt,
         count: merged.length,
-        notebooks: merged
+        notebooks: merged,
+        deletedNotebookIds: serverDeletedIds
       });
     } catch (err) {
       console.error('Error syncing notebooks:', err);
@@ -75,17 +77,35 @@ export function apiRoutes(app) {
     try {
       // Parse the text body as JSON
       const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
-      const { notebooks, lastSyncedAt: clientLastSyncedAt } = body;
+      const { notebooks, lastSyncedAt: clientLastSyncedAt, deletedNotebookIds = [] } = body;
 
       if (!Array.isArray(notebooks) || notebooks.length === 0) {
         return res.status(204).end();
       }
 
-      mergeAndSaveState(req.user.id, notebooks, clientLastSyncedAt);
+      mergeAndSaveState(req.user.id, notebooks, clientLastSyncedAt, deletedNotebookIds);
       res.status(204).end();  // No response body needed for beacon
     } catch (err) {
       console.error('Error in sync-beacon:', err);
       res.status(204).end();  // Still 204 — beacon can't read response anyway
+    }
+  });
+
+  // ─── PATCH /api/notebooks/:id/progress — Update reading progress safely ───
+  app.patch('/api/notebooks/:id/progress', requireAuth, (req, res) => {
+    try {
+      const { lastPageIndex } = req.body || {};
+      if (typeof lastPageIndex !== 'number') {
+        return res.status(400).json({ error: 'lastPageIndex không hợp lệ' });
+      }
+      const updated = updateNotebookProgress(req.user.id, req.params.id, lastPageIndex);
+      if (!updated) {
+        return res.status(404).json({ error: 'Không tìm thấy cuốn sổ' });
+      }
+      res.json({ ok: true, lastPageIndex });
+    } catch (err) {
+      console.error('Error updating notebook progress:', err);
+      res.status(500).json({ error: 'Lỗi cập nhật tiến độ đọc' });
     }
   });
 

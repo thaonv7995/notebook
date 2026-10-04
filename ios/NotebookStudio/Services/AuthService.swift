@@ -114,17 +114,19 @@ enum AuthService {
 
     /// Verify the current JWT is still valid with the server.
     ///
-    /// - Returns: User info if session is valid, nil if expired/invalid.
-    static func checkSession() async -> LoginResponse.UserInfo? {
-        do {
-            let response: MeResponse = try await APIClient.shared.request(.me)
-            if response.ok, let user = response.user {
-                return .init(id: user.id, username: user.username)
-            }
-            return nil
-        } catch {
-            return nil
+    /// - Returns: User info if session is valid.
+    /// - Throws: `APIError.unauthorized` on 401, or network error if offline.
+    static func verifySession() async throws -> LoginResponse.UserInfo {
+        let response: MeResponse = try await APIClient.shared.request(.me)
+        guard response.ok, let user = response.user else {
+            throw APIError.unauthorized
         }
+        return .init(id: user.id, username: user.username)
+    }
+
+    /// Legacy check: verify JWT, returns nil on any failure.
+    static func checkSession() async -> LoginResponse.UserInfo? {
+        try? await verifySession()
     }
 
     // MARK: - Change Password

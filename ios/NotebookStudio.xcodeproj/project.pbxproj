@@ -116,7 +116,7 @@
 		16564E5E3E9A8C3B706A96C1 /* ReaderChromeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderChromeView.swift; sourceTree = "<group>"; };
 		1CD2AE2F49D30C811D95CF99 /* ColumnGuideBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColumnGuideBar.swift; sourceTree = "<group>"; };
 		1DD15B2CB889158F95F85B29 /* Notebook.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Notebook.swift; sourceTree = "<group>"; };
-		210BCD13E2E5F6DAD81A8D66 /* NotebookStudioTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = NotebookStudioTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		210BCD13E2E5F6DAD81A8D66 /* NotebookStudioTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = NotebookStudioTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		28891560C26345231174C949 /* BiometricLockView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BiometricLockView.swift; sourceTree = "<group>"; };
 		2ABAFB5725A9AC8ED4637E09 /* BookmarkedPageCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookmarkedPageCard.swift; sourceTree = "<group>"; };
 		2E06F90919CDD159ABB88F9A /* InitialData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InitialData.swift; sourceTree = "<group>"; };
@@ -534,7 +534,7 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = YES;
-				LastUpgradeCheck = 1600;
+				LastUpgradeCheck = 2700;
 				TargetAttributes = {
 					34ECEDE4D25BE6124EC16C3A = {
 						DevelopmentTeam = "";
@@ -692,6 +692,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
@@ -727,6 +728,7 @@
 				DEVELOPMENT_TEAM = "";
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_NO_COMMON_BLOCKS = YES;
@@ -755,6 +757,7 @@
 				ONLY_ACTIVE_ARCH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.9;
@@ -765,6 +768,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
@@ -800,6 +804,7 @@
 				DEVELOPMENT_TEAM = "";
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
@@ -821,6 +826,7 @@
 				MTL_FAST_MATH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_OPTIMIZATION_LEVEL = "-O";
 				SWIFT_VERSION = 5.9;

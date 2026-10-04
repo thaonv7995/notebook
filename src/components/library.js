@@ -5,6 +5,7 @@
 import { getState, persistState } from '../state/store.js';
 import { getEls } from '../utils/dom.js';
 import { showToast, openNewNotebookModal, showPromptModal, openDeleteNotebookModal, openEditCoverModal } from './modal.js';
+import { deleteNotebookRemote } from '../api/client.js';
 
 let searchQuery = '';
 let categoryFilter = 'all';
@@ -307,10 +308,22 @@ export function deleteBook(id, onDeletedCallback = null) {
   if (state.activeNotebookId === id) {
     state.activeNotebookId = state.notebooks.length > 0 ? state.notebooks[0].id : null;
   }
+
+  // Tombstone tracking: prevent zombie notebook resurrection during pull/sync
+  if (!Array.isArray(state.deletedNotebookIds)) state.deletedNotebookIds = [];
+  if (!state.deletedNotebookIds.includes(id)) {
+    state.deletedNotebookIds.push(id);
+    if (state.deletedNotebookIds.length > 200) state.deletedNotebookIds = state.deletedNotebookIds.slice(-200);
+  }
+
+  // Delete on server in background
+  deleteNotebookRemote(id).catch(err => console.warn('Remote notebook delete notice:', err.message));
+
   persistState();
   renderLibraryGrid();
   if (onDeletedCallback) onDeletedCallback();
   showToast(`Đã xóa cuốn sổ “${deletedBook.title}”.`, 'Hoàn tác', () => {
+    state.deletedNotebookIds = (state.deletedNotebookIds || []).filter(item => item !== id);
     state.notebooks.splice(nbIndex, 0, deletedBook);
     persistState();
     renderLibraryGrid();

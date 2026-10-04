@@ -23,7 +23,7 @@ const BASE_URL_PRESETS = [
   { name: 'OpenRouter', url: 'https://openrouter.ai/api/v1', hint: 'Claude, Llama, Gemini,...' },
   { name: 'DeepSeek', url: 'https://api.deepseek.com/v1', hint: 'V3 & R1 siêu rẻ' },
   { name: 'Groq', url: 'https://api.groq.com/openai/v1', hint: 'Tốc độ cực nhanh' },
-  { name: 'Ollama (Local)', url: 'http://localhost:11434/v1', hint: 'Chạy offline máy tính' },
+  { name: 'Ollama (Server)', url: 'http://localhost:11434/v1', hint: 'Ollama chạy trên máy chủ' },
 ];
 
 function createPanelHTML() {

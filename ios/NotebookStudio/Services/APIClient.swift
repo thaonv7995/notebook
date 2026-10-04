@@ -119,6 +119,13 @@ actor APIClient {
             throw APIError.server("Unexpected status \(httpResponse.statusCode)")
         }
 
+        // Handle empty responses (HTTP 204 No Content or empty 200)
+        if data.isEmpty || T.self == EmptyResponse.self {
+            if let empty = EmptyResponse() as? T {
+                return (empty, httpResponse)
+            }
+        }
+
         // Decode
         do {
             let decoded = try JSONDecoder().decode(T.self, from: data)
@@ -164,11 +171,9 @@ actor APIClient {
 
 // MARK: - Empty response for fire-and-forget
 
-private struct EmptyResponse: Decodable {
-    // Accepts any JSON — we don't care about the body
-    init(from decoder: Decoder) throws {
-        // Accept anything
-    }
+struct EmptyResponse: Decodable {
+    init() {}
+    init(from decoder: Decoder) throws {}
 }
 
 // MARK: - API Errors

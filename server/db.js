@@ -18,7 +18,6 @@ import { fileURLToPath } from 'url';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const DATA_DIR = join(__dirname, '..', 'data');
 const DB_PATH = join(DATA_DIR, 'db.json');
-const DB_TEMP = join(DATA_DIR, 'db.tmp.json');
 
 if (!existsSync(DATA_DIR)) mkdirSync(DATA_DIR, { recursive: true });
 
@@ -36,9 +35,10 @@ function loadDb() {
 }
 
 function saveDb(data) {
-  // Atomic write: write to temp file then rename
-  writeFileSync(DB_TEMP, JSON.stringify(data, null, 2), 'utf-8');
-  renameSync(DB_TEMP, DB_PATH);
+  // Atomic write: write to unique temp file then rename (prevents collision during concurrent writes)
+  const tempPath = join(DATA_DIR, `db.${process.pid}.${Date.now()}.${Math.random().toString(36).slice(2, 6)}.tmp`);
+  writeFileSync(tempPath, JSON.stringify(data, null, 2), 'utf-8');
+  renameSync(tempPath, DB_PATH);
 }
 
 // In-memory cache
@@ -91,6 +91,11 @@ export function loadFullState(userId) {
 export function getLastSyncedAt(userId) {
   if (!db.syncMeta) db.syncMeta = {};
   return db.syncMeta[userId]?.lastSyncedAt || null;
+}
+
+export function getDeletedNotebookIds(userId) {
+  if (!db.syncMeta) db.syncMeta = {};
+  return db.syncMeta[userId]?.deletedNotebookIds || [];
 }
 
 /**
@@ -161,16 +166,27 @@ function mergeNotebookPages(localNb, serverNb) {
  * Notebooks deleted on one side (missing from incoming) are kept if they
  * were updated on server after the client's last known sync.
  */
-export function mergeAndSaveState(userId, incomingNotebooks, clientLastSyncedAt) {
+export function mergeAndSaveState(userId, incomingNotebooks, clientLastSyncedAt, clientDeletedNotebookIds = []) {
   const existing = db.notebooks[userId] || [];
   const now = new Date().toISOString();
 
+  if (!db.syncMeta) db.syncMeta = {};
+  if (!db.syncMeta[userId]) db.syncMeta[userId] = {};
+  const serverDeletedSet = new Set([
+    ...(Array.isArray(db.syncMeta[userId].deletedNotebookIds) ? db.syncMeta[userId].deletedNotebookIds : []),
+    ...(Array.isArray(clientDeletedNotebookIds) ? clientDeletedNotebookIds : [])
+  ]);
+
   // Build maps keyed by notebook id
   const serverMap = new Map();
-  existing.forEach(nb => serverMap.set(nb.id, nb));
+  existing.forEach(nb => {
+    if (!serverDeletedSet.has(nb.id)) serverMap.set(nb.id, nb);
+  });
 
   const incomingMap = new Map();
-  incomingNotebooks.forEach(nb => incomingMap.set(nb.id, nb));
+  incomingNotebooks.forEach(nb => {
+    if (!serverDeletedSet.has(nb.id)) incomingMap.set(nb.id, nb);
+  });
 
   const merged = [];
   const allIds = new Set([...serverMap.keys(), ...incomingMap.keys()]);
@@ -186,33 +202,59 @@ export function mergeAndSaveState(userId, incomingNotebooks, clientLastSyncedAt)
       // Only on client — new notebook, add it
       merged.push(clientNb);
     } else if (serverNb && !clientNb) {
-      // Only on server — client may have deleted it, or client never had it
-      if (clientLastSyncedAt && serverNb.updatedAt && serverNb.updatedAt > clientLastSyncedAt) {
+      // Only on server — preserve it unless explicitly marked deleted in tombstones
+      if (!serverDeletedSet.has(id)) {
         merged.push(serverNb);
       }
-      // else: client explicitly deleted it — omit from merged result
     }
   }
 
+  const finalDeletedIds = Array.from(serverDeletedSet).slice(-200);
   db.notebooks[userId] = merged;
-  if (!db.syncMeta) db.syncMeta = {};
-  db.syncMeta[userId] = { lastSyncedAt: now };
+  db.syncMeta[userId] = {
+    ...db.syncMeta[userId],
+    lastSyncedAt: now,
+    deletedNotebookIds: finalDeletedIds
+  };
   persist();
 
-  return { merged, savedAt: now };
+  return { merged, savedAt: now, deletedNotebookIds: finalDeletedIds };
 }
 
 export function saveFullState(userId, notebooks) {
   db.notebooks[userId] = notebooks;
   if (!db.syncMeta) db.syncMeta = {};
-  db.syncMeta[userId] = { lastSyncedAt: new Date().toISOString() };
+  if (!db.syncMeta[userId]) db.syncMeta[userId] = {};
+  db.syncMeta[userId].lastSyncedAt = new Date().toISOString();
   persist();
 }
 
 export function deleteNotebookById(userId, notebookId) {
   const userNotebooks = db.notebooks[userId] || [];
   db.notebooks[userId] = userNotebooks.filter(nb => nb.id !== notebookId);
+
+  if (!db.syncMeta) db.syncMeta = {};
+  if (!db.syncMeta[userId]) db.syncMeta[userId] = {};
+  const deletedSet = new Set(Array.isArray(db.syncMeta[userId].deletedNotebookIds) ? db.syncMeta[userId].deletedNotebookIds : []);
+  deletedSet.add(notebookId);
+  db.syncMeta[userId].deletedNotebookIds = Array.from(deletedSet).slice(-200);
+  db.syncMeta[userId].lastSyncedAt = new Date().toISOString();
   persist();
+}
+
+export function updateNotebookProgress(userId, notebookId, lastPageIndex) {
+  const userNotebooks = db.notebooks[userId] || [];
+  const nb = userNotebooks.find(n => n.id === notebookId);
+  if (nb) {
+    nb.lastPageIndex = lastPageIndex;
+    nb.updatedAt = new Date().toISOString();
+    if (!db.syncMeta) db.syncMeta = {};
+    if (!db.syncMeta[userId]) db.syncMeta[userId] = {};
+    db.syncMeta[userId].lastSyncedAt = new Date().toISOString();
+    persist();
+    return true;
+  }
+  return false;
 }
 
 export default db;
