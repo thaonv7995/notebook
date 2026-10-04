@@ -78,9 +78,18 @@ struct ReaderView: View {
             let useDoubleSided = isLargeAndLandscape && !isEditMode
 
             ZStack(alignment: .top) {
-                // Dark Slate Desk Background (bilingual-app #0f172a)
-                Color(hex: "0f172a")
-                    .ignoresSafeArea()
+                // Background Desk:
+                // In Full Screen, seamlessly blend with the notebook's paper tone (zero dark seams at top or bottom).
+                // In normal reading mode with header, dark slate desk #0f172a.
+                Group {
+                    if isFullScreen {
+                        readerSettings.paperTone.backgroundColor
+                    } else {
+                        Color(hex: "0f172a")
+                    }
+                }
+                .ignoresSafeArea()
+                .animation(.easeInOut(duration: 0.28), value: isFullScreen)
 
                 // Book Page Pager with 3D Page Curl Animation (iPad) or Smooth Horizontal Scroll (Phone)
                 PageNavigationView(
@@ -103,6 +112,7 @@ struct ReaderView: View {
                         }
                     }
                 )
+                .ignoresSafeArea()
                 // Layout geometry directly from bilingual-app ReaderView:
                 // On iPhone: always full bleed, pushed below header + notch when not in full screen.
                 // On iPad: desk mode with 0.94 scale, y: 20 offset, 16 corner radius, 20 shadow.
@@ -195,7 +205,8 @@ struct ReaderView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
-        .background(Color(hex: "0f172a"))
+        .background(isFullScreen ? readerSettings.paperTone.backgroundColor : Color(hex: "0f172a"))
+        .animation(.easeInOut(duration: 0.28), value: isFullScreen)
         .statusBarHidden(true)
         .ignoresSafeArea()
         .onAppear {

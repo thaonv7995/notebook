@@ -16,20 +16,23 @@ struct TemplateRouter: View {
     @AppStorage("use_native_renderer") private var useNativeRenderer: Bool = false
 
     var body: some View {
-        if useNativeRenderer {
-            nativeView
-        } else {
-            WebTemplatePageView(
-                page: page,
-                author: author,
-                pageNum: pageNumber,
-                fontFamily: fontFamily,
-                isEditable: isEditable,
-                isFullScreen: isFullScreen,
-                topOverlayInset: topOverlayInset,
-                onToggleChrome: onToggleChrome
-            )
+        Group {
+            if useNativeRenderer {
+                nativeView
+            } else {
+                WebTemplatePageView(
+                    page: page,
+                    author: author,
+                    pageNum: pageNumber,
+                    fontFamily: fontFamily,
+                    isEditable: isEditable,
+                    isFullScreen: isFullScreen,
+                    topOverlayInset: topOverlayInset,
+                    onToggleChrome: onToggleChrome
+                )
+            }
         }
+        .ignoresSafeArea()
     }
 
     @ViewBuilder

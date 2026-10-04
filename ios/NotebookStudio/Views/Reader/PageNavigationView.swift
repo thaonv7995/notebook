@@ -36,8 +36,10 @@ struct PageNavigationView: View {
                         topOverlayInset: topOverlayInset,
                         onToggleChrome: onToggleChrome
                     )
+                    .ignoresSafeArea()
                 }
             }
+            .ignoresSafeArea()
             .id("pager_\(settings.pageTransitionStyle.rawValue)_\(isDoubleSided)")
 
             // 3D Book Center Spine Shadow in Double-Sided mode (matching bilingual-app)
@@ -57,6 +59,7 @@ struct PageNavigationView: View {
                 .allowsHitTesting(false)
             }
         }
+        .ignoresSafeArea()
     }
 }
 

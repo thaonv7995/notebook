@@ -150,7 +150,7 @@ final class WebTemplateGenerator {
               padding: 0;
               width: 100%;
               min-height: 100%;
-              background: transparent;
+              background: var(--paper-cream, \(bgHex));
               display: flex;
               justify-content: center;
               align-items: flex-start;
@@ -173,6 +173,7 @@ final class WebTemplateGenerator {
               min-height: 820px !important;
               padding: 22px 20px 16px 36px !important;
               border-radius: 4px;
+              background: var(--paper-cream, \(bgHex)) !important;
             }
 
             /* --- Mobile Full-Bleed Reading Experience (<= 640px) --- */
@@ -183,13 +184,13 @@ final class WebTemplateGenerator {
                 width: 100% !important;
                 min-height: 100% !important;
                 overflow-x: hidden !important;
-                background: transparent !important;
+                background: var(--paper-cream, \(bgHex)) !important;
               }
 
               .book-desk-scaler {
                 width: 100% !important;
                 max-width: 100% !important;
-                min-height: 100vh !important;
+                min-height: 100% !important;
                 margin: 0 !important;
                 transform: none !important;
                 box-shadow: none !important;
@@ -204,6 +205,7 @@ final class WebTemplateGenerator {
                 padding: 16px 14px 28px 16px !important;
                 box-shadow: none !important;
                 border-radius: 0 !important;
+                background: var(--paper-cream, \(bgHex)) !important;
               }
 
               /* Hide punch margin line and edge notches on phone so the page has maximum usable reading space */
@@ -225,7 +227,29 @@ final class WebTemplateGenerator {
               /* Phone Full Screen: clear notch / safe area comfortably without clipping */
               body.phone-fullscreen .a4-template-sheet {
                 padding-top: \(max(24, Int(topOverlayInset) + 12))px !important;
+                padding-bottom: max(32px, env(safe-area-inset-bottom, 34px)) !important;
               }
+            }
+
+            /* Full Screen Mode on all devices (iPhone & iPad): expand paper edge-to-edge with zero dark gaps */
+            body.is-fullscreen {
+              background: var(--paper-cream, \(bgHex)) !important;
+              margin: 0 !important;
+              padding: 0 !important;
+            }
+
+            body.is-fullscreen .book-desk-scaler {
+              margin: 0 auto !important;
+              box-shadow: none !important;
+              border-radius: 0 !important;
+              min-height: 100vh !important;
+            }
+
+            body.is-fullscreen .a4-template-sheet {
+              border-radius: 0 !important;
+              box-shadow: none !important;
+              min-height: 100vh !important;
+              background: var(--paper-cream, \(bgHex)) !important;
             }
 
             /* --- Reading Mode Optimization --- */

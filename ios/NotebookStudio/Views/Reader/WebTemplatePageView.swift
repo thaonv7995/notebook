@@ -18,7 +18,7 @@ struct WebTemplatePageView: View {
 
     var body: some View {
         ZStack {
-            Color(hex: "0f172a")
+            settings.paperTone.backgroundColor
                 .ignoresSafeArea()
 
             WKWebViewContainer(
@@ -33,10 +33,13 @@ struct WebTemplatePageView: View {
                     isFullScreen: isFullScreen,
                     topOverlayInset: topOverlayInset
                 ),
+                paperTone: settings.paperTone,
                 isEditable: isEditable,
                 onToggleChrome: onToggleChrome
             )
+            .ignoresSafeArea()
         }
+        .ignoresSafeArea()
     }
 }
 
@@ -44,6 +47,7 @@ struct WebTemplatePageView: View {
 
 struct WKWebViewContainer: UIViewRepresentable {
     let html: String
+    var paperTone: PaperTone = .cream
     var isEditable: Bool = false
     var onToggleChrome: (() -> Void)? = nil
 
@@ -60,9 +64,10 @@ struct WKWebViewContainer: UIViewRepresentable {
         config.userContentController = contentController
 
         let webView = WKWebView(frame: .zero, configuration: config)
+        let paperColor = UIColor(paperTone.backgroundColor)
         webView.isOpaque = false
-        webView.backgroundColor = .clear
-        webView.scrollView.backgroundColor = .clear
+        webView.backgroundColor = paperColor
+        webView.scrollView.backgroundColor = paperColor
         webView.scrollView.bounces = true
         webView.scrollView.showsHorizontalScrollIndicator = false
         webView.scrollView.showsVerticalScrollIndicator = false
@@ -76,6 +81,10 @@ struct WKWebViewContainer: UIViewRepresentable {
 
     func updateUIView(_ uiView: WKWebView, context: Context) {
         context.coordinator.onToggleChrome = onToggleChrome
+
+        let paperColor = UIColor(paperTone.backgroundColor)
+        uiView.backgroundColor = paperColor
+        uiView.scrollView.backgroundColor = paperColor
 
         // Only reload if HTML actually changed
         if context.coordinator.lastHTML != html {

@@ -43,7 +43,7 @@ struct BookPagerView<Content: View>: UIViewControllerRepresentable {
         )
         pvc.dataSource = context.coordinator
         pvc.delegate = context.coordinator
-        pvc.view.backgroundColor = UIColor(red: 15/255, green: 23/255, blue: 42/255, alpha: 1)
+        pvc.view.backgroundColor = .clear
 
         if isDouble {
             pvc.isDoubleSided = true
