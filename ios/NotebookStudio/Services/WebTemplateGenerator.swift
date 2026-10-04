@@ -1,4 +1,5 @@
 import Foundation
+import CoreText
 
 /// Generates 100% pixel-identical HTML matching the web app's `src/templates/` and `src/styles/templates.css`.
 /// Includes:
@@ -105,7 +106,8 @@ final class WebTemplateGenerator {
                    local('KaiTi_GB2312'), local('BiauKai'),
                    local('STSongti-SC-Regular'), local('STSongti-SC-Bold'),
                    local('Songti SC'), local('STSong'),
-                   local('PingFang SC'), local('PingFangSC-Regular');
+                   local('Noto Serif SC'), local('NotoSerifSC-Regular'),
+                   local('ZCOOL XiaoWei');
               unicode-range: U+2E80-2EFF, U+2F00-2FDF, U+3000-303F, U+3100-312F,
                              U+31C0-31EF, U+3200-32FF, U+3400-4DBF, U+4E00-9FFF,
                              U+F900-FAFF, U+FE30-FE4F, U+FF00-FFEF;
@@ -120,7 +122,7 @@ final class WebTemplateGenerator {
               --rule-accent: \(textHex);
               --ink-muted: \(secondaryHex);
               --notebook-font-size: \(fontSize)px;
-              --cjk-calligraphic-font: "CJK-Smart-Enlarged", "STKaitiSC-Regular", "Kaiti SC", "STKaiti", "KaiTi", "SimKai", "STSongti-SC-Regular", "Songti SC", "STSong", "Noto Serif SC", "PingFang SC", serif;
+              --cjk-calligraphic-font: "CJK-Smart-Enlarged", "STKaitiSC-Regular", "Kaiti SC", "STKaiti", "KaiTi", "SimKai", "STSongti-SC-Regular", "Songti SC", "STSong", "Noto Serif SC", "ZCOOL XiaoWei", serif;
               --notebook-font-family: \(resolvedFontFamilyCSS);
             }
 
@@ -1216,7 +1218,7 @@ final class WebTemplateGenerator {
             #cbd5e1 calc(var(--notebook-line-height, 28px) - 1px),
             #cbd5e1 var(--notebook-line-height, 28px)
           );
-          --cjk-calligraphic-font: "CJK-Smart-Enlarged", "STKaitiSC-Regular", "Kaiti SC", "STKaiti", "KaiTi", "SimKai", "STSongti-SC-Regular", "Songti SC", "STSong", "Noto Serif SC", "PingFang SC", serif;
+          --cjk-calligraphic-font: "CJK-Smart-Enlarged", "STKaitiSC-Regular", "Kaiti SC", "STKaiti", "KaiTi", "SimKai", "STSongti-SC-Regular", "Songti SC", "STSong", "Noto Serif SC", "ZCOOL XiaoWei", serif;
           --notebook-font-family: 'CJK-Smart-Enlarged', 'Plus Jakarta Sans', 'Noto Serif SC', var(--cjk-calligraphic-font);
         }
         .hanzi-cjk {
@@ -1225,5 +1227,31 @@ final class WebTemplateGenerator {
           top: -2px;
         }
         """
+    }
+}
+
+/// Preloads and ensures Apple's native Chinese calligraphy fonts (Kaiti SC & Songti SC)
+/// with authentic stroke contrast (nét thanh nét đậm) are downloaded and active in iOS.
+final class FontService {
+    static let shared = FontService()
+
+    private init() {}
+
+    func preloadChineseCalligraphyFonts() {
+        DispatchQueue.global(qos: .utility).async {
+            let fontFamilies = ["Kaiti SC", "STKaiti", "Songti SC"]
+            for family in fontFamilies {
+                let descriptor = CTFontDescriptorCreateWithAttributes([
+                    kCTFontFamilyNameAttribute: family
+                ] as CFDictionary)
+
+                CTFontDescriptorMatchFontDescriptorsWithProgressHandler(
+                    [descriptor] as CFArray,
+                    nil
+                ) { state, progress in
+                    return true
+                }
+            }
+        }
     }
 }

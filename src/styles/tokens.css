@@ -16,7 +16,8 @@
        local('KaiTi_GB2312'), local('BiauKai'),
        local('STSongti-SC-Regular'), local('STSongti-SC-Bold'),
        local('Songti SC'), local('STSong'),
-       local('PingFang SC'), local('PingFangSC-Regular');
+       local('Noto Serif SC'), local('NotoSerifSC-Regular'),
+       local('ZCOOL XiaoWei');
   unicode-range: U+2E80-2EFF, U+2F00-2FDF, U+3000-303F, U+3100-312F,
                  U+31C0-31EF, U+3200-32FF, U+3400-4DBF, U+4E00-9FFF,
                  U+F900-FAFF, U+FE30-FE4F, U+FF00-FFEF;
@@ -79,6 +80,6 @@
     #cbd5e1 var(--notebook-line-height, 28px)
   );
   --paper-zoom: 1.0;
-  --cjk-calligraphic-font: "CJK-Smart-Enlarged", "STKaitiSC-Regular", "Kaiti SC", "STKaiti", "KaiTi", "SimKai", "STSongti-SC-Regular", "Songti SC", "STSong", "Noto Serif SC", "PingFang SC", serif;
+  --cjk-calligraphic-font: "CJK-Smart-Enlarged", "STKaitiSC-Regular", "Kaiti SC", "STKaiti", "KaiTi", "SimKai", "STSongti-SC-Regular", "Songti SC", "STSong", "Noto Serif SC", "ZCOOL XiaoWei", serif;
   --notebook-font-family: 'CJK-Smart-Enlarged', 'Plus Jakarta Sans', 'Noto Serif SC', var(--cjk-calligraphic-font);
 }
