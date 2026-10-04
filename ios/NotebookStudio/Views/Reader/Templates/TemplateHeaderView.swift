@@ -9,13 +9,16 @@ struct TemplateHeaderView: View {
     let date: String?
     let number: String?
     var numberLabel: String = "NO."
+    var author: String? = nil
+    var sealSubLabel: String = "ARCHIVE"
 
     @ObservedObject private var settings = ReaderSettings.shared
 
     var body: some View {
         VStack(alignment: .leading, spacing: DesignTokens.spacingSM) {
-            // Top purpose badge
-            HStack {
+            // Top purpose badge, date/number badges & author seal cartouche
+            HStack(alignment: .center, spacing: DesignTokens.spacingSM) {
+                // Purpose badge
                 HStack(spacing: 6) {
                     Text(purposeIcon)
                         .font(.system(size: 11))
@@ -54,6 +57,25 @@ struct TemplateHeaderView: View {
                         }
                     }
                 }
+
+                // Author seal cartouche
+                if let author = author, !author.isEmpty {
+                    VStack(alignment: .trailing, spacing: 1) {
+                        Text(author.hasPrefix("@") ? author : "@\(author)")
+                            .font(.jakartaSans(size: 9, weight: .bold))
+                            .foregroundStyle(settings.paperTone.textColor)
+                        Text(sealSubLabel)
+                            .font(.jakartaSans(size: 7, weight: .semibold))
+                            .tracking(0.8)
+                            .foregroundStyle(DesignTokens.accentLight)
+                    }
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 3)
+                            .stroke(DesignTokens.accentLight.opacity(0.35), lineWidth: 0.8)
+                    )
+                }
             }
 
             // Topic / Subject title
@@ -88,6 +110,7 @@ struct TemplateHeaderView: View {
         topicLabel: "SUBJECT / TOPIC:",
         topic: "Lập trình iOS với SwiftUI",
         date: "04/10/2026",
-        number: "01"
+        number: "01",
+        author: "thaonv"
     )
 }

@@ -10,7 +10,7 @@ struct CornellPageView: View {
     @ObservedObject private var settings = ReaderSettings.shared
 
     var body: some View {
-        ScrollView {
+        A4PaperSheetView(systemTitle: "CORNELL SYSTEM", pageNumber: Int(page.no ?? "1") ?? 1) {
             VStack(spacing: 0) {
                 // Header
                 TemplateHeaderView(
@@ -19,7 +19,9 @@ struct CornellPageView: View {
                     topicLabel: "SUBJECT / TOPIC:",
                     topic: page.topic ?? page.title,
                     date: page.date,
-                    number: page.no
+                    number: page.no,
+                    author: "@thaonv",
+                    sealSubLabel: "STUDY ARCHIVE"
                 )
 
                 // Cornell 2-column Body
@@ -31,7 +33,7 @@ struct CornellPageView: View {
                         RichTextView(html: page.cues, customFontSize: CGFloat(settings.fontSize - 1))
                             .frame(maxWidth: .infinity, alignment: .leading)
                     }
-                    .frame(width: 130)
+                    .frame(width: 120)
                     .padding(DesignTokens.spacingMD)
 
                     // Vertical dividing line
@@ -66,9 +68,7 @@ struct CornellPageView: View {
                 .padding(DesignTokens.spacingLG)
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .padding(.bottom, DesignTokens.spacingXXL)
         }
-        .background(settings.paperTone.backgroundColor)
     }
 
     private func sectionBadge(title: String, icon: String) -> some View {

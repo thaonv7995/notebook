@@ -10,7 +10,7 @@ struct ReadingPageView: View {
     @ObservedObject private var settings = ReaderSettings.shared
 
     var body: some View {
-        ScrollView {
+        A4PaperSheetView(systemTitle: "READING JOURNAL", pageNumber: Int(page.no ?? "1") ?? 1) {
             VStack(alignment: .leading, spacing: 0) {
                 // Header
                 TemplateHeaderView(
@@ -20,7 +20,8 @@ struct ReadingPageView: View {
                     topic: page.topic ?? page.title,
                     date: page.date,
                     number: page.no,
-                    numberLabel: "CH."
+                    author: "@thaonv",
+                    sealSubLabel: "READING ARCHIVE"
                 )
 
                 // 2 Columns Split
@@ -61,9 +62,7 @@ struct ReadingPageView: View {
                 .padding(DesignTokens.spacingLG)
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .padding(.bottom, DesignTokens.spacingXXL)
         }
-        .background(settings.paperTone.backgroundColor)
     }
 
     private func badge(title: String, icon: String, color: Color) -> some View {

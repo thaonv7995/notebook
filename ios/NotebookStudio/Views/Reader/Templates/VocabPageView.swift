@@ -9,7 +9,7 @@ struct VocabPageView: View {
     @ObservedObject private var settings = ReaderSettings.shared
 
     var body: some View {
-        ScrollView {
+        A4PaperSheetView(systemTitle: "VOCABULARY LAB", pageNumber: Int(page.no ?? "1") ?? 1) {
             VStack(alignment: .leading, spacing: DesignTokens.spacingMD) {
                 // Header
                 TemplateHeaderView(
@@ -18,7 +18,9 @@ struct VocabPageView: View {
                     topicLabel: "TOPIC / THEME:",
                     topic: page.topic ?? page.title,
                     date: page.date,
-                    number: page.no
+                    number: page.no,
+                    author: "@thaonv",
+                    sealSubLabel: "VOCAB ARCHIVE"
                 )
 
                 VStack(spacing: DesignTokens.spacingMD) {
@@ -65,9 +67,7 @@ struct VocabPageView: View {
                 }
                 .padding(.horizontal, DesignTokens.spacingLG)
             }
-            .padding(.bottom, DesignTokens.spacingXXL)
         }
-        .background(settings.paperTone.backgroundColor)
     }
 
     private func vocabCard<Content: View>(

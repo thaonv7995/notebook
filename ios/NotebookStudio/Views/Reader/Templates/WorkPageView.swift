@@ -10,7 +10,7 @@ struct WorkPageView: View {
     @ObservedObject private var settings = ReaderSettings.shared
 
     var body: some View {
-        ScrollView {
+        A4PaperSheetView(systemTitle: "WORK SYSTEM", pageNumber: Int(page.no ?? "1") ?? 1) {
             VStack(alignment: .leading, spacing: DesignTokens.spacingMD) {
                 // Header
                 TemplateHeaderView(
@@ -19,7 +19,9 @@ struct WorkPageView: View {
                     topicLabel: "PROJECT / OBJECTIVE:",
                     topic: page.project ?? page.topic ?? page.title,
                     date: page.date,
-                    number: page.no
+                    number: page.no,
+                    author: "@thaonv",
+                    sealSubLabel: "WORK ARCHIVE"
                 )
 
                 // Sub-header: Deadline + Status badge
@@ -96,9 +98,7 @@ struct WorkPageView: View {
                     .padding(.horizontal, DesignTokens.spacingLG)
                 }
             }
-            .padding(.bottom, DesignTokens.spacingXXL)
         }
-        .background(settings.paperTone.backgroundColor)
     }
 
     private func statusBadge(_ status: String) -> some View {

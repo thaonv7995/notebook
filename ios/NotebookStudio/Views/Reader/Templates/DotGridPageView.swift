@@ -9,7 +9,7 @@ struct DotGridPageView: View {
     @ObservedObject private var settings = ReaderSettings.shared
 
     var body: some View {
-        ScrollView {
+        A4PaperSheetView(systemTitle: "DOT GRID SYSTEM", pageNumber: Int(page.no ?? "1") ?? 1) {
             VStack(alignment: .leading, spacing: 0) {
                 // Header
                 TemplateHeaderView(
@@ -18,7 +18,9 @@ struct DotGridPageView: View {
                     topicLabel: "SUBJECT / TOPIC:",
                     topic: page.topic ?? page.title,
                     date: page.date,
-                    number: page.no
+                    number: page.no,
+                    author: "@thaonv",
+                    sealSubLabel: "DOT GRID ARCHIVE"
                 )
 
                 // Dot grid content area
@@ -31,9 +33,7 @@ struct DotGridPageView: View {
                 }
                 .frame(minHeight: 480)
             }
-            .padding(.bottom, DesignTokens.spacingXXL)
         }
-        .background(settings.paperTone.backgroundColor)
     }
 }
 

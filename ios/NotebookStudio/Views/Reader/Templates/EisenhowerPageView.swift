@@ -13,7 +13,7 @@ struct EisenhowerPageView: View {
     @ObservedObject private var settings = ReaderSettings.shared
 
     var body: some View {
-        ScrollView {
+        A4PaperSheetView(systemTitle: "EISENHOWER MATRIX", pageNumber: Int(page.no ?? "1") ?? 1) {
             VStack(alignment: .leading, spacing: 0) {
                 // Header
                 TemplateHeaderView(
@@ -22,7 +22,9 @@ struct EisenhowerPageView: View {
                     topicLabel: "GOAL / CONTEXT:",
                     topic: page.topic ?? page.title,
                     date: page.date,
-                    number: page.no
+                    number: page.no,
+                    author: "@thaonv",
+                    sealSubLabel: "PRIORITY ARCHIVE"
                 )
 
                 // 2x2 Quadrants Grid
@@ -81,9 +83,7 @@ struct EisenhowerPageView: View {
                 }
                 .frame(minHeight: 460)
             }
-            .padding(.bottom, DesignTokens.spacingXXL)
         }
-        .background(settings.paperTone.backgroundColor)
     }
 
     private func quadrantCell(

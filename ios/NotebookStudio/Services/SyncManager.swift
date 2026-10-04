@@ -41,21 +41,28 @@ class SyncManager: ObservableObject {
         // 1. Load from local cache first (instant)
         let localNotebooks = LocalStorageManager.shared.loadNotebooks()
 
-        // 2. Try to fetch from server
+        // 2. If not logged in, return local cache immediately
+        guard KeychainManager.getToken() != nil else {
+            return localNotebooks
+        }
+
+        // 3. Try to fetch from server
         isSyncing = true
         syncError = nil
 
         do {
             // Check if server has newer data
             let serverTimestamp = try await NotebookService.getSyncMeta()
-            let needsSync = shouldSync(serverTimestamp: serverTimestamp)
+            let needsSync = shouldSync(serverTimestamp: serverTimestamp, localCount: localNotebooks.count)
 
             if needsSync {
                 // Fetch full data from server
                 let (serverNotebooks, newSyncedAt) = try await NotebookService.fetchAll()
 
-                // Save to local cache
-                LocalStorageManager.shared.saveNotebooks(serverNotebooks)
+                // Save to local cache if valid data received
+                if !serverNotebooks.isEmpty {
+                    LocalStorageManager.shared.saveNotebooks(serverNotebooks)
+                }
 
                 // Update sync timestamp
                 if let newSyncedAt {
@@ -65,7 +72,7 @@ class SyncManager: ObservableObject {
 
                 isOffline = false
                 isSyncing = false
-                return serverNotebooks
+                return serverNotebooks.isEmpty ? localNotebooks : serverNotebooks
             }
 
             // Server data is same or older — use local cache
@@ -146,7 +153,9 @@ class SyncManager: ObservableObject {
     // MARK: - Private
 
     /// Determine if we need to fetch from server based on timestamps.
-    private func shouldSync(serverTimestamp: String?) -> Bool {
+    private func shouldSync(serverTimestamp: String?, localCount: Int) -> Bool {
+        // Always sync if local cache is completely empty
+        if localCount == 0 { return true }
         guard let serverTimestamp else { return true }
         guard let localTimestamp = lastSyncedAt else { return true }
 

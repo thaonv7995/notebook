@@ -9,7 +9,7 @@ struct RuledPageView: View {
     @ObservedObject private var settings = ReaderSettings.shared
 
     var body: some View {
-        ScrollView {
+        A4PaperSheetView(systemTitle: "RULED SYSTEM", pageNumber: Int(page.no ?? "1") ?? 1) {
             VStack(alignment: .leading, spacing: 0) {
                 // Header
                 TemplateHeaderView(
@@ -18,7 +18,9 @@ struct RuledPageView: View {
                     topicLabel: "SUBJECT / TOPIC:",
                     topic: page.topic ?? page.title,
                     date: page.date,
-                    number: page.no
+                    number: page.no,
+                    author: "@thaonv",
+                    sealSubLabel: "RULED ARCHIVE"
                 )
 
                 // Ruled lines content area
@@ -33,9 +35,7 @@ struct RuledPageView: View {
                 }
                 .frame(minHeight: 480)
             }
-            .padding(.bottom, DesignTokens.spacingXXL)
         }
-        .background(settings.paperTone.backgroundColor)
     }
 }
 

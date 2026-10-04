@@ -9,7 +9,7 @@ struct GridPageView: View {
     @ObservedObject private var settings = ReaderSettings.shared
 
     var body: some View {
-        ScrollView {
+        A4PaperSheetView(systemTitle: "GRID SYSTEM", pageNumber: Int(page.no ?? "1") ?? 1) {
             VStack(alignment: .leading, spacing: 0) {
                 // Header
                 TemplateHeaderView(
@@ -18,7 +18,9 @@ struct GridPageView: View {
                     topicLabel: "SUBJECT / TOPIC:",
                     topic: page.topic ?? page.title,
                     date: page.date,
-                    number: page.no
+                    number: page.no,
+                    author: "@thaonv",
+                    sealSubLabel: "GRID ARCHIVE"
                 )
 
                 // Grid content area
@@ -31,9 +33,7 @@ struct GridPageView: View {
                 }
                 .frame(minHeight: 480)
             }
-            .padding(.bottom, DesignTokens.spacingXXL)
         }
-        .background(settings.paperTone.backgroundColor)
     }
 }
 

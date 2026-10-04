@@ -9,7 +9,7 @@ struct BlankPageView: View {
     @ObservedObject private var settings = ReaderSettings.shared
 
     var body: some View {
-        ScrollView {
+        A4PaperSheetView(systemTitle: "FREEFORM SYSTEM", pageNumber: Int(page.no ?? "1") ?? 1) {
             VStack(alignment: .leading, spacing: 0) {
                 // Header
                 TemplateHeaderView(
@@ -18,7 +18,9 @@ struct BlankPageView: View {
                     topicLabel: "SUBJECT / TOPIC:",
                     topic: page.topic ?? page.title,
                     date: page.date,
-                    number: page.no
+                    number: page.no,
+                    author: "@thaonv",
+                    sealSubLabel: "FREEFORM ARCHIVE"
                 )
 
                 // Clean content area
@@ -27,9 +29,7 @@ struct BlankPageView: View {
                     .padding(.vertical, DesignTokens.spacingLG)
                     .frame(minHeight: 480, alignment: .topLeading)
             }
-            .padding(.bottom, DesignTokens.spacingXXL)
         }
-        .background(settings.paperTone.backgroundColor)
     }
 }
 

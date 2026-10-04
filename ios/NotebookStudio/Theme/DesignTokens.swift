@@ -6,9 +6,9 @@ enum DesignTokens {
     // MARK: - Colors
 
     /// Primary accent — warm amber/gold
-    static let accent = Color("Accent", bundle: nil)
-    static let accentLight = Color(hex: "#c9a84c")
-    static let accentDark = Color(hex: "#d4a849")
+    static let accent = Color(hex: "#c9a84c")
+    static let accentLight = Color(hex: "#d4a849")
+    static let accentDark = Color(hex: "#b89230")
 
     /// Backgrounds
     static let backgroundLight = Color(hex: "#f5f0eb")

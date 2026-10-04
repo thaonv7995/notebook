@@ -10,6 +10,18 @@ struct MainTabView: View {
 
     @AppStorage("app_color_scheme") private var colorSchemeRaw: String = "system"
 
+    init() {
+        let tabBarAppearance = UITabBarAppearance()
+        tabBarAppearance.configureWithDefaultBackground()
+        let accentUIColor = UIColor(red: 201.0/255.0, green: 168.0/255.0, blue: 76.0/255.0, alpha: 1.0)
+        tabBarAppearance.stackedLayoutAppearance.selected.iconColor = accentUIColor
+        tabBarAppearance.stackedLayoutAppearance.selected.titleTextAttributes = [.foregroundColor: accentUIColor]
+        tabBarAppearance.stackedLayoutAppearance.normal.iconColor = UIColor.secondaryLabel
+        tabBarAppearance.stackedLayoutAppearance.normal.titleTextAttributes = [.foregroundColor: UIColor.secondaryLabel]
+        UITabBar.appearance().standardAppearance = tabBarAppearance
+        UITabBar.appearance().scrollEdgeAppearance = tabBarAppearance
+    }
+
     private var selectedColorScheme: ColorScheme? {
         switch colorSchemeRaw {
         case "light": return .light

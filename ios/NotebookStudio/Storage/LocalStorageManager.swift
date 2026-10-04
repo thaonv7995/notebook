@@ -68,11 +68,18 @@ class LocalStorageManager {
         )
         descriptor.fetchLimit = 500 // Safety limit
 
-        guard let cached = try? context.fetch(descriptor) else {
-            return []
+        if let cached = try? context.fetch(descriptor), !cached.isEmpty {
+            return cached.map { $0.toNotebook() }
         }
 
-        return cached.map { $0.toNotebook() }
+        // Fallback to starter notebooks if local cache is completely empty
+        let starters = InitialData.starterNotebooks
+        if !starters.isEmpty {
+            saveNotebooks(starters)
+            return starters
+        }
+
+        return []
     }
 
     /// Alias for loadNotebooks() for consistent naming across views.

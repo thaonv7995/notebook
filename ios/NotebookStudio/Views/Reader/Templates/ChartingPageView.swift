@@ -10,7 +10,7 @@ struct ChartingPageView: View {
     @ObservedObject private var settings = ReaderSettings.shared
 
     var body: some View {
-        ScrollView {
+        A4PaperSheetView(systemTitle: "CHARTING SYSTEM", pageNumber: Int(page.no ?? "1") ?? 1) {
             VStack(alignment: .leading, spacing: 0) {
                 // Header
                 TemplateHeaderView(
@@ -19,7 +19,9 @@ struct ChartingPageView: View {
                     topicLabel: "SUBJECT / TOPIC:",
                     topic: page.topic ?? page.title,
                     date: page.date,
-                    number: page.no
+                    number: page.no,
+                    author: "@thaonv",
+                    sealSubLabel: "CHART ARCHIVE"
                 )
 
                 // 3 Columns Comparison
@@ -68,9 +70,7 @@ struct ChartingPageView: View {
                 .padding(DesignTokens.spacingLG)
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .padding(.bottom, DesignTokens.spacingXXL)
         }
-        .background(settings.paperTone.backgroundColor)
     }
 
     private func chartColumn(title: String, icon: String, html: String?) -> some View {
