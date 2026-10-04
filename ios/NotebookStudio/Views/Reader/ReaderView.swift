@@ -21,8 +21,6 @@ struct ReaderView: View {
     @State private var isFullScreen: Bool = false
     @State private var isEditMode: Bool = false
     @State private var revision: Int = 0
-    @State private var zoomScale: CGFloat = 1.0
-    @State private var gestureZoomScale: CGFloat = 1.0
 
     // Jump to Page Dialog States (from bilingual-app)
     @State private var showJumpToPageDialog: Bool = false
@@ -84,47 +82,38 @@ struct ReaderView: View {
                 Color(hex: "0f172a")
                     .ignoresSafeArea()
 
-                // Book Page Pager with 3D Page Curl Animation
+                // Book Page Pager with 3D Page Curl Animation (iPad) or Smooth Horizontal Scroll (Phone)
                 PageNavigationView(
                     pages: pages,
                     author: notebook.author,
                     fontFamily: notebook.fontFamily,
                     currentPageIndex: $currentPageIndex,
-                    zoomScale: $zoomScale,
                     isEditable: isEditMode,
                     isDoubleSided: useDoubleSided,
+                    isFullScreen: isFullScreen,
+                    topOverlayInset: phoneTopInset,
                     revision: revision,
                     onToggleChrome: {
                         guard !isEditMode else { return }
                         let now = ProcessInfo.processInfo.systemUptime
                         guard now - lastToggleTimestamp > 0.35 else { return }
                         lastToggleTimestamp = now
-                        withAnimation(.easeInOut(duration: 0.24)) {
+                        withAnimation(.easeInOut(duration: 0.28)) {
                             isFullScreen.toggle()
                         }
                     }
                 )
-                .scaleEffect(gestureZoomScale)
-                .gesture(
-                    MagnificationGesture()
-                        .onChanged { value in
-                            gestureZoomScale = max(0.9, min(2.5, value))
-                        }
-                        .onEnded { _ in
-                            withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
-                                zoomScale = max(1.0, min(2.0, gestureZoomScale))
-                                gestureZoomScale = 1.0
-                            }
-                        }
-                )
-                // Layout geometry from bilingual-app
+                // Layout geometry directly from bilingual-app ReaderView:
+                // On iPhone: always full bleed, pushed below header + notch when not in full screen.
+                // On iPad: desk mode with 0.94 scale, y: 20 offset, 16 corner radius, 20 shadow.
+                // When Full Screen on iPad: smoothly ZOOMS to 1.0 scale, y: 0, 0 corner radius, 0 shadow.
                 .padding(.top, isPhone && !isFullScreen ? phoneTopInset + 49 : 0)
                 .padding(.horizontal, isPhone && isLandscape ? phoneHorizontalInset : 0)
                 .scaleEffect(isFullScreen || isPhone ? 1.0 : 0.94)
                 .offset(y: isFullScreen || isPhone ? 0 : 20)
                 .clipShape(RoundedRectangle(cornerRadius: isFullScreen || isPhone ? 0 : 16, style: .continuous))
                 .shadow(color: Color.black.opacity(isFullScreen || isPhone ? 0 : 0.4), radius: isFullScreen || isPhone ? 0 : 20, x: 0, y: 10)
-                .animation(.easeInOut(duration: 0.24), value: isFullScreen)
+                .animation(.easeInOut(duration: 0.28), value: isFullScreen)
 
                 // Sleek Top Header (matching bilingual-app ReaderHeaderView)
                 if !isFullScreen {
@@ -135,6 +124,7 @@ struct ReaderView: View {
                             totalPages: pages.count,
                             isBookmarked: isCurrentPageBookmarked,
                             isEditMode: isEditMode,
+                            isFullScreen: isFullScreen,
                             onBack: {
                                 dismiss()
                             },
@@ -143,6 +133,11 @@ struct ReaderView: View {
                             },
                             onToggleEditMode: {
                                 toggleEditMode()
+                            },
+                            onToggleFullScreen: {
+                                withAnimation(.easeInOut(duration: 0.28)) {
+                                    isFullScreen.toggle()
+                                }
                             },
                             onOpenJumpToPage: {
                                 inputPageString = "\(currentPageIndex + 1)"
@@ -197,6 +192,34 @@ struct ReaderView: View {
                     }
                     .transition(.move(edge: .top).combined(with: .opacity))
                 }
+
+                // Minimal floating indicator/button to exit full-screen mode easily
+                if isFullScreen {
+                    HStack {
+                        Spacer()
+                        Button(action: {
+                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                            withAnimation(.easeInOut(duration: 0.28)) {
+                                isFullScreen = false
+                            }
+                        }) {
+                            Image(systemName: "arrow.down.right.and.arrow.up.left")
+                                .font(.system(size: 13, weight: .bold))
+                                .foregroundColor(.white.opacity(0.85))
+                                .frame(width: 32, height: 32)
+                                .background(Color(hex: "1e293b").opacity(0.85))
+                                .clipShape(Circle())
+                                .overlay(
+                                    Circle()
+                                        .stroke(Color.white.opacity(0.15), lineWidth: 1)
+                                )
+                                .shadow(color: Color.black.opacity(0.35), radius: 6, x: 0, y: 3)
+                        }
+                        .padding(.top, isPhone ? max(10, phoneTopInset) : 16)
+                        .padding(.trailing, 16)
+                        .transition(.opacity)
+                    }
+                }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
@@ -205,6 +228,11 @@ struct ReaderView: View {
         .ignoresSafeArea()
         .onAppear {
             initProgress()
+        }
+        .onChange(of: isFullScreen) { _, _ in
+            if isPhone {
+                revision += 1
+            }
         }
         .onChange(of: currentPageIndex) { _, newIndex in
             saveProgress(pageIndex: newIndex)

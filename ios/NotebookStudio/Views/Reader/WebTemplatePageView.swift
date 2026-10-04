@@ -10,6 +10,8 @@ struct WebTemplatePageView: View {
     var pageNum: Int = 1
     var fontFamily: String? = nil
     var isEditable: Bool = false
+    var isFullScreen: Bool = false
+    var topOverlayInset: CGFloat = 0
     var onToggleChrome: (() -> Void)? = nil
 
     @ObservedObject private var settings = ReaderSettings.shared
@@ -27,7 +29,9 @@ struct WebTemplatePageView: View {
                     paperTone: settings.paperTone,
                     fontSize: Int(settings.fontSize),
                     fontFamily: (settings.fontFamily != .plusJakartaSans ? settings.fontFamily.rawValue : fontFamily) ?? settings.fontFamily.rawValue,
-                    isEditable: isEditable
+                    isEditable: isEditable,
+                    isFullScreen: isFullScreen,
+                    topOverlayInset: topOverlayInset
                 ),
                 isEditable: isEditable,
                 onToggleChrome: onToggleChrome
@@ -62,6 +66,7 @@ struct WKWebViewContainer: UIViewRepresentable {
         webView.scrollView.bounces = true
         webView.scrollView.showsHorizontalScrollIndicator = false
         webView.scrollView.showsVerticalScrollIndicator = false
+        webView.scrollView.contentInsetAdjustmentBehavior = .never
         webView.scrollView.isScrollEnabled = true
 
         context.coordinator.lastHTML = html
@@ -94,7 +99,9 @@ struct WKWebViewContainer: UIViewRepresentable {
 
         func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
             if message.name == "notebookReader" {
-                if let dict = message.body as? [String: Any], dict["type"] as? String == "toggleChrome" {
+                if let dict = message.body as? [String: Any],
+                   let type = dict["type"] as? String,
+                   type == "toggleFullScreen" || type == "toggleChrome" {
                     let now = ProcessInfo.processInfo.systemUptime
                     guard now - lastToggleTimestamp > 0.35 else { return }
                     lastToggleTimestamp = now

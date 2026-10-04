@@ -7,9 +7,10 @@ struct PageNavigationView: View {
     var author: String? = "@thaonv"
     var fontFamily: String? = nil
     @Binding var currentPageIndex: Int
-    @Binding var zoomScale: CGFloat
     var isEditable: Bool = false
     var isDoubleSided: Bool = false
+    var isFullScreen: Bool = false
+    var topOverlayInset: CGFloat = 0
     var revision: Int = 0
     var onToggleChrome: (() -> Void)? = nil
 
@@ -31,9 +32,10 @@ struct PageNavigationView: View {
                         pageNumber: index + 1,
                         fontFamily: fontFamily,
                         isEditable: isEditable,
+                        isFullScreen: isFullScreen,
+                        topOverlayInset: topOverlayInset,
                         onToggleChrome: onToggleChrome
                     )
-                    .scaleEffect(index == currentPageIndex ? zoomScale : 1.0)
                 }
             }
             .id("pager_\(settings.pageTransitionStyle.rawValue)_\(isDoubleSided)")
@@ -55,14 +57,6 @@ struct PageNavigationView: View {
                 .allowsHitTesting(false)
             }
         }
-        .onChange(of: currentPageIndex) { oldVal, newVal in
-            if oldVal != newVal {
-                // Reset zoom on page flip
-                withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
-                    zoomScale = 1.0
-                }
-            }
-        }
     }
 }
 
@@ -74,6 +68,6 @@ struct PageNavigationView: View {
         ],
         author: "@thaonv",
         currentPageIndex: .constant(0),
-        zoomScale: .constant(1.0)
+        isFullScreen: false
     )
 }

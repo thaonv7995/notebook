@@ -9,6 +9,8 @@ struct TemplateRouter: View {
     var pageNumber: Int = 1
     var fontFamily: String? = nil
     var isEditable: Bool = false
+    var isFullScreen: Bool = false
+    var topOverlayInset: CGFloat = 0
     var onToggleChrome: (() -> Void)? = nil
 
     @AppStorage("use_native_renderer") private var useNativeRenderer: Bool = false
@@ -23,6 +25,8 @@ struct TemplateRouter: View {
                 pageNum: pageNumber,
                 fontFamily: fontFamily,
                 isEditable: isEditable,
+                isFullScreen: isFullScreen,
+                topOverlayInset: topOverlayInset,
                 onToggleChrome: onToggleChrome
             )
         }

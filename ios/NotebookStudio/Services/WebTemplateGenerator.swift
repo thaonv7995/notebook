@@ -48,7 +48,9 @@ final class WebTemplateGenerator {
         paperTone: PaperTone = .cream,
         fontSize: Int = 15,
         fontFamily: String? = nil,
-        isEditable: Bool = false
+        isEditable: Bool = false,
+        isFullScreen: Bool = false,
+        topOverlayInset: CGFloat = 0
     ) -> String {
         let css = getCombinedCSS()
         let authorHandle = formatAuthorHandle(author)
@@ -219,6 +221,11 @@ final class WebTemplateGenerator {
                 min-height: 30px !important;
                 line-height: 30px !important;
               }
+
+              /* Phone Full Screen: clear notch / safe area comfortably without clipping */
+              body.phone-fullscreen .a4-template-sheet {
+                padding-top: \(max(24, Int(topOverlayInset) + 12))px !important;
+              }
             }
 
             /* --- Reading Mode Optimization --- */
@@ -271,22 +278,31 @@ final class WebTemplateGenerator {
             }
           </style>
           <script>
+            var lastComputedScale = -1;
             function fitScale() {
               var w = window.innerWidth;
               var scaler = document.getElementById('sheetContainer');
               if (!scaler) return;
               if (w <= 640) {
                 // Mobile phone mode: full bleed, 1:1 true point size
-                scaler.style.transform = 'none';
-                scaler.style.marginBottom = '0px';
+                if (lastComputedScale !== 0) {
+                  scaler.style.transform = 'none';
+                  scaler.style.marginBottom = '0px';
+                  lastComputedScale = 0;
+                }
               } else {
-                // iPad / Desktop mode: scale authentic A4 sheet to fit desk
-                var scale = Math.min((w - 16) / 660, 1.0);
-                scaler.style.transform = 'scale(' + scale + ')';
-                scaler.style.marginBottom = (820 * (scale - 1)) + 'px';
+                // iPad / Desktop mode: scale authentic A4 sheet to fit desk smoothly
+                var scale = Math.round(Math.min((w - 16) / 660, 1.0) * 100) / 100;
+                if (scale !== lastComputedScale) {
+                  scaler.style.transform = 'scale(' + scale + ')';
+                  scaler.style.marginBottom = (820 * (scale - 1)) + 'px';
+                  lastComputedScale = scale;
+                }
               }
             }
-            window.addEventListener('resize', fitScale);
+            window.addEventListener('resize', function() {
+              requestAnimationFrame(fitScale);
+            });
             window.addEventListener('DOMContentLoaded', fitScale);
             setTimeout(fitScale, 50);
 
@@ -364,37 +380,35 @@ final class WebTemplateGenerator {
               }
             });
 
-            // Reading mode: precise stationary tap detection (rejects swipes/page curl)
-            var tapStartX = 0, tapStartY = 0, tapStartTime = 0;
-            document.addEventListener('touchstart', function(e) {
-              if (e.touches && e.touches.length === 1) {
-                tapStartX = e.touches[0].clientX;
-                tapStartY = e.touches[0].clientY;
-                tapStartTime = Date.now();
-              }
-            }, { passive: true });
-
-            document.addEventListener('touchend', function(e) {
-              var isEdit = document.body && document.body.classList.contains('editing-mode');
-              if (!isEdit) {
-                if (e.changedTouches && e.changedTouches.length === 1) {
-                  var dx = Math.abs(e.changedTouches[0].clientX - tapStartX);
-                  var dy = Math.abs(e.changedTouches[0].clientY - tapStartY);
-                  var dt = Date.now() - tapStartTime;
-                  // Only treat as genuine tap if moved < 10px and duration < 350ms
-                  if (dx < 10 && dy < 10 && dt < 350) {
-                    if (window.getSelection && window.getSelection().toString().length > 0) return;
-                    if (e.target.closest('a') || e.target.closest('button') || e.target.closest('input')) return;
-                    if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.notebookReader) {
-                      window.webkit.messageHandlers.notebookReader.postMessage({ type: 'toggleChrome' });
-                    }
-                  }
+            // Double-tap to toggle full-screen mode (modeled faithfully after bilingual-app)
+            var lastTapTime = 0;
+            function handleDoubleTap(e) {
+              if (e.target && typeof e.target.closest === 'function') {
+                if (e.target.closest('input') || e.target.closest('textarea') || e.target.closest('.status-pill-btn') || e.target.closest('.action-check-square')) {
+                  return;
                 }
               }
-            }, { passive: true });
+              var currentTime = Date.now();
+              var tapLength = currentTime - lastTapTime;
+              if (tapLength < 380 && tapLength > 40) {
+                if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.notebookReader) {
+                  window.webkit.messageHandlers.notebookReader.postMessage({ type: 'toggleFullScreen' });
+                }
+                if (e.cancelable) e.preventDefault();
+                lastTapTime = 0;
+                return;
+              }
+              lastTapTime = currentTime;
+            }
+
+            document.addEventListener('touchstart', function(e) {
+              if (e.touches && e.touches.length === 1) {
+                handleDoubleTap(e);
+              }
+            }, { passive: false });
           </script>
         </head>
-        <body class="\(isEditable ? "editing-mode" : "reading-mode")">
+        <body class="\(isEditable ? "editing-mode" : "reading-mode") \(isFullScreen ? "phone-fullscreen is-fullscreen" : "")">
           <div class="book-desk-scaler" id="sheetContainer">
             \(templateContent)
           </div>

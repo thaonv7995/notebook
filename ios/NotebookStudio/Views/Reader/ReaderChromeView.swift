@@ -15,10 +15,12 @@ struct ReaderChromeView: View {
     let totalPages: Int
     let isBookmarked: Bool
     var isEditMode: Bool = false
+    var isFullScreen: Bool = false
 
     let onBack: () -> Void
     let onToggleBookmark: () -> Void
     var onToggleEditMode: (() -> Void)? = nil
+    var onToggleFullScreen: (() -> Void)? = nil
     var onOpenJumpToPage: (() -> Void)? = nil
     var onDecreaseFont: (() -> Void)? = nil
     var onIncreaseFont: (() -> Void)? = nil
@@ -142,8 +144,20 @@ struct ReaderChromeView: View {
                 }
             }
 
-            // iPad-only direct TOC & Bookmark buttons
+            // iPad-only direct TOC, Bookmark, and Full-Screen buttons
             if !isPhone {
+                if let onToggleFullScreen = onToggleFullScreen {
+                    Button(action: {
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        onToggleFullScreen()
+                    }) {
+                        Image(systemName: isFullScreen ? "arrow.down.right.and.arrow.up.left" : "arrow.up.left.and.arrow.down.right")
+                            .font(.system(size: 13, weight: .bold))
+                            .foregroundColor(.white)
+                            .frame(width: 28, height: 28)
+                    }
+                }
+
                 Button(action: {
                     UIImpactFeedbackGenerator(style: .light).impactOccurred()
                     onToggleBookmark()
@@ -194,6 +208,16 @@ struct ReaderChromeView: View {
                         }
                     }
 
+                    Divider()
+                }
+
+                if let onToggleFullScreen = onToggleFullScreen {
+                    Button(action: onToggleFullScreen) {
+                        Label(
+                            isFullScreen ? "Thu nhỏ giao diện" : "Toàn màn hình",
+                            systemImage: isFullScreen ? "arrow.down.right.and.arrow.up.left" : "arrow.up.left.and.arrow.down.right"
+                        )
+                    }
                     Divider()
                 }
 

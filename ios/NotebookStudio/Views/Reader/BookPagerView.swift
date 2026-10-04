@@ -123,12 +123,15 @@ struct BookPagerView<Content: View>: UIViewControllerRepresentable {
 
             if needsUpdate {
                 let dir: UIPageViewController.NavigationDirection = (currentPage >= context.coordinator.lastPage) ? .forward : .reverse
+                let shouldAnimate = UIDevice.current.userInterfaceIdiom == .phone
+                    && context.coordinator.lastPage != -1
+                    && context.coordinator.lastPage != currentPage
                 context.coordinator.lastPage = currentPage
                 context.coordinator.lastRevision = revision
                 let vc = context.coordinator.createVC(page: currentPage)
 
                 if uiViewController.spineLocation != .mid {
-                    uiViewController.setViewControllers([vc], direction: dir, animated: true)
+                    uiViewController.setViewControllers([vc], direction: dir, animated: shouldAnimate)
                 }
 
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
@@ -151,7 +154,7 @@ struct BookPagerView<Content: View>: UIViewControllerRepresentable {
 
         init(_ parent: BookPagerView) {
             self.parent = parent
-            self.lastPage = parent.currentPage
+            self.lastPage = -1
             self.lastRevision = parent.revision
         }
 
