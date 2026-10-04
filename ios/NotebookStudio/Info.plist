@@ -23,5 +23,14 @@
 		<string>PlusJakartaSans[wght].ttf</string>
 		<string>PlusJakartaSans-Italic[wght].ttf</string>
 	</array>
+	<key>UILaunchScreen</key>
+	<dict>
+		<key>UIColorName</key>
+		<string>LaunchBackground</string>
+		<key>UIImageName</key>
+		<string>LaunchIcon</string>
+		<key>UIImageRespectsSafeAreaInsets</key>
+		<true/>
+	</dict>
 </dict>
 </plist>

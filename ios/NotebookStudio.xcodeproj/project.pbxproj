@@ -131,7 +131,7 @@
 		8440BE4903C4177B3F7F4C10 /* TableOfContentsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TableOfContentsView.swift; sourceTree = "<group>"; };
 		8B795505730AF44002BE0D85 /* SearchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchView.swift; sourceTree = "<group>"; };
 		8D09368318C6224C2271CEF7 /* WorkPageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkPageView.swift; sourceTree = "<group>"; };
-		9164DE6EE68420ED8AD625BB /* NotebookStudio.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = NotebookStudio.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		9164DE6EE68420ED8AD625BB /* NotebookStudio.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = NotebookStudio.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		94AACCF24A0FDCEF59C6BC1F /* PlusJakartaSans-Italic[wght].ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "PlusJakartaSans-Italic[wght].ttf"; sourceTree = "<group>"; };
 		9A30A2916613C52F6D808109 /* FavoritesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FavoritesView.swift; sourceTree = "<group>"; };
 		9E654D3E6BB937FB329D6C3B /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
@@ -488,6 +488,7 @@
 						DevelopmentTeam = "";
 					};
 					4A86CB695E52F939025A239B = {
+						DevelopmentTeam = "";
 						ProvisioningStyle = Automatic;
 					};
 				};
@@ -770,7 +771,6 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = MPB66BJ242;
 				INFOPLIST_FILE = NotebookStudio/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Notebook Studio";
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -790,7 +790,6 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = MPB66BJ242;
 				INFOPLIST_FILE = NotebookStudio/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Notebook Studio";
 				LD_RUNPATH_SEARCH_PATHS = (

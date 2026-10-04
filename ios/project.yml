@@ -54,6 +54,10 @@ targets:
         UIAppFonts:
           - "PlusJakartaSans[wght].ttf"
           - "PlusJakartaSans-Italic[wght].ttf"
+        UILaunchScreen:
+          UIColorName: LaunchBackground
+          UIImageName: LaunchIcon
+          UIImageRespectsSafeAreaInsets: true
 
   NotebookStudioTests:
     type: bundle.unit-test
