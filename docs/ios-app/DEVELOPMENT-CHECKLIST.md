@@ -92,21 +92,14 @@
 
 ## Phase 4: UI — Library Tab 📚 `~3 ngày`
 
-- [ ] **P4-1** Tạo `Views/Library/LibraryView.swift`:
-  - NavigationStack với `.navigationTitle("Notebook Studio")`
-  - `.searchable()` modifier cho search trong library
-  - Pull-to-refresh (`refreshable`)
+- [x] **P4-1** Tạo `Views/Library/LibraryView.swift` ✅:
+  - NavigationStack + `.searchable()` + `.refreshable` + offline banner + loading skeleton
 
-- [ ] **P4-2** Tạo `Views/Library/CategoryChipsView.swift`:
-  - Horizontal ScrollView chips: "All", "Study", "Work", "Personal"
-  - Extract unique categories từ notebooks
-  - Chip active có accent gradient
+- [x] **P4-2** Tạo `Views/Library/CategoryChipsView.swift` ✅:
+  - Horizontal chips with accent gradient, haptic feedback, smooth animation
 
-- [ ] **P4-3** Tạo `Views/Library/NotebookCardView.swift`:
-  - Layout ngang: Thumbnail | Title + Subtitle + Last opened
-  - Progress ring (đọc đến trang mấy / tổng trang)
-  - Parse `coverGradient` CSS → SwiftUI LinearGradient cho thumbnail
-  - Swipe actions: Pin / Share / Delete
+- [x] **P4-3** Tạo `Views/Library/NotebookCardView.swift` ✅:
+  - Gradient thumbnail (CSS→SwiftUI via GradientParser), progress ring, pin indicator, press animation
 
 - [ ] **P4-4** Tạo `Views/Library/SortMenu.swift`:
   - Menu sort: Mới mở / Tên A-Z / Ngày tạo / Pinned first

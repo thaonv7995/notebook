@@ -4,7 +4,7 @@ import Foundation
 /// Maps 1:1 with the JSON structure from the web app's backend API.
 ///
 /// Reference: `src/state/store.js` lines 50-130, `server/db.js`
-struct Notebook: Codable, Identifiable, Equatable {
+struct Notebook: Codable, Identifiable, Equatable, Hashable {
     let id: String
     var title: String
     var author: String
@@ -92,8 +92,13 @@ struct Notebook: Codable, Identifiable, Equatable {
         return Double(min(lastPageIndex + 1, pageCount)) / Double(pageCount)
     }
 
-    /// Equatable conformance (by ID only for performance).
+    /// Equatable conformance (by ID + updatedAt for performance).
     static func == (lhs: Notebook, rhs: Notebook) -> Bool {
         lhs.id == rhs.id && lhs.updatedAt == rhs.updatedAt
+    }
+
+    /// Hashable conformance (by ID only).
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
     }
 }
