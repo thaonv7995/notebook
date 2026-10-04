@@ -76,37 +76,17 @@
 
 ---
 
-## Phase 3: Local Storage & Offline 💾 `~2 ngày`
+## Phase 3: Local Storage & Offline 💾 `~2 ngày` ✅ DONE
 
-- [ ] **P3-1** Tạo `Storage/NotebookStore.swift` — SwiftData model:
-  - `@Model class CachedNotebook` — mirror Notebook struct
-  - `@Model class CachedPage` — mirror Page struct
-  - Relationship: Notebook → Pages (cascade delete)
+- [x] **P3-1** Tạo `Storage/NotebookStore.swift` ✅ — SwiftData @Model:
+  - JSON-blob approach for pages (avoids complex relational model for 10 templates)
+  - `toNotebook()` / `update(from:)` conversion, lazy page decoding, `@Attribute(.externalStorage)`
 
-- [ ] **P3-2** Tạo `Storage/LocalStorageManager.swift`:
-  - `saveNotebooks([Notebook])` → SwiftData
-  - `loadNotebooks() -> [Notebook]`
-  - `getNotebook(id) -> Notebook?`
-  - `deleteAll()`
-
-- [ ] **P3-3** Tạo `Services/SyncManager.swift` — Sync engine:
-  - Mở app → Load local cache → Hiển thị ngay → Background fetch từ server
-  - So sánh `lastSyncedAt` local vs server
-  - Nếu server mới hơn → pull & merge
-  - Lưu `lastSyncedAt` vào UserDefaults
-  - Handle conflict: server wins (vì app chỉ đọc, không sửa nội dung)
-
-- [ ] **P3-4** Tạo `Storage/ReadingProgressStore.swift`:
-  - Lưu `lastPageIndex` per notebook locally
-  - Sync reading position lên server qua `PUT /api/notebooks/sync`
-
-- [ ] **P3-5** Tạo `Storage/BookmarkStore.swift`:
-  - Lưu danh sách bookmarked page IDs locally
-  - `struct Bookmark { notebookId, pageId, createdAt }`
-
-- [ ] **P3-6** Network reachability monitor — `NWPathMonitor`:
-  - Detect online/offline
-  - Auto-sync khi có mạng trở lại
+- [x] **P3-2** Tạo `Storage/LocalStorageManager.swift` ✅ — CRUD via SwiftData (save/load/get/delete/count)
+- [x] **P3-3** Tạo `Services/SyncManager.swift` ✅ — cache-first strategy, server-wins conflict, force refresh
+- [x] **P3-4** Tạo `Storage/ReadingProgressStore.swift` ✅ — in-memory + UserDefaults + debounced server sync (5s)
+- [x] **P3-5** Tạo `Storage/BookmarkStore.swift` ✅ — toggle/check/query bookmarks, UserDefaults persistence
+- [x] **P3-6** Tạo `Services/NetworkMonitor.swift` ✅ — NWPathMonitor, auto-sync on reconnection, statusText/statusIcon
 
 ---
 
