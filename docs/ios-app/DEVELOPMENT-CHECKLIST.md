@@ -63,11 +63,10 @@
   - 3 timeout tiers (request 30s, sync 60s, ping 10s)
   - Common headers, auth header builder, URLSessionConfiguration
 
-- [ ] **P2-2** Tạo `Services/APIClient.swift` — URLSession wrapper:
-  - `func request<T: Decodable>(_ endpoint, method, body) async throws -> T`
-  - Tự động gắn JWT header: `Authorization: Bearer <token>`
-  - Handle 401 → auto logout
-  - Handle network errors gracefully
+- [x] **P2-2** Tạo `Services/APIClient.swift` ✅ — URLSession wrapper:
+  - Actor-isolated async/await, auto JWT Bearer header
+  - 401 → `unauthorizedNotification` → auto logout
+  - Typed `APIError` enum with Vietnamese messages + `isOffline`/`isAuthError` helpers
 
 - [ ] **P2-3** Tạo `Services/AuthService.swift`:
   | Method | API Endpoint | Ghi chú |
