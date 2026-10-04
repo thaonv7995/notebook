@@ -1,19 +1,19 @@
 import SwiftUI
 
 /// Dot Grid Template View (P5-14)
-/// Layout:
-/// - Header: Topic, Date, No
-/// - Canvas-drawn dot grid background pattern with content overlay
+/// Matches web `dotgrid-template-sheet` & `dotgrid-container`:
+/// - Header: Dot Grid purpose badge, Subject/Topic underline, Date, No
+/// - Full-canvas box with 1.5pt border and 20pt dot matrix pattern
 struct DotGridPageView: View {
     let page: Page
     @ObservedObject private var settings = ReaderSettings.shared
 
     var body: some View {
-        A4PaperSheetView(systemTitle: "DOT GRID SYSTEM", pageNumber: Int(page.no ?? "1") ?? 1) {
-            VStack(alignment: .leading, spacing: 0) {
+        A4PaperSheetView(systemTitle: "DOT GRID NOTEBOOK", pageNumber: Int(page.no ?? "1") ?? 1) {
+            VStack(spacing: 0) {
                 // Header
                 TemplateHeaderView(
-                    purposeIcon: "✦",
+                    purposeIcon: "☷",
                     purposeTitle: "DOT GRID JOURNAL",
                     topicLabel: "SUBJECT / TOPIC:",
                     topic: page.topic ?? page.title,
@@ -23,21 +23,25 @@ struct DotGridPageView: View {
                     sealSubLabel: "DOT GRID ARCHIVE"
                 )
 
-                // Dot grid content area
+                // Dot grid canvas with 1.5pt border
                 ZStack(alignment: .topLeading) {
-                    DotGridBackground(dotSpacing: 24, dotColor: settings.paperTone.lineColor)
+                    DotGridBackground(dotSpacing: 20, dotColor: settings.paperTone.lineColor)
 
                     RichTextView(html: page.content)
-                        .padding(.horizontal, DesignTokens.spacingLG)
-                        .padding(.vertical, DesignTokens.spacingLG)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 10)
                 }
-                .frame(minHeight: 480)
+                .frame(minHeight: 460)
+                .overlay(
+                    Rectangle()
+                        .stroke(settings.paperTone.lineColor, lineWidth: 1.5)
+                )
             }
         }
     }
 }
 
-/// Canvas-based dot grid pattern background
+/// Canvas-based dot grid pattern background matching web radial-gradient
 struct DotGridBackground: View {
     let dotSpacing: CGFloat
     let dotColor: Color
@@ -49,7 +53,7 @@ struct DotGridBackground: View {
                 var y: CGFloat = dotSpacing
                 while y < size.height {
                     let rect = CGRect(x: x - 1, y: y - 1, width: 2, height: 2)
-                    context.fill(Path(ellipseIn: rect), with: .color(dotColor.opacity(0.8)))
+                    context.fill(Path(ellipseIn: rect), with: .color(dotColor.opacity(0.75)))
                     y += dotSpacing
                 }
                 x += dotSpacing
@@ -61,12 +65,12 @@ struct DotGridBackground: View {
 
 #Preview {
     DotGridPageView(page: Page(
-        id: "dot-1",
+        id: "dotgrid-1",
         template: .dotgrid,
-        title: "Bullet Journal",
-        topic: "Bullet Journal Plan",
+        title: "Bullet Journal Ideas",
+        topic: "Bullet Journal Ideas",
         date: "04/10/2026",
         no: "01",
-        content: "<p>• Task 1: Thiết kế giao diện dot grid</p><p>• Task 2: Kiểm thử hiệu năng Canvas</p>"
+        content: "<p>• Task Tracker</p><p>• Habit Loop</p>"
     ))
 }

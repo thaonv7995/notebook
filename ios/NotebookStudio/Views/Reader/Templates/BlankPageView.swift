@@ -1,20 +1,20 @@
 import SwiftUI
 
 /// Blank / Freeform Page Template View (P5-16)
-/// Layout:
-/// - Header: Topic, Date, No
-/// - Clean, undisturbed paper surface with rich content
+/// Matches web `blank-template-sheet` & `blank-container`:
+/// - Header: Blank Sheet purpose badge, Subject/Topic underline, Date, No
+/// - Clean full-canvas box with 1.5pt crisp border and undisturbed paper surface
 struct BlankPageView: View {
     let page: Page
     @ObservedObject private var settings = ReaderSettings.shared
 
     var body: some View {
-        A4PaperSheetView(systemTitle: "FREEFORM SYSTEM", pageNumber: Int(page.no ?? "1") ?? 1) {
-            VStack(alignment: .leading, spacing: 0) {
+        A4PaperSheetView(systemTitle: "BLANK NOTEBOOK", pageNumber: Int(page.no ?? "1") ?? 1) {
+            VStack(spacing: 0) {
                 // Header
                 TemplateHeaderView(
-                    purposeIcon: "📄",
-                    purposeTitle: "FREEFORM NOTEBOOK",
+                    purposeIcon: "◻",
+                    purposeTitle: "BLANK SHEET",
                     topicLabel: "SUBJECT / TOPIC:",
                     topic: page.topic ?? page.title,
                     date: page.date,
@@ -23,11 +23,17 @@ struct BlankPageView: View {
                     sealSubLabel: "FREEFORM ARCHIVE"
                 )
 
-                // Clean content area
-                RichTextView(html: page.content)
-                    .padding(.horizontal, DesignTokens.spacingLG)
-                    .padding(.vertical, DesignTokens.spacingLG)
-                    .frame(minHeight: 480, alignment: .topLeading)
+                // Clean Canvas with 1.5pt border
+                ZStack(alignment: .topLeading) {
+                    RichTextView(html: page.content)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 10)
+                }
+                .frame(minHeight: 460, alignment: .topLeading)
+                .overlay(
+                    Rectangle()
+                        .stroke(settings.paperTone.lineColor, lineWidth: 1.5)
+                )
             }
         }
     }

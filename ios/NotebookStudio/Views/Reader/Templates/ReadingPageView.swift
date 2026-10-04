@@ -1,17 +1,17 @@
 import SwiftUI
 
 /// Reading Notes Template View (P5-13)
-/// Layout:
-/// - Header: Book/Article, Date, Ch. (Chapter)
-/// - Split: Key Ideas & Takeaways | Quotes & Highlights
-/// - Bottom: Summary & Personal Reflection
+/// Matches web `reading-container`:
+/// - Header: Book/Article, Date, Ch. (Chapter), Book Archive seal
+/// - 2 Columns: Key Ideas & Takeaways (left 50%) | Quotes & Highlights (right 50%) on ruled lines
+/// - Bottom Area: Summary & Personal Reflection on ruled lines
 struct ReadingPageView: View {
     let page: Page
     @ObservedObject private var settings = ReaderSettings.shared
 
     var body: some View {
-        A4PaperSheetView(systemTitle: "READING JOURNAL", pageNumber: Int(page.no ?? "1") ?? 1) {
-            VStack(alignment: .leading, spacing: 0) {
+        A4PaperSheetView(systemTitle: "READING NOTES", pageNumber: Int(page.no ?? "1") ?? 1) {
+            VStack(spacing: 0) {
                 // Header
                 TemplateHeaderView(
                     purposeIcon: "📖",
@@ -20,76 +20,89 @@ struct ReadingPageView: View {
                     topic: page.topic ?? page.title,
                     date: page.date,
                     number: page.no,
+                    numberLabel: "CH.",
                     author: "@thaonv",
-                    sealSubLabel: "READING ARCHIVE"
+                    sealSubLabel: "BOOK ARCHIVE"
                 )
 
-                // 2 Columns Split
-                HStack(alignment: .top, spacing: 0) {
-                    // Left: Key Ideas
-                    VStack(alignment: .leading, spacing: DesignTokens.spacingSM) {
-                        badge(title: "KEY IDEAS & TAKEAWAYS", icon: "lightbulb", color: .yellow)
-                        RichTextView(html: page.cues)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                    }
-                    .padding(DesignTokens.spacingMD)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                // Reading Container with 1.5pt crisp border
+                VStack(spacing: 0) {
+                    // Split Body: 2 Columns
+                    HStack(alignment: .top, spacing: 0) {
+                        // Left: Key Ideas
+                        VStack(alignment: .leading, spacing: 0) {
+                            ColumnGuideBar(title: "KEY IDEAS & TAKEAWAYS")
 
+                            ZStack(alignment: .topLeading) {
+                                RuledBackgroundView(lineHeight: 26, lineColor: settings.paperTone.lineColor.opacity(0.45))
+
+                                RichTextView(html: page.cues, customFontSize: CGFloat(settings.fontSize - 1))
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 4)
+                            }
+                            .frame(minHeight: 260)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+
+                        // Vertical dividing line
+                        Rectangle()
+                            .fill(settings.paperTone.lineColor)
+                            .frame(width: 1.5)
+
+                        // Right: Quotes & Highlights
+                        VStack(alignment: .leading, spacing: 0) {
+                            ColumnGuideBar(title: "QUOTES & HIGHLIGHTS")
+
+                            ZStack(alignment: .topLeading) {
+                                RuledBackgroundView(lineHeight: 26, lineColor: settings.paperTone.lineColor.opacity(0.45))
+
+                                RichTextView(html: (page.notes?.isEmpty ?? true) ? page.content : page.notes, customFontSize: CGFloat(settings.fontSize - 1))
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 4)
+                            }
+                            .frame(minHeight: 260)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+
+                    // Horizontal dividing line
                     Rectangle()
                         .fill(settings.paperTone.lineColor)
-                        .frame(width: 1.5)
+                        .frame(height: 1.5)
 
-                    // Right: Quotes & Highlights
-                    VStack(alignment: .leading, spacing: DesignTokens.spacingSM) {
-                        badge(title: "QUOTES & HIGHLIGHTS", icon: "quote.bubble", color: .purple)
-                        RichTextView(html: (page.notes?.isEmpty ?? true) ? page.content : page.notes)
-                            .frame(maxWidth: .infinity, alignment: .leading)
+                    // Bottom: Summary & Reflection
+                    VStack(alignment: .leading, spacing: 0) {
+                        ColumnGuideBar(title: "SUMMARY & PERSONAL REFLECTION")
+
+                        ZStack(alignment: .topLeading) {
+                            RuledBackgroundView(lineHeight: 26, lineColor: settings.paperTone.lineColor.opacity(0.45))
+
+                            RichTextView(html: page.summary)
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 4)
+                        }
+                        .frame(minHeight: 90)
                     }
-                    .padding(DesignTokens.spacingMD)
-                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
-                .frame(minHeight: 280)
-
-                // Bottom: Summary & Reflection
-                Rectangle()
-                    .fill(settings.paperTone.lineColor)
-                    .frame(height: 1.5)
-
-                VStack(alignment: .leading, spacing: DesignTokens.spacingSM) {
-                    badge(title: "SUMMARY & PERSONAL REFLECTION", icon: "sparkles", color: DesignTokens.accentLight)
-                    RichTextView(html: page.summary)
-                }
-                .padding(DesignTokens.spacingLG)
-                .frame(maxWidth: .infinity, alignment: .leading)
+                .overlay(
+                    Rectangle()
+                        .stroke(settings.paperTone.lineColor, lineWidth: 1.5)
+                )
             }
         }
-    }
-
-    private func badge(title: String, icon: String, color: Color) -> some View {
-        HStack(spacing: 4) {
-            Image(systemName: icon)
-                .font(.system(size: 9, weight: .bold))
-            Text(title)
-                .font(.jakartaSans(size: 9, weight: .bold))
-                .tracking(0.8)
-        }
-        .foregroundStyle(color)
-        .padding(.horizontal, 6)
-        .padding(.vertical, 3)
-        .background(color.opacity(0.12), in: RoundedRectangle(cornerRadius: 4))
     }
 }
 
 #Preview {
     ReadingPageView(page: Page(
-        id: "read-1",
+        id: "reading-1",
         template: .reading,
-        title: "Atomic Habits",
-        topic: "Atomic Habits — James Clear",
+        title: "Sapiens - Lược sử loài người",
+        topic: "Sapiens - Lược sử loài người",
         date: "04/10/2026",
-        no: "03",
-        cues: "<p>• Quy luật 1%: Mỗi ngày tiến bộ 1% thì sau 1 năm tăng 37 lần.</p><p>• Tập trung vào hệ thống thay vì chỉ mục tiêu.</p>",
-        notes: "<blockquote>\"You do not rise to the level of your goals. You fall to the level of your systems.\"</blockquote>",
-        summary: "<p>Cuốn sách thực tế và sâu sắc về tâm lý hành vi con người. Áp dụng ngay việc thiết lập thói quen code mỗi sáng.</p>"
+        no: "01",
+        cues: "<p>• Cách mạng nhận thức là bước ngoặt quan trọng nhất của loài người.</p><p>• Ngôn ngữ hư cấu giúp kết nối hàng triệu người xa lạ.</p>",
+        notes: "<blockquote>Không một loài vật nào khác có thể tin vào những thứ không có thật như thần linh, tiền tệ, hoặc quốc gia.</blockquote>",
+        summary: "<p>Cuốn sách mở ra góc nhìn hoàn toàn mới về cách xã hội loài người được tổ chức và phát triển dựa trên những câu chuyện hư cấu chung.</p>"
     ))
 }

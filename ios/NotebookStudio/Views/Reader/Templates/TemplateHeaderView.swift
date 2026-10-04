@@ -1,6 +1,11 @@
 import SwiftUI
 
-/// Shared header for template notebook pages with purpose badge, topic title, date, and page number.
+/// Shared functional header for notebook template pages.
+/// Matches `templates.css` `.functional-header` with vintage stationery aesthetics:
+/// - Purpose badge with sharp rectangular border
+/// - Monogrammed signature seal cartouche
+/// - Serif topic label with classic underline field
+/// - Date, Number, Deadline, and status pills (TODO / WIP / DONE)
 struct TemplateHeaderView: View {
     let purposeIcon: String
     let purposeTitle: String
@@ -9,108 +14,239 @@ struct TemplateHeaderView: View {
     let date: String?
     let number: String?
     var numberLabel: String = "NO."
-    var author: String? = nil
+    var author: String? = "@thaonv"
     var sealSubLabel: String = "ARCHIVE"
+    var deadline: String? = nil
+    var status: String? = nil
+    var onStatusChange: ((String) -> Void)? = nil
 
     @ObservedObject private var settings = ReaderSettings.shared
+    @State private var currentStatus: String = "WIP"
+
+    private var effectiveStatus: String {
+        status ?? currentStatus
+    }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: DesignTokens.spacingSM) {
-            // Top purpose badge, date/number badges & author seal cartouche
-            HStack(alignment: .center, spacing: DesignTokens.spacingSM) {
-                // Purpose badge
-                HStack(spacing: 6) {
+        VStack(alignment: .leading, spacing: 6) {
+            // MARK: - Row 1: Header Top Meta (Purpose badge + Signature Seal)
+            HStack(alignment: .center) {
+                // Purpose badge (Sharp rectangular border matching web)
+                HStack(spacing: 4) {
                     Text(purposeIcon)
-                        .font(.system(size: 11))
-                    Text(purposeTitle)
-                        .font(.jakartaSans(size: 11, weight: .bold))
+                        .font(.system(size: 9))
+                    Text(purposeTitle.uppercased())
+                        .font(.jakartaSans(size: 8.5, weight: .bold))
                         .tracking(1.2)
                 }
-                .foregroundStyle(DesignTokens.accentLight)
-                .padding(.horizontal, 10)
-                .padding(.vertical, 4)
-                .background(DesignTokens.accentLight.opacity(0.12), in: Capsule())
+                .foregroundStyle(settings.paperTone.textColor)
+                .padding(.horizontal, 6)
+                .padding(.vertical, 2.5)
+                .background(settings.paperTone.backgroundColor)
+                .overlay(
+                    Rectangle()
+                        .stroke(settings.paperTone.lineColor, lineWidth: 1)
+                )
 
                 Spacer()
 
-                // Date & Number badges
-                HStack(spacing: 12) {
-                    if let date = date, !date.isEmpty {
-                        HStack(spacing: 4) {
-                            Text("DATE:")
-                                .font(.jakartaSans(size: 10, weight: .bold))
-                                .foregroundStyle(settings.paperTone.secondaryColor)
-                            Text(date)
-                                .font(.jakartaSans(size: 11, weight: .medium))
-                                .foregroundStyle(settings.paperTone.textColor)
-                        }
-                    }
-
-                    if let number = number, !number.isEmpty {
-                        HStack(spacing: 4) {
-                            Text(numberLabel)
-                                .font(.jakartaSans(size: 10, weight: .bold))
-                                .foregroundStyle(settings.paperTone.secondaryColor)
-                            Text(number)
-                                .font(.jakartaSans(size: 11, weight: .semibold))
-                                .foregroundStyle(DesignTokens.accentLight)
-                        }
-                    }
-                }
-
-                // Author seal cartouche
+                // Signature Seal Cartouche (@thaonv • ARCHIVE)
                 if let author = author, !author.isEmpty {
-                    VStack(alignment: .trailing, spacing: 1) {
+                    VStack(spacing: 1) {
                         Text(author.hasPrefix("@") ? author : "@\(author)")
-                            .font(.jakartaSans(size: 9, weight: .bold))
+                            .font(.system(size: 8.5, weight: .bold, design: .monospaced))
                             .foregroundStyle(settings.paperTone.textColor)
-                        Text(sealSubLabel)
-                            .font(.jakartaSans(size: 7, weight: .semibold))
-                            .tracking(0.8)
-                            .foregroundStyle(DesignTokens.accentLight)
+                        Text(sealSubLabel.uppercased())
+                            .font(.jakartaSans(size: 5.5, weight: .bold))
+                            .tracking(1.0)
+                            .foregroundStyle(settings.paperTone.secondaryColor)
                     }
-                    .padding(.horizontal, 6)
+                    .padding(.horizontal, 8)
                     .padding(.vertical, 2)
+                    .background(settings.paperTone.backgroundColor)
                     .overlay(
-                        RoundedRectangle(cornerRadius: 3)
-                            .stroke(DesignTokens.accentLight.opacity(0.35), lineWidth: 0.8)
+                        RoundedRectangle(cornerRadius: 2)
+                            .stroke(settings.paperTone.textColor.opacity(0.85), lineWidth: 1.2)
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 2)
+                            .stroke(settings.paperTone.lineColor.opacity(0.5), lineWidth: 0.5)
+                            .padding(1)
                     )
                 }
             }
 
-            // Topic / Subject title
-            if let topic = topic, !topic.isEmpty {
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(topicLabel)
-                        .font(.jakartaSans(size: 10, weight: .bold))
-                        .tracking(1.0)
-                        .foregroundStyle(settings.paperTone.secondaryColor)
+            // MARK: - Row 2: Header Main Field (Serif label + Underline field)
+            HStack(alignment: .bottom, spacing: 6) {
+                Text(topicLabel.uppercased())
+                    .font(.system(size: 12.5, weight: .bold, design: .serif))
+                    .tracking(0.8)
+                    .foregroundStyle(settings.paperTone.textColor)
+                    .layoutPriority(1)
 
-                    Text(topic)
-                        .font(.jakartaSans(size: 18, weight: .bold))
+                VStack(spacing: 0) {
+                    Text((topic?.isEmpty ?? true) ? " " : (topic ?? " "))
+                        .font(.jakartaSans(size: 13, weight: .semibold))
                         .foregroundStyle(settings.paperTone.textColor)
+                        .lineLimit(1)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal, 4)
+                        .padding(.bottom, 2)
+
+                    Rectangle()
+                        .fill(settings.paperTone.textColor.opacity(0.85))
+                        .frame(height: 1.3)
                 }
             }
+            .padding(.top, 1)
 
-            // Separator bar
-            Rectangle()
-                .fill(settings.paperTone.lineColor)
-                .frame(height: 1.5)
-                .padding(.top, 2)
+            // MARK: - Row 3: Sub-fields (Date, Deadline, Status Pills, No.)
+            HStack(alignment: .center, spacing: 10) {
+                // Date sub-field
+                HStack(spacing: 4) {
+                    Text("DATE:")
+                        .font(.jakartaSans(size: 9.5, weight: .bold))
+                        .foregroundStyle(settings.paperTone.secondaryColor)
+
+                    VStack(spacing: 0) {
+                        Text(date ?? "   /   /      ")
+                            .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                            .foregroundStyle(settings.paperTone.textColor)
+                            .padding(.horizontal, 2)
+                            .padding(.bottom, 1)
+
+                        Rectangle()
+                            .fill(settings.paperTone.lineColor)
+                            .frame(height: 1)
+                    }
+                    .frame(minWidth: 70)
+                }
+
+                // Optional Deadline sub-field
+                if let deadline = deadline, !deadline.isEmpty {
+                    HStack(spacing: 4) {
+                        Text("DEADLINE:")
+                            .font(.jakartaSans(size: 9.5, weight: .bold))
+                            .foregroundStyle(settings.paperTone.secondaryColor)
+
+                        VStack(spacing: 0) {
+                            Text(deadline)
+                                .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                                .foregroundStyle(settings.paperTone.textColor)
+                                .padding(.horizontal, 2)
+                                .padding(.bottom, 1)
+
+                            Rectangle()
+                                .fill(settings.paperTone.lineColor)
+                                .frame(height: 1)
+                        }
+                        .frame(minWidth: 65)
+                    }
+                }
+
+                Spacer()
+
+                // Optional Work Status Pills
+                if status != nil || onStatusChange != nil {
+                    HStack(spacing: 3) {
+                        statusPill(title: "[ ] TODO", isActive: effectiveStatus == "TODO", activeBg: "#fee2e2", activeBorder: "#ef4444", activeText: "#b91c1c") {
+                            currentStatus = "TODO"
+                            onStatusChange?("TODO")
+                        }
+                        statusPill(title: "[ ] WIP", isActive: effectiveStatus == "WIP" || effectiveStatus.isEmpty, activeBg: "#fef3c7", activeBorder: "#f59e0b", activeText: "#b45309") {
+                            currentStatus = "WIP"
+                            onStatusChange?("WIP")
+                        }
+                        statusPill(title: "[✓] DONE", isActive: effectiveStatus == "DONE", activeBg: "#dcfce7", activeBorder: "#22c55e", activeText: "#15803d") {
+                            currentStatus = "DONE"
+                            onStatusChange?("DONE")
+                        }
+                    }
+                }
+
+                // Page Number sub-field
+                if let number = number, !number.isEmpty {
+                    HStack(spacing: 4) {
+                        Text(numberLabel)
+                            .font(.jakartaSans(size: 9.5, weight: .bold))
+                            .foregroundStyle(settings.paperTone.secondaryColor)
+
+                        VStack(spacing: 0) {
+                            Text(number)
+                                .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                                .foregroundStyle(settings.paperTone.textColor)
+                                .padding(.horizontal, 3)
+                                .padding(.bottom, 1)
+
+                            Rectangle()
+                                .fill(settings.paperTone.lineColor)
+                                .frame(height: 1)
+                        }
+                        .frame(minWidth: 32)
+                    }
+                }
+            }
+            .padding(.top, 1)
         }
-        .padding(.horizontal, DesignTokens.spacingLG)
-        .padding(.top, DesignTokens.spacingMD)
+        .padding(.horizontal, 4)
+        .padding(.bottom, 6)
+        .onAppear {
+            if let status = status {
+                currentStatus = status
+            }
+        }
+    }
+
+    private func statusPill(
+        title: String,
+        isActive: Bool,
+        activeBg: String,
+        activeBorder: String,
+        activeText: String,
+        onTap: @escaping () -> Void
+    ) -> some View {
+        Button(action: onTap) {
+            Text(title)
+                .font(.jakartaSans(size: 8, weight: .bold))
+                .foregroundStyle(isActive ? Color(hex: activeText) : settings.paperTone.secondaryColor)
+                .padding(.horizontal, 4)
+                .padding(.vertical, 2)
+                .background(isActive ? Color(hex: activeBg) : settings.paperTone.backgroundColor)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 2)
+                        .stroke(isActive ? Color(hex: activeBorder) : settings.paperTone.lineColor, lineWidth: 1)
+                )
+        }
+        .buttonStyle(.plain)
     }
 }
 
 #Preview {
-    TemplateHeaderView(
-        purposeIcon: "✦",
-        purposeTitle: "STUDY JOURNAL",
-        topicLabel: "SUBJECT / TOPIC:",
-        topic: "Lập trình iOS với SwiftUI",
-        date: "04/10/2026",
-        number: "01",
-        author: "thaonv"
-    )
+    VStack(spacing: 20) {
+        TemplateHeaderView(
+            purposeIcon: "✦",
+            purposeTitle: "STUDY JOURNAL",
+            topicLabel: "SUBJECT / TOPIC:",
+            topic: "Lập trình iOS với SwiftUI",
+            date: "04/10/2026",
+            number: "01",
+            author: "thaonv",
+            sealSubLabel: "STUDY ARCHIVE"
+        )
+
+        TemplateHeaderView(
+            purposeIcon: "💼",
+            purposeTitle: "WORK & PROJECT",
+            topicLabel: "PROJECT / OBJECTIVE:",
+            topic: "Xây dựng ứng dụng di động",
+            date: "04/10/2026",
+            number: "02",
+            author: "thaonv",
+            sealSubLabel: "WORK ARCHIVE",
+            deadline: "10/10/2026",
+            status: "WIP"
+        )
+    }
+    .padding()
+    .background(Color(hex: "#FAF5E8"))
 }

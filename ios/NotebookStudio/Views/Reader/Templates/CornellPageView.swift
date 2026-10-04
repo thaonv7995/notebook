@@ -1,10 +1,10 @@
 import SwiftUI
 
 /// Cornell Notes Template View (P5-8)
-/// Layout:
-/// - Header: Subject/Topic, Date, No
-/// - 2 Columns: Cues & Questions (left) | Notes & Details (right)
-/// - Bottom: Summary & Synthesis
+/// Matches web `cornell-container`:
+/// - Header: Subject/Topic underline, Date, No, Author seal
+/// - 2 Columns: Cues & Questions (left) | Notes & Details (right) with 28pt ruled lines
+/// - Bottom: Summary & Synthesis with ruled lines
 struct CornellPageView: View {
     let page: Page
     @ObservedObject private var settings = ReaderSettings.shared
@@ -12,7 +12,7 @@ struct CornellPageView: View {
     var body: some View {
         A4PaperSheetView(systemTitle: "CORNELL SYSTEM", pageNumber: Int(page.no ?? "1") ?? 1) {
             VStack(spacing: 0) {
-                // Header
+                // Functional Header
                 TemplateHeaderView(
                     purposeIcon: "✦",
                     purposeTitle: "STUDY JOURNAL",
@@ -24,65 +24,71 @@ struct CornellPageView: View {
                     sealSubLabel: "STUDY ARCHIVE"
                 )
 
-                // Cornell 2-column Body
-                HStack(alignment: .top, spacing: 0) {
-                    // Left Column: Cues & Questions
-                    VStack(alignment: .leading, spacing: DesignTokens.spacingSM) {
-                        sectionBadge(title: "CUES & QUESTIONS", icon: "questionmark.circle")
+                // Cornell Container with 1.5pt crisp border
+                VStack(spacing: 0) {
+                    // Split Body: Cues (left) + Notes (right)
+                    HStack(alignment: .top, spacing: 0) {
+                        // Left Column: Cues & Questions (30%)
+                        VStack(alignment: .leading, spacing: 0) {
+                            ColumnGuideBar(title: "CUES & QUESTIONS")
 
-                        RichTextView(html: page.cues, customFontSize: CGFloat(settings.fontSize - 1))
-                            .frame(maxWidth: .infinity, alignment: .leading)
+                            ZStack(alignment: .topLeading) {
+                                RuledBackgroundView(lineHeight: 26, lineColor: settings.paperTone.lineColor.opacity(0.45))
+
+                                RichTextView(html: page.cues, customFontSize: CGFloat(settings.fontSize - 1.5))
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 4)
+                            }
+                            .frame(minHeight: 280)
+                        }
+                        .frame(width: 110)
+
+                        // Vertical dividing line
+                        Rectangle()
+                            .fill(settings.paperTone.lineColor)
+                            .frame(width: 1.5)
+
+                        // Right Column: Notes & Details (70%)
+                        VStack(alignment: .leading, spacing: 0) {
+                            ColumnGuideBar(title: "NOTES")
+
+                            ZStack(alignment: .topLeading) {
+                                RuledBackgroundView(lineHeight: 26, lineColor: settings.paperTone.lineColor.opacity(0.45))
+
+                                RichTextView(html: (page.notes?.isEmpty ?? true) ? page.content : page.notes)
+                                    .padding(.horizontal, 10)
+                                    .padding(.vertical, 4)
+                            }
+                            .frame(minHeight: 280)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
                     }
-                    .frame(width: 120)
-                    .padding(DesignTokens.spacingMD)
 
-                    // Vertical dividing line
+                    // Horizontal dividing line
                     Rectangle()
                         .fill(settings.paperTone.lineColor)
-                        .frame(width: 1.5)
+                        .frame(height: 1.5)
 
-                    // Right Column: Notes & Details
-                    VStack(alignment: .leading, spacing: DesignTokens.spacingSM) {
-                        sectionBadge(title: "NOTES & DETAILS", icon: "note.text")
+                    // Bottom Section: Summary & Synthesis
+                    VStack(alignment: .leading, spacing: 0) {
+                        ColumnGuideBar(title: "SUMMARY & SYNTHESIS")
 
-                        RichTextView(html: (page.notes?.isEmpty ?? true) ? page.content : page.notes)
-                            .frame(maxWidth: .infinity, alignment: .leading)
+                        ZStack(alignment: .topLeading) {
+                            RuledBackgroundView(lineHeight: 26, lineColor: settings.paperTone.lineColor.opacity(0.45))
+
+                            RichTextView(html: page.summary)
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 4)
+                        }
+                        .frame(minHeight: 85)
                     }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(DesignTokens.spacingMD)
                 }
-                .frame(minHeight: 280)
-
-                // Horizontal dividing line
-                Rectangle()
-                    .fill(settings.paperTone.lineColor)
-                    .frame(height: 1.5)
-
-                // Bottom Section: Summary & Synthesis
-                VStack(alignment: .leading, spacing: DesignTokens.spacingSM) {
-                    sectionBadge(title: "SUMMARY & SYNTHESIS", icon: "sparkles")
-
-                    RichTextView(html: page.summary)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                }
-                .padding(DesignTokens.spacingLG)
-                .frame(maxWidth: .infinity, alignment: .leading)
+                .overlay(
+                    Rectangle()
+                        .stroke(settings.paperTone.lineColor, lineWidth: 1.5)
+                )
             }
         }
-    }
-
-    private func sectionBadge(title: String, icon: String) -> some View {
-        HStack(spacing: 4) {
-            Image(systemName: icon)
-                .font(.system(size: 9, weight: .bold))
-            Text(title)
-                .font(.jakartaSans(size: 10, weight: .bold))
-                .tracking(1.0)
-        }
-        .foregroundStyle(DesignTokens.accentLight)
-        .padding(.horizontal, 8)
-        .padding(.vertical, 3)
-        .background(DesignTokens.accentLight.opacity(0.1), in: RoundedRectangle(cornerRadius: 4))
     }
 }
 

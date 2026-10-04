@@ -1,18 +1,32 @@
 import SwiftUI
 
 /// Work & Project Log Template View (P5-9)
-/// Layout:
-/// - Header: Project, Deadline, Status badge (TODO, WIP, DONE)
-/// - Agenda & Key Objectives
-/// - 2 Columns or stacked sections: Discussions/Notes + Action Items checklist
+/// Matches web `work-container`:
+/// - Header: Project, Date, Deadline, Status pills (TODO, WIP, DONE)
+/// - Top Split: Agenda & Decisions (left) | Notes & Discussions (right) on ruled lines
+/// - Bottom Area: 5 Action Item rows with interactive checkboxes and underline lines
 struct WorkPageView: View {
     let page: Page
     @ObservedObject private var settings = ReaderSettings.shared
 
+    @State private var actions: [ActionItem] = []
+    @State private var currentStatus: String = "WIP"
+
+    init(page: Page) {
+        self.page = page
+        let initialActions = page.actions ?? []
+        var list = initialActions
+        while list.count < 5 {
+            list.append(ActionItem(checked: false, text: ""))
+        }
+        _actions = State(initialValue: list)
+        _currentStatus = State(initialValue: page.status ?? "WIP")
+    }
+
     var body: some View {
-        A4PaperSheetView(systemTitle: "WORK SYSTEM", pageNumber: Int(page.no ?? "1") ?? 1) {
-            VStack(alignment: .leading, spacing: DesignTokens.spacingMD) {
-                // Header
+        A4PaperSheetView(systemTitle: "WORK & PROJECT LOG", pageNumber: Int(page.no ?? "1") ?? 1) {
+            VStack(spacing: 0) {
+                // Functional Header with Deadline and Status Pills
                 TemplateHeaderView(
                     purposeIcon: "💼",
                     purposeTitle: "WORK & PROJECT",
@@ -21,121 +35,135 @@ struct WorkPageView: View {
                     date: page.date,
                     number: page.no,
                     author: "@thaonv",
-                    sealSubLabel: "WORK ARCHIVE"
+                    sealSubLabel: "WORK ARCHIVE",
+                    deadline: page.deadline,
+                    status: currentStatus,
+                    onStatusChange: { newStatus in
+                        currentStatus = newStatus
+                    }
                 )
 
-                // Sub-header: Deadline + Status badge
-                HStack(spacing: DesignTokens.spacingMD) {
-                    if let deadline = page.deadline, !deadline.isEmpty {
-                        HStack(spacing: 4) {
-                            Image(systemName: "calendar.badge.clock")
-                                .font(.system(size: 11))
-                                .foregroundStyle(.red.opacity(0.8))
-                            Text("DEADLINE:")
-                                .font(.jakartaSans(size: 10, weight: .bold))
-                                .foregroundStyle(settings.paperTone.secondaryColor)
-                            Text(deadline)
-                                .font(.jakartaSans(size: 11, weight: .semibold))
-                                .foregroundStyle(settings.paperTone.textColor)
-                        }
-                    }
+                // Work Container with 1.5pt crisp border
+                VStack(spacing: 0) {
+                    // Split Body: Agenda (left 32%) + Discussions (right 68%)
+                    HStack(alignment: .top, spacing: 0) {
+                        // Left Column: Agenda & Decisions
+                        VStack(alignment: .leading, spacing: 0) {
+                            ColumnGuideBar(title: "AGENDA & DECISIONS")
 
-                    Spacer()
+                            ZStack(alignment: .topLeading) {
+                                RuledBackgroundView(lineHeight: 26, lineColor: settings.paperTone.lineColor.opacity(0.45))
 
-                    // Status Badge
-                    if let status = page.status, !status.isEmpty {
-                        statusBadge(status)
-                    }
-                }
-                .padding(.horizontal, DesignTokens.spacingLG)
-
-                // Agenda Section
-                if let agenda = page.agenda, !agenda.isEmpty {
-                    VStack(alignment: .leading, spacing: DesignTokens.spacingSM) {
-                        sectionBadge(title: "AGENDA & OBJECTIVES", icon: "target")
-                        RichTextView(html: agenda)
-                    }
-                    .padding(.horizontal, DesignTokens.spacingLG)
-                    .padding(.top, DesignTokens.spacingXS)
-
-                    Divider()
-                        .overlay(settings.paperTone.lineColor)
-                        .padding(.horizontal, DesignTokens.spacingLG)
-                }
-
-                // Discussions & Detailed Notes
-                VStack(alignment: .leading, spacing: DesignTokens.spacingSM) {
-                    sectionBadge(title: "DISCUSSIONS & NOTES", icon: "text.bubble")
-                    RichTextView(html: (page.discussions?.isEmpty ?? true) ? page.content : page.discussions)
-                }
-                .padding(.horizontal, DesignTokens.spacingLG)
-
-                // Action Items Checklist
-                if let actions = page.actions, !actions.isEmpty {
-                    Divider()
-                        .overlay(settings.paperTone.lineColor)
-                        .padding(.horizontal, DesignTokens.spacingLG)
-
-                    VStack(alignment: .leading, spacing: DesignTokens.spacingSM) {
-                        sectionBadge(title: "ACTION ITEMS & NEXT STEPS", icon: "checklist")
-
-                        VStack(alignment: .leading, spacing: DesignTokens.spacingSM) {
-                            ForEach(Array(actions.enumerated()), id: \.offset) { _, item in
-                                HStack(alignment: .top, spacing: DesignTokens.spacingSM) {
-                                    Image(systemName: item.checked ? "checkmark.square.fill" : "square")
-                                        .font(.system(size: 16))
-                                        .foregroundStyle(item.checked ? DesignTokens.accentLight : settings.paperTone.secondaryColor)
-
-                                    Text(item.text)
-                                        .font(settings.fontFamily.font(size: CGFloat(settings.fontSize)))
-                                        .strikethrough(item.checked)
-                                        .foregroundStyle(item.checked ? settings.paperTone.secondaryColor : settings.paperTone.textColor)
-                                }
-                                .padding(.vertical, 2)
+                                RichTextView(html: page.agenda, customFontSize: CGFloat(settings.fontSize - 1.5))
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 4)
                             }
+                            .frame(minHeight: 220)
+                        }
+                        .frame(width: 115)
+
+                        // Vertical dividing line
+                        Rectangle()
+                            .fill(settings.paperTone.lineColor)
+                            .frame(width: 1.5)
+
+                        // Right Column: Notes & Discussions
+                        VStack(alignment: .leading, spacing: 0) {
+                            ColumnGuideBar(title: "NOTES & DISCUSSIONS")
+
+                            ZStack(alignment: .topLeading) {
+                                RuledBackgroundView(lineHeight: 26, lineColor: settings.paperTone.lineColor.opacity(0.45))
+
+                                RichTextView(html: (page.discussions?.isEmpty ?? true) ? page.content : page.discussions)
+                                    .padding(.horizontal, 10)
+                                    .padding(.vertical, 4)
+                            }
+                            .frame(minHeight: 220)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+
+                    // Horizontal dividing line
+                    Rectangle()
+                        .fill(settings.paperTone.lineColor)
+                        .frame(height: 1.5)
+
+                    // Bottom Action Area: 5 Action Item Rows matching web .action-row
+                    VStack(spacing: 0) {
+                        ForEach(0..<min(5, actions.count), id: \.self) { idx in
+                            actionRow(idx: idx)
                         }
                     }
-                    .padding(.horizontal, DesignTokens.spacingLG)
+                    .background(settings.paperTone.backgroundColor)
+                }
+                .overlay(
+                    Rectangle()
+                        .stroke(settings.paperTone.lineColor, lineWidth: 1.5)
+                )
+            }
+        }
+    }
+
+    // MARK: - Action Item Row matching web .action-row
+
+    private func actionRow(idx: Int) -> some View {
+        let item = actions[idx]
+
+        return HStack(spacing: 6) {
+            // Checkbox button [ ] / [✓]
+            Button {
+                actions[idx].checked.toggle()
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            } label: {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 2)
+                        .stroke(item.checked ? Color(hex: "#16a34a") : settings.paperTone.textColor, lineWidth: 1.2)
+                        .background(
+                            item.checked ? Color(hex: "#16a34a") : Color.clear,
+                            in: RoundedRectangle(cornerRadius: 2)
+                        )
+                        .frame(width: 14, height: 14)
+
+                    if item.checked {
+                        Image(systemName: "checkmark")
+                            .font(.system(size: 9, weight: .black))
+                            .foregroundStyle(.white)
+                    }
                 }
             }
-        }
-    }
+            .buttonStyle(.plain)
 
-    private func statusBadge(_ status: String) -> some View {
-        let (color, text): (Color, String) = {
-            switch status.uppercased() {
-            case "DONE": return (.green, "DONE")
-            case "WIP": return (.orange, "IN PROGRESS")
-            default: return (.blue, "TO DO")
+            // First row badge
+            if idx == 0 {
+                Text("ACTION ITEMS & NEXT STEPS")
+                    .font(.jakartaSans(size: 7.5, weight: .bold))
+                    .tracking(0.8)
+                    .foregroundStyle(settings.paperTone.textColor)
+                    .padding(.horizontal, 4)
+                    .padding(.vertical, 1.5)
+                    .background(settings.paperTone.backgroundColor)
+                    .overlay(
+                        Rectangle()
+                            .stroke(settings.paperTone.lineColor, lineWidth: 1)
+                    )
             }
-        }()
 
-        return HStack(spacing: 4) {
-            Circle()
-                .fill(color)
-                .frame(width: 6, height: 6)
-            Text(text)
-                .font(.jakartaSans(size: 10, weight: .bold))
-                .tracking(1.0)
+            // Action line text with strikethrough if done
+            Text(item.text.isEmpty ? (idx == 0 && actions[0].text.isEmpty ? "Thêm hành động cần làm..." : " ") : item.text)
+                .font(settings.fontFamily.font(size: CGFloat(settings.fontSize - 1.5)))
+                .strikethrough(item.checked, color: settings.paperTone.secondaryColor)
+                .foregroundStyle(item.checked ? settings.paperTone.secondaryColor : (item.text.isEmpty ? settings.paperTone.secondaryColor.opacity(0.4) : settings.paperTone.textColor))
+                .lineLimit(1)
+                .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .foregroundStyle(color)
         .padding(.horizontal, 8)
-        .padding(.vertical, 4)
-        .background(color.opacity(0.12), in: Capsule())
-    }
-
-    private func sectionBadge(title: String, icon: String) -> some View {
-        HStack(spacing: 4) {
-            Image(systemName: icon)
-                .font(.system(size: 9, weight: .bold))
-            Text(title)
-                .font(.jakartaSans(size: 10, weight: .bold))
-                .tracking(1.0)
-        }
-        .foregroundStyle(DesignTokens.accentLight)
-        .padding(.horizontal, 8)
-        .padding(.vertical, 3)
-        .background(DesignTokens.accentLight.opacity(0.1), in: RoundedRectangle(cornerRadius: 4))
+        .frame(height: 28)
+        .overlay(
+            Rectangle()
+                .fill(settings.paperTone.lineColor.opacity(0.6))
+                .frame(height: idx < 4 ? 1 : 0),
+            alignment: .bottom
+        )
     }
 }
 

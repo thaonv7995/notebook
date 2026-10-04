@@ -1,20 +1,20 @@
 import SwiftUI
 
 /// Square Grid Template View (P5-15)
-/// Layout:
-/// - Header: Topic, Date, No
-/// - Canvas-drawn square grid background with content overlay
+/// Matches web `grid-template-sheet` & `grid-container`:
+/// - Header: Grid Notebook purpose badge, Subject/Topic underline, Date, No
+/// - Full-canvas box with 1.5pt border and 20pt square grid pattern
 struct GridPageView: View {
     let page: Page
     @ObservedObject private var settings = ReaderSettings.shared
 
     var body: some View {
-        A4PaperSheetView(systemTitle: "GRID SYSTEM", pageNumber: Int(page.no ?? "1") ?? 1) {
-            VStack(alignment: .leading, spacing: 0) {
+        A4PaperSheetView(systemTitle: "GRID NOTEBOOK", pageNumber: Int(page.no ?? "1") ?? 1) {
+            VStack(spacing: 0) {
                 // Header
                 TemplateHeaderView(
-                    purposeIcon: "▦",
-                    purposeTitle: "SQUARE GRID NOTEBOOK",
+                    purposeIcon: "☵",
+                    purposeTitle: "GRID NOTEBOOK",
                     topicLabel: "SUBJECT / TOPIC:",
                     topic: page.topic ?? page.title,
                     date: page.date,
@@ -23,21 +23,25 @@ struct GridPageView: View {
                     sealSubLabel: "GRID ARCHIVE"
                 )
 
-                // Grid content area
+                // Grid canvas with 1.5pt border
                 ZStack(alignment: .topLeading) {
-                    SquareGridBackground(gridSpacing: 24, gridColor: settings.paperTone.lineColor)
+                    SquareGridBackground(gridSpacing: 20, gridColor: settings.paperTone.lineColor)
 
                     RichTextView(html: page.content)
-                        .padding(.horizontal, DesignTokens.spacingLG)
-                        .padding(.vertical, DesignTokens.spacingLG)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 10)
                 }
-                .frame(minHeight: 480)
+                .frame(minHeight: 460)
+                .overlay(
+                    Rectangle()
+                        .stroke(settings.paperTone.lineColor, lineWidth: 1.5)
+                )
             }
         }
     }
 }
 
-/// Canvas-based square grid pattern background
+/// Canvas-based square grid pattern background matching web 20px grid
 struct SquareGridBackground: View {
     let gridSpacing: CGFloat
     let gridColor: Color
@@ -72,10 +76,10 @@ struct SquareGridBackground: View {
     GridPageView(page: Page(
         id: "grid-1",
         template: .grid,
-        title: "Tính toán kỹ thuật",
-        topic: "Tính toán kỹ thuật",
+        title: "Tính toán & Biểu đồ",
+        topic: "Tính toán & Biểu đồ",
         date: "04/10/2026",
         no: "01",
-        content: "<p>Bản vẽ và sơ đồ thiết kế hệ thống.</p>"
+        content: "<p>f(x) = ax^2 + bx + c</p>"
     ))
 }

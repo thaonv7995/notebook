@@ -1,17 +1,17 @@
 import SwiftUI
 
 /// Charting / Comparison Template View (P5-12)
-/// Layout:
-/// - Header: Topic, Date, No
-/// - 3 Columns comparison (Col A, Col B, Col C)
-/// - Bottom Analysis & Insights section
+/// Matches web `charting-container`:
+/// - Header: Subject/Topic, Date, No, Data Analysis seal
+/// - 3 Columns comparison (Col A, Col B, Col C) on ruled lines
+/// - Bottom Analysis & Conclusions area on ruled lines
 struct ChartingPageView: View {
     let page: Page
     @ObservedObject private var settings = ReaderSettings.shared
 
     var body: some View {
-        A4PaperSheetView(systemTitle: "CHARTING SYSTEM", pageNumber: Int(page.no ?? "1") ?? 1) {
-            VStack(alignment: .leading, spacing: 0) {
+        A4PaperSheetView(systemTitle: "CHARTING METHOD", pageNumber: Int(page.no ?? "1") ?? 1) {
+            VStack(spacing: 0) {
                 // Header
                 TemplateHeaderView(
                     purposeIcon: "📊",
@@ -21,76 +21,70 @@ struct ChartingPageView: View {
                     date: page.date,
                     number: page.no,
                     author: "@thaonv",
-                    sealSubLabel: "CHART ARCHIVE"
+                    sealSubLabel: "DATA ANALYSIS"
                 )
 
-                // 3 Columns Comparison
-                let chart = page.chartData ?? ChartData()
+                // Charting Container with 1.5pt crisp border
+                VStack(spacing: 0) {
+                    let chart = page.chartData ?? ChartData()
 
-                HStack(alignment: .top, spacing: 0) {
-                    // Column A
-                    chartColumn(title: "COLUMN A", icon: "a.circle", html: chart.col1)
+                    // 3 Columns Comparison
+                    HStack(alignment: .top, spacing: 0) {
+                        chartCol(title: "COLUMN A", html: chart.col1)
 
-                    Rectangle()
-                        .fill(settings.paperTone.lineColor)
-                        .frame(width: 1.5)
+                        Rectangle()
+                            .fill(settings.paperTone.lineColor)
+                            .frame(width: 1.5)
 
-                    // Column B
-                    chartColumn(title: "COLUMN B", icon: "b.circle", html: chart.col2)
+                        chartCol(title: "COLUMN B", html: chart.col2)
 
-                    Rectangle()
-                        .fill(settings.paperTone.lineColor)
-                        .frame(width: 1.5)
+                        Rectangle()
+                            .fill(settings.paperTone.lineColor)
+                            .frame(width: 1.5)
 
-                    // Column C
-                    chartColumn(title: "COLUMN C", icon: "c.circle", html: chart.col3)
-                }
-                .frame(minHeight: 260)
-
-                // Bottom Analysis & Synthesis
-                Rectangle()
-                    .fill(settings.paperTone.lineColor)
-                    .frame(height: 1.5)
-
-                VStack(alignment: .leading, spacing: DesignTokens.spacingSM) {
-                    HStack(spacing: 4) {
-                        Image(systemName: "chart.line.uptrend.xyaxis")
-                            .font(.system(size: 10, weight: .bold))
-                        Text("ANALYSIS & INSIGHTS")
-                            .font(.jakartaSans(size: 10, weight: .bold))
-                            .tracking(1.0)
+                        chartCol(title: "COLUMN C", html: chart.col3)
                     }
-                    .foregroundStyle(DesignTokens.accentLight)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 3)
-                    .background(DesignTokens.accentLight.opacity(0.1), in: RoundedRectangle(cornerRadius: 4))
 
-                    RichTextView(html: (page.summary?.isEmpty ?? true) ? page.content : page.summary)
+                    // Horizontal dividing line
+                    Rectangle()
+                        .fill(settings.paperTone.lineColor)
+                        .frame(height: 1.5)
+
+                    // Bottom: Analysis & Conclusions
+                    VStack(alignment: .leading, spacing: 0) {
+                        ColumnGuideBar(title: "ANALYSIS & CONCLUSIONS")
+
+                        ZStack(alignment: .topLeading) {
+                            RuledBackgroundView(lineHeight: 26, lineColor: settings.paperTone.lineColor.opacity(0.45))
+
+                            RichTextView(html: (page.summary?.isEmpty ?? true) ? page.content : page.summary)
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 4)
+                        }
+                        .frame(minHeight: 90)
+                    }
                 }
-                .padding(DesignTokens.spacingLG)
-                .frame(maxWidth: .infinity, alignment: .leading)
+                .overlay(
+                    Rectangle()
+                        .stroke(settings.paperTone.lineColor, lineWidth: 1.5)
+                )
             }
         }
     }
 
-    private func chartColumn(title: String, icon: String, html: String?) -> some View {
-        VStack(alignment: .leading, spacing: DesignTokens.spacingSM) {
-            HStack(spacing: 4) {
-                Image(systemName: icon)
-                    .font(.system(size: 10, weight: .bold))
-                Text(title)
-                    .font(.jakartaSans(size: 9, weight: .bold))
-                    .tracking(0.8)
-            }
-            .foregroundStyle(settings.paperTone.secondaryColor)
-            .padding(.horizontal, 6)
-            .padding(.vertical, 2)
-            .background(settings.paperTone.lineColor.opacity(0.5), in: RoundedRectangle(cornerRadius: 4))
+    private func chartCol(title: String, html: String?) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            ColumnGuideBar(title: title)
 
-            RichTextView(html: html, customFontSize: CGFloat(settings.fontSize - 2))
-                .frame(maxWidth: .infinity, alignment: .leading)
+            ZStack(alignment: .topLeading) {
+                RuledBackgroundView(lineHeight: 26, lineColor: settings.paperTone.lineColor.opacity(0.45))
+
+                RichTextView(html: html, customFontSize: CGFloat(settings.fontSize - 1.5))
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 4)
+            }
+            .frame(minHeight: 240)
         }
-        .padding(DesignTokens.spacingSM)
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
@@ -99,15 +93,10 @@ struct ChartingPageView: View {
     ChartingPageView(page: Page(
         id: "chart-1",
         template: .charting,
-        title: "So sánh Mobile Frameworks",
+        title: "So sánh Frameworks",
         topic: "So sánh Mobile Frameworks",
         date: "04/10/2026",
         no: "01",
-        summary: "<p>SwiftUI tối ưu nhất cho trải nghiệm người dùng iOS mượt mà, chân thực chuẩn Apple HIG.</p>",
-        chartData: ChartData(
-            col1: "<h3>SwiftUI</h3><p>• Native Apple</p><p>• Tốc độ 60/120fps</p><p>• Tích hợp sâu iOS</p>",
-            col2: "<h3>Flutter</h3><p>• Đa nền tảng</p><p>• Engine Skia/Impeller riêng</p><p>• Ngôn ngữ Dart</p>",
-            col3: "<h3>React Native</h3><p>• JavaScript / TS</p><p>• Hệ sinh thái NPM lớn</p><p>• Kiến trúc New Arch</p>"
-        )
+        summary: "<p>SwiftUI tối ưu nhất cho hệ sinh thái Apple, Flutter thích hợp cho cross-platform nhanh chóng.</p>"
     ))
 }
