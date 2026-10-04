@@ -183,6 +183,555 @@ struct ProgressRing: View {
     }
 }
 
+// MARK: - Notebook Book Card (Bilingual-app style shelf item)
+
+struct NotebookBookCard: View {
+    let notebook: Notebook
+    let onSelect: () -> Void
+    let onTogglePriority: () -> Void
+    let onStartReading: () -> Void
+
+    @ObservedObject private var progressStore = ReadingProgressStore.shared
+
+    private var currentProgressPage: Int {
+        progressStore.lastPageIndex(for: notebook.id)
+    }
+
+    private var progressRatio: Double {
+        guard notebook.pageCount > 0 else { return 0 }
+        return min(1.0, max(0.0, Double(currentProgressPage + 1) / Double(notebook.pageCount)))
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            // Book Cover Wrapper (Aspect ratio 154 / 220)
+            ZStack {
+                // Background Gradient
+                GradientParser.gradient(from: notebook.coverGradient)
+
+                // Spine highlight effect (left edge)
+                HStack(spacing: 0) {
+                    LinearGradient(
+                        colors: [
+                            Color.white.opacity(0.22),
+                            Color.white.opacity(0.08),
+                            Color.clear,
+                            Color.black.opacity(0.3)
+                        ],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    )
+                    .frame(width: 8)
+
+                    Rectangle()
+                        .fill(Color.black.opacity(0.25))
+                        .frame(width: 1)
+
+                    Spacer()
+                }
+
+                // Inner Cover Pattern / Text
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack {
+                        // Category Pill
+                        Text(notebook.category)
+                            .font(.system(size: 9, weight: .bold))
+                            .foregroundColor(.white.opacity(0.9))
+                            .padding(.horizontal, 7)
+                            .padding(.vertical, 3)
+                            .background(Color.black.opacity(0.35))
+                            .clipShape(Capsule())
+
+                        Spacer()
+
+                        // Pin Indicator (if pinned)
+                        if notebook.isPinned {
+                            Image(systemName: "star.fill")
+                                .font(.system(size: 11, weight: .bold))
+                                .foregroundColor(Color(hex: "fbbf24"))
+                                .padding(5)
+                                .background(Color.black.opacity(0.4))
+                                .clipShape(Circle())
+                        }
+                    }
+
+                    Spacer()
+
+                    // Watermark / Icon of template
+                    HStack {
+                        Spacer()
+                        Image(systemName: notebook.primaryTemplate.iconName)
+                            .font(.system(size: 26))
+                            .foregroundColor(Color(hex: notebook.coverTextColor).opacity(0.25))
+                            .padding(.trailing, 8)
+                            .padding(.bottom, 36)
+                    }
+                }
+                .padding(10)
+
+                // Bottom Gradient & Information Overlay (modeled after bilingual-app)
+                VStack {
+                    Spacer()
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        // Author / Category
+                        Text(notebook.author.isEmpty ? "@thaonv" : notebook.author)
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundColor(.white.opacity(0.8))
+                            .lineLimit(1)
+
+                        // Progress Text + Updated
+                        HStack(alignment: .firstTextBaseline) {
+                            if notebook.pageCount > 0 {
+                                Text("Trang \(currentProgressPage + 1)/\(notebook.pageCount)")
+                                    .font(.system(size: 10, weight: .bold))
+                                    .foregroundColor(Color(hex: "2dd4bf"))
+                            } else {
+                                Text("\(notebook.pageCount) trang")
+                                    .font(.system(size: 10, weight: .bold))
+                                    .foregroundColor(.white.opacity(0.9))
+                            }
+
+                            Spacer()
+
+                            Text(formattedRelativeDate(notebook.updatedAt))
+                                .font(.system(size: 9))
+                                .foregroundColor(.white.opacity(0.7))
+                        }
+
+                        // Progress Bar (Teal)
+                        if notebook.pageCount > 0 {
+                            GeometryReader { geo in
+                                ZStack(alignment: .leading) {
+                                    Capsule()
+                                        .fill(Color.white.opacity(0.2))
+                                        .frame(height: 3)
+
+                                    Capsule()
+                                        .fill(Color(hex: "2dd4bf"))
+                                        .frame(width: geo.size.width * CGFloat(progressRatio), height: 3)
+                                }
+                            }
+                            .frame(height: 3)
+                            .padding(.top, 2)
+                        }
+                    }
+                    .padding(.horizontal, 10)
+                    .padding(.top, 24)
+                    .padding(.bottom, 10)
+                    .background(
+                        LinearGradient(
+                            colors: [.clear, .black.opacity(0.65), .black.opacity(0.95)],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
+                }
+            }
+            .aspectRatio(154.0 / 220.0, contentMode: .fit)
+            .frame(maxWidth: .infinity)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .shadow(color: Color.black.opacity(0.4), radius: 8, x: 0, y: 4)
+            .contentShape(Rectangle())
+            .onTapGesture {
+                onSelect()
+            }
+
+            // Notebook Title & Star Button
+            HStack(alignment: .top, spacing: 6) {
+                Text(notebook.title)
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundColor(.white)
+                    .lineLimit(2)
+
+                Spacer(minLength: 0)
+
+                Button(action: onTogglePriority) {
+                    Image(systemName: notebook.isPinned ? "star.fill" : "star")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundColor(notebook.isPinned ? Color(hex: "fbbf24") : .white.opacity(0.55))
+                        .frame(width: 24, height: 24)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(notebook.isPinned ? "Bỏ ưu tiên" : "Ưu tiên đọc")
+            }
+            .frame(maxWidth: .infinity, minHeight: 40, alignment: .topLeading)
+            .padding(.horizontal, 4)
+            .contentShape(Rectangle())
+            .onTapGesture {
+                onSelect()
+            }
+        }
+        .contextMenu {
+            Button {
+                onStartReading()
+            } label: {
+                Label("Đọc tiếp", systemImage: "book.fill")
+            }
+
+            Button {
+                onSelect()
+            } label: {
+                Label("Chi tiết sổ tay", systemImage: "info.circle")
+            }
+
+            Button {
+                onTogglePriority()
+            } label: {
+                Label(notebook.isPinned ? "Bỏ ưu tiên" : "Ưu tiên đọc", systemImage: notebook.isPinned ? "star.slash" : "star.fill")
+            }
+        }
+    }
+
+    private func formattedRelativeDate(_ isoString: String) -> String {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        var date = formatter.date(from: isoString)
+        if date == nil {
+            formatter.formatOptions = [.withInternetDateTime]
+            date = formatter.date(from: isoString)
+        }
+        guard let d = date else { return "" }
+        let rel = RelativeDateTimeFormatter()
+        rel.locale = Locale(identifier: "vi_VN")
+        rel.unitsStyle = .abbreviated
+        return rel.localizedString(for: d, relativeTo: Date())
+    }
+}
+
+// MARK: - Notebook Detail Sheet (Bilingual-app style Book Detail Sheet)
+
+struct NotebookDetailSheet: View {
+    let notebook: Notebook
+    let onStartReading: (Notebook, Int) -> Void
+    let onTogglePriority: () -> Void
+
+    @Environment(\.dismiss) private var dismiss
+    @ObservedObject private var progressStore = ReadingProgressStore.shared
+
+    private var currentProgressPage: Int {
+        progressStore.lastPageIndex(for: notebook.id)
+    }
+
+    private var progressRatio: Double {
+        guard notebook.pageCount > 0 else { return 0 }
+        return min(1.0, max(0.0, Double(currentProgressPage + 1) / Double(notebook.pageCount)))
+    }
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                Color(hex: "0f172a")
+                    .ignoresSafeArea()
+
+                ScrollView {
+                    VStack(spacing: 24) {
+                        // 3D Book Cover Presentation
+                        ZStack {
+                            GradientParser.gradient(from: notebook.coverGradient)
+
+                            // Spine highlight effect
+                            HStack(spacing: 0) {
+                                LinearGradient(
+                                    colors: [
+                                        Color.white.opacity(0.25),
+                                        Color.white.opacity(0.08),
+                                        Color.clear,
+                                        Color.black.opacity(0.3)
+                                    ],
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                )
+                                .frame(width: 10)
+
+                                Rectangle()
+                                    .fill(Color.black.opacity(0.3))
+                                    .frame(width: 1)
+
+                                Spacer()
+                            }
+
+                            // Center icon
+                            VStack(spacing: 8) {
+                                Image(systemName: "book.closed.fill")
+                                    .font(.system(size: 38))
+                                    .foregroundColor(Color(hex: notebook.coverTextColor).opacity(0.85))
+
+                                Text("\(notebook.pageCount) trang")
+                                    .font(.system(size: 13, weight: .bold, design: .rounded))
+                                    .foregroundColor(Color(hex: notebook.coverTextColor).opacity(0.9))
+                            }
+                        }
+                        .frame(width: 154, height: 220)
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                        .shadow(color: Color.black.opacity(0.55), radius: 14, x: 0, y: 8)
+                        .padding(.top, 16)
+
+                        // Title & Metadata
+                        VStack(spacing: 8) {
+                            Text(notebook.title)
+                                .font(.system(size: 20, weight: .bold))
+                                .foregroundColor(.white)
+                                .multilineTextAlignment(.center)
+                                .padding(.horizontal, 24)
+
+                            HStack(spacing: 8) {
+                                Label(notebook.category, systemImage: "folder.fill")
+                                    .font(.system(size: 12, weight: .medium))
+                                    .foregroundColor(Color(hex: "38bdf8"))
+                                    .padding(.horizontal, 10)
+                                    .padding(.vertical, 4)
+                                    .background(Color(hex: "38bdf8").opacity(0.15))
+                                    .clipShape(Capsule())
+
+                                Label(notebook.primaryTemplate.displayName, systemImage: notebook.primaryTemplate.iconName)
+                                    .font(.system(size: 12, weight: .medium))
+                                    .foregroundColor(Color(hex: "d97706"))
+                                    .padding(.horizontal, 10)
+                                    .padding(.vertical, 4)
+                                    .background(Color(hex: "d97706").opacity(0.15))
+                                    .clipShape(Capsule())
+
+                                if !notebook.lang.isEmpty {
+                                    Text(notebook.lang)
+                                        .font(.system(size: 11, weight: .semibold))
+                                        .foregroundColor(Color(hex: "94a3b8"))
+                                        .padding(.horizontal, 8)
+                                        .padding(.vertical, 4)
+                                        .background(Color.white.opacity(0.08))
+                                        .clipShape(Capsule())
+                                }
+                            }
+                        }
+
+                        // Reading Stats Card (Glassmorphism dark card #1e293b)
+                        HStack(spacing: 0) {
+                            statColumn(
+                                value: "\(Int(progressRatio * 100))%",
+                                label: "Tiến độ",
+                                color: Color(hex: "2dd4bf")
+                            )
+
+                            Divider()
+                                .background(Color.white.opacity(0.12))
+                                .frame(height: 36)
+
+                            statColumn(
+                                value: notebook.pageCount > 0 ? "\(currentProgressPage + 1)/\(notebook.pageCount)" : "0/0",
+                                label: "Trang hiện tại",
+                                color: .white
+                            )
+
+                            Divider()
+                                .background(Color.white.opacity(0.12))
+                                .frame(height: 36)
+
+                            statColumn(
+                                value: progressRatio >= 1.0 ? "Đã xong" : (currentProgressPage > 0 ? "Đang đọc" : "Chưa đọc"),
+                                label: "Trạng thái",
+                                color: progressRatio >= 1.0 ? Color(hex: "22c55e") : Color(hex: "fbbf24")
+                            )
+                        }
+                        .padding(.vertical, 16)
+                        .background(Color(hex: "1e293b"))
+                        .clipShape(RoundedRectangle(cornerRadius: 14))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 14)
+                                .stroke(Color.white.opacity(0.08), lineWidth: 1)
+                        )
+                        .padding(.horizontal, 20)
+
+                        // Action Buttons
+                        VStack(spacing: 12) {
+                            // Primary Continue Reading Button
+                            Button(action: {
+                                dismiss()
+                                onStartReading(notebook, currentProgressPage)
+                            }) {
+                                HStack(spacing: 8) {
+                                    Image(systemName: "book.fill")
+                                        .font(.system(size: 15, weight: .bold))
+                                    Text(currentProgressPage > 0 ? "Tiếp tục đọc (Trang \(currentProgressPage + 1))" : "Bắt đầu đọc")
+                                        .font(.system(size: 15, weight: .bold))
+                                }
+                                .foregroundColor(.white)
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 48)
+                                .background(
+                                    LinearGradient(
+                                        colors: [Color(hex: "0284c7"), Color(hex: "0369a1")],
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    )
+                                )
+                                .clipShape(RoundedRectangle(cornerRadius: 12))
+                                .shadow(color: Color(hex: "0284c7").opacity(0.35), radius: 8, y: 3)
+                            }
+
+                            // Secondary actions row
+                            HStack(spacing: 12) {
+                                Button(action: {
+                                    dismiss()
+                                    onStartReading(notebook, 0)
+                                }) {
+                                    HStack(spacing: 6) {
+                                        Image(systemName: "arrow.counterclockwise")
+                                            .font(.system(size: 13))
+                                        Text("Đọc từ đầu")
+                                            .font(.system(size: 14, weight: .semibold))
+                                    }
+                                    .foregroundColor(.white)
+                                    .frame(maxWidth: .infinity)
+                                    .frame(height: 42)
+                                    .background(Color(hex: "1e293b"))
+                                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 10)
+                                            .stroke(Color.white.opacity(0.12), lineWidth: 1)
+                                    )
+                                }
+
+                                Button(action: {
+                                    onTogglePriority()
+                                }) {
+                                    HStack(spacing: 6) {
+                                        Image(systemName: notebook.isPinned ? "star.fill" : "star")
+                                            .font(.system(size: 13))
+                                            .foregroundColor(notebook.isPinned ? Color(hex: "fbbf24") : .white)
+                                        Text(notebook.isPinned ? "Đã ưu tiên" : "Ưu tiên")
+                                            .font(.system(size: 14, weight: .semibold))
+                                            .foregroundColor(.white)
+                                    }
+                                    .frame(maxWidth: .infinity)
+                                    .frame(height: 42)
+                                    .background(notebook.isPinned ? Color(hex: "fbbf24").opacity(0.15) : Color(hex: "1e293b"))
+                                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 10)
+                                            .stroke(notebook.isPinned ? Color(hex: "fbbf24").opacity(0.4) : Color.white.opacity(0.12), lineWidth: 1)
+                                    )
+                                }
+                            }
+                        }
+                        .padding(.horizontal, 20)
+
+                        // Table of Contents Section
+                        VStack(alignment: .leading, spacing: 12) {
+                            HStack {
+                                Text("Danh sách trang (\(notebook.pages.count))")
+                                    .font(.system(size: 16, weight: .bold))
+                                    .foregroundColor(.white)
+                                Spacer()
+                            }
+                            .padding(.horizontal, 20)
+
+                            if notebook.pages.isEmpty {
+                                Text("Chưa có trang nào trong sổ tay này.")
+                                    .font(.system(size: 14))
+                                    .foregroundColor(Color(hex: "94a3b8"))
+                                    .padding(.horizontal, 20)
+                                    .padding(.vertical, 8)
+                            } else {
+                                VStack(spacing: 8) {
+                                    ForEach(Array(notebook.pages.enumerated()), id: \.element.id) { index, page in
+                                        Button(action: {
+                                            dismiss()
+                                            onStartReading(notebook, index)
+                                        }) {
+                                            HStack(spacing: 12) {
+                                                // Page number pill
+                                                Text("\(index + 1)")
+                                                    .font(.system(size: 12, weight: .bold))
+                                                    .foregroundColor(index == currentProgressPage ? Color(hex: "2dd4bf") : .white)
+                                                    .frame(width: 28, height: 28)
+                                                    .background(index == currentProgressPage ? Color(hex: "2dd4bf").opacity(0.2) : Color.white.opacity(0.08))
+                                                    .clipShape(Circle())
+
+                                                // Page Title or Topic
+                                                VStack(alignment: .leading, spacing: 2) {
+                                                    Text(pageTitle(page: page, index: index))
+                                                        .font(.system(size: 14, weight: index == currentProgressPage ? .bold : .medium))
+                                                        .foregroundColor(.white)
+                                                        .lineLimit(1)
+
+                                                    Text(page.template.displayName)
+                                                        .font(.system(size: 11))
+                                                        .foregroundColor(Color(hex: "94a3b8"))
+                                                }
+
+                                                Spacer()
+
+                                                if index == currentProgressPage {
+                                                    Text("Đang đọc")
+                                                        .font(.system(size: 11, weight: .semibold))
+                                                        .foregroundColor(Color(hex: "2dd4bf"))
+                                                        .padding(.horizontal, 8)
+                                                        .padding(.vertical, 3)
+                                                        .background(Color(hex: "2dd4bf").opacity(0.15))
+                                                        .clipShape(Capsule())
+                                                }
+
+                                                Image(systemName: "chevron.right")
+                                                    .font(.system(size: 12, weight: .semibold))
+                                                    .foregroundColor(Color(hex: "64748b"))
+                                            }
+                                            .padding(.horizontal, 14)
+                                            .padding(.vertical, 10)
+                                            .background(Color(hex: "1e293b"))
+                                            .clipShape(RoundedRectangle(cornerRadius: 10))
+                                            .overlay(
+                                                RoundedRectangle(cornerRadius: 10)
+                                                    .stroke(index == currentProgressPage ? Color(hex: "2dd4bf").opacity(0.4) : Color.white.opacity(0.06), lineWidth: 1)
+                                            )
+                                        }
+                                        .buttonStyle(.plain)
+                                    }
+                                }
+                                .padding(.horizontal, 20)
+                            }
+                        }
+                        .padding(.top, 8)
+                        .padding(.bottom, 36)
+                    }
+                }
+            }
+            .navigationTitle("Chi tiết sổ tay")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Xong") {
+                        dismiss()
+                    }
+                    .foregroundColor(Color(hex: "38bdf8"))
+                    .fontWeight(.semibold)
+                }
+            }
+        }
+    }
+
+    private func statColumn(value: String, label: String, color: Color) -> some View {
+        VStack(spacing: 4) {
+            Text(value)
+                .font(.system(size: 16, weight: .bold))
+                .foregroundColor(color)
+            Text(label)
+                .font(.system(size: 11, weight: .medium))
+                .foregroundColor(Color(hex: "94a3b8"))
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    private func pageTitle(page: Page, index: Int) -> String {
+        if let t = page.title, !t.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return t
+        }
+        if let topic = page.topic, !topic.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return topic
+        }
+        return "Trang \(index + 1)"
+    }
+}
+
 // MARK: - Preview
 
 #Preview {
@@ -196,24 +745,6 @@ struct ProgressRing: View {
             isPinned: true,
             lastPageIndex: 3,
             pages: (1...10).map { Page(id: "p-\($0)", template: .cornell) }
-        ))
-
-        NotebookCardView(notebook: Notebook(
-            id: "nb-2",
-            title: "Kế hoạch dự án Q4",
-            category: "Công việc",
-            coverGradient: "linear-gradient(135deg, #7c3aed, #4f46e5)",
-            lastPageIndex: 7,
-            pages: (1...8).map { Page(id: "p-\($0)", template: .work) }
-        ))
-
-        NotebookCardView(notebook: Notebook(
-            id: "nb-3",
-            title: "Nhật ký cá nhân",
-            category: "Cá nhân",
-            coverGradient: "linear-gradient(45deg, #059669, #10b981)",
-            lastPageIndex: 0,
-            pages: [Page(id: "p-1", template: .ruled)]
         ))
     }
     .padding()

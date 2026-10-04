@@ -35,7 +35,7 @@ class LocalStorageManager {
         container.mainContext
     }
 
-    // MARK: - Save Notebooks
+    // MARK: - Save & Replace Notebooks
 
     /// Save or update notebooks in local storage.
     /// Existing notebooks (by ID) are updated; new ones are inserted.
@@ -59,6 +59,34 @@ class LocalStorageManager {
         try? context.save()
     }
 
+    /// Authoritative server replacement: updates matching notebooks, inserts new ones,
+    /// and purges any locally cached notebooks (or old starter samples) that no longer exist on the server.
+    func replaceNotebooks(_ notebooks: [Notebook]) {
+        let descriptor = FetchDescriptor<CachedNotebook>()
+        let existing = (try? context.fetch(descriptor)) ?? []
+        let serverIds = Set(notebooks.map(\.id))
+        let existingMap = Dictionary(uniqueKeysWithValues: existing.map { ($0.id, $0) })
+
+        // 1. Delete removed or starter notebooks not on server
+        for cached in existing {
+            if !serverIds.contains(cached.id) {
+                context.delete(cached)
+            }
+        }
+
+        // 2. Insert or update
+        for notebook in notebooks {
+            if let cached = existingMap[notebook.id] {
+                cached.update(from: notebook)
+            } else {
+                let cached = CachedNotebook(from: notebook)
+                context.insert(cached)
+            }
+        }
+
+        try? context.save()
+    }
+
     // MARK: - Load All Notebooks
 
     /// Load all cached notebooks, sorted by updatedAt descending.
@@ -72,11 +100,13 @@ class LocalStorageManager {
             return cached.map { $0.toNotebook() }
         }
 
-        // Fallback to starter notebooks if local cache is completely empty
-        let starters = InitialData.starterNotebooks
-        if !starters.isEmpty {
-            saveNotebooks(starters)
-            return starters
+        // Only fallback to starter notebooks if user is unauthenticated offline guest
+        if KeychainManager.getToken() == nil {
+            let starters = InitialData.starterNotebooks
+            if !starters.isEmpty {
+                saveNotebooks(starters)
+                return starters
+            }
         }
 
         return []

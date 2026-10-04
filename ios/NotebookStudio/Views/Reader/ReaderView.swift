@@ -6,8 +6,18 @@ import UIKit
 /// jump-to-page dialog, and realistic 3D book page curl animation.
 struct ReaderView: View {
     let notebook: Notebook
+    var initialPageIndex: Int? = nil
 
     @State private var currentPageIndex: Int = 0
+
+    init(notebook: Notebook, initialPageIndex: Int? = nil) {
+        self.notebook = notebook
+        self.initialPageIndex = initialPageIndex
+        let savedIndex = ReadingProgressStore.shared.lastPageIndex(for: notebook.id)
+        let page = initialPageIndex ?? (savedIndex > 0 ? savedIndex : notebook.lastPageIndex)
+        let maxPages = max(1, notebook.pages.count)
+        self._currentPageIndex = State(initialValue: max(0, min(maxPages - 1, page)))
+    }
     @State private var isFullScreen: Bool = false
     @State private var isEditMode: Bool = false
     @State private var revision: Int = 0
@@ -303,6 +313,10 @@ struct ReaderView: View {
     // MARK: - Actions
 
     private func initProgress() {
+        if let explicit = initialPageIndex {
+            currentPageIndex = max(0, min(pages.count - 1, explicit))
+            return
+        }
         let savedIndex = ReadingProgressStore.shared.lastPageIndex(for: notebook.id)
         if savedIndex > 0 && savedIndex < pages.count {
             currentPageIndex = savedIndex

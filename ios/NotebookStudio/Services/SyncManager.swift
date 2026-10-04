@@ -59,10 +59,8 @@ class SyncManager: ObservableObject {
                 // Fetch full data from server
                 let (serverNotebooks, newSyncedAt) = try await NotebookService.fetchAll()
 
-                // Save to local cache if valid data received
-                if !serverNotebooks.isEmpty {
-                    LocalStorageManager.shared.saveNotebooks(serverNotebooks)
-                }
+                // Replace local cache with authoritative server state
+                LocalStorageManager.shared.replaceNotebooks(serverNotebooks)
 
                 // Update sync timestamp
                 if let newSyncedAt {
@@ -72,7 +70,7 @@ class SyncManager: ObservableObject {
 
                 isOffline = false
                 isSyncing = false
-                return serverNotebooks.isEmpty ? localNotebooks : serverNotebooks
+                return serverNotebooks
             }
 
             // Server data is same or older — use local cache

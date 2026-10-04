@@ -56,6 +56,7 @@ class AuthViewModel: ObservableObject {
                 username: username,
                 password: password
             )
+            SyncManager.shared.clearSyncState()
             self.username = user.username
             self.isLoggedIn = true
         } catch let apiError as APIError {
