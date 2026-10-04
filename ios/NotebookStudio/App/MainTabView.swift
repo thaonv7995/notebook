@@ -8,33 +8,44 @@ struct MainTabView: View {
         case library, search, favorites, settings
     }
 
+    @AppStorage("app_color_scheme") private var colorSchemeRaw: String = "system"
+
+    private var selectedColorScheme: ColorScheme? {
+        switch colorSchemeRaw {
+        case "light": return .light
+        case "dark": return .dark
+        default: return nil
+        }
+    }
+
     var body: some View {
         TabView(selection: $selectedTab) {
             LibraryView()
                 .tabItem {
-                    Label("Library", systemImage: "books.vertical.fill")
+                    Label("Thư viện", systemImage: "books.vertical.fill")
                 }
                 .tag(Tab.library)
 
             SearchView()
                 .tabItem {
-                    Label("Search", systemImage: "magnifyingglass")
+                    Label("Tìm kiếm", systemImage: "magnifyingglass")
                 }
                 .tag(Tab.search)
 
             FavoritesView()
                 .tabItem {
-                    Label("Favorites", systemImage: "star.fill")
+                    Label("Yêu thích", systemImage: "star.fill")
                 }
                 .tag(Tab.favorites)
 
             SettingsView()
                 .tabItem {
-                    Label("Settings", systemImage: "gearshape.fill")
+                    Label("Cài đặt", systemImage: "gearshape.fill")
                 }
                 .tag(Tab.settings)
         }
         .tint(DesignTokens.accent)
+        .preferredColorScheme(selectedColorScheme)
     }
 }
 

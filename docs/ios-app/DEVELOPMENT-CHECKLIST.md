@@ -241,34 +241,34 @@
 
 ### Search Tab
 
-- [ ] **P6-1** Tạo `Views/Search/SearchView.swift`:
+- [x] **P6-1** Tạo `Views/Search/SearchView.swift` ✅:
   - iOS native `.searchable()` search bar
   - Recent searches chips (lưu UserDefaults)
   - Quick Access: horizontal scroll 5 trang đọc gần nhất
 
-- [ ] **P6-2** Tạo `Services/SearchEngine.swift`:
+- [x] **P6-2** Tạo `Services/SearchEngine.swift` ✅:
   - Full-text search trong: notebook title, page topic/title, cues, notes, summary, content, actions
   - Strip HTML tags trước khi search
   - Return results với snippet + keyword highlight
 
-- [ ] **P6-3** Tạo `Views/Search/SearchResultView.swift`:
+- [x] **P6-3** Tạo `Views/Search/SearchResultView.swift` ✅:
   - Mỗi result: Notebook name → Page number → Snippet với highlight
   - Tap → mở ReaderView ở đúng trang đó
 
 ### Favorites Tab
 
-- [ ] **P6-4** Tạo `Views/Favorites/FavoritesView.swift`:
+- [x] **P6-4** Tạo `Views/Favorites/FavoritesView.swift` ✅:
   - Section 1: Pinned Notebooks (từ `isPinned`)
   - Section 2: Bookmarked Pages
 
-- [ ] **P6-5** Tạo `Views/Favorites/BookmarkedPageCard.swift`:
+- [x] **P6-5** Tạo `Views/Favorites/BookmarkedPageCard.swift` ✅:
   - Preview snippet nội dung trang
   - Notebook name + page number
   - Swipe to unbookmark
 
 ### Settings Tab
 
-- [ ] **P6-6** Tạo `Views/Settings/SettingsView.swift` — Form-based layout:
+- [x] **P6-6** Tạo `Views/Settings/SettingsView.swift` — Form-based layout ✅:
   - Account section: Username display, Change password, Logout
   - Server section: Server URL, Connection status, Last synced, Manual sync button
   - Reading section: Default font, font size slider, line height picker
@@ -276,7 +276,7 @@
   - Offline section: Cached notebooks count, Clear cache button
   - About section: App version, Build number
 
-- [ ] **P6-7** Tạo `ViewModels/SettingsViewModel.swift`:
+- [x] **P6-7** Tạo `ViewModels/SettingsViewModel.swift` ✅:
   - Persist settings trong `@AppStorage`
   - Sync settings (font, paper tone) ảnh hưởng ReaderView
 
