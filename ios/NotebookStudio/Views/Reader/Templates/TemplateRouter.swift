@@ -1,11 +1,29 @@
 import SwiftUI
 
-/// Routes a Page to its specific native template view (P5-18).
-/// Supports all 10 templates with fallback to RuledPageView.
+/// Routes a Page to its template rendering engine (P5-18).
+/// Defaults to `WebTemplatePageView` which provides 100% pixel-identical web rendering:
+/// exact A4 sheet size, format, style, vector royal corner frames, edge notches, and fonts.
 struct TemplateRouter: View {
     let page: Page
+    var author: String? = "@thaonv"
+    var pageNumber: Int = 1
+
+    @AppStorage("use_native_renderer") private var useNativeRenderer: Bool = false
 
     var body: some View {
+        if useNativeRenderer {
+            nativeView
+        } else {
+            WebTemplatePageView(
+                page: page,
+                author: author,
+                pageNum: pageNumber
+            )
+        }
+    }
+
+    @ViewBuilder
+    private var nativeView: some View {
         switch page.template {
         case .cornell:
             CornellPageView(page: page)

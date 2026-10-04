@@ -47,6 +47,7 @@ struct ReaderView: View {
             // Page Content with Tap Gesture & Pinch-to-Zoom
             PageNavigationView(
                 pages: pages,
+                author: notebook.author,
                 currentPageIndex: $currentPageIndex,
                 zoomScale: $zoomScale
             )
