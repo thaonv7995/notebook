@@ -53,3 +53,17 @@ targets:
         UIAppFonts:
           - "PlusJakartaSans[wght].ttf"
           - "PlusJakartaSans-Italic[wght].ttf"
+
+  NotebookStudioTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: NotebookStudioTests
+        excludes:
+          - "**/.DS_Store"
+    dependencies:
+      - target: NotebookStudio
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: true
+

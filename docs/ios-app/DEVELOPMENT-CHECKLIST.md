@@ -39,100 +39,18 @@
 
 ---
 
-## Phase 1: Data Models 📦 `~2 ngày`
+## Phase 1: Data Models 📦 `~2 ngày` ✅ DONE
 
 > Map 1:1 với JSON structure trong web app. Xem [`store.js`](file:///Users/thaonv/Desktop/Notebook%20Project/src/state/store.js) dòng 28-133.
 
-- [ ] **P1-1** Tạo `Models/Notebook.swift` — Codable struct:
-  ```swift
-  struct Notebook: Codable, Identifiable {
-      let id: String
-      var title: String
-      var author: String           // default "@thaonv"
-      var category: String         // "Ghi chép", "Study", "Work"...
-      var lang: String             // "VI"
-      var fontFamily: String       // "sans", "serif", "mono"...
-      var lineHeight: String       // "24", "28", "32"...
-      var coverGradient: String    // CSS linear-gradient
-      var coverTextColor: String   // hex color
-      var isPinned: Bool
-      var lastPageIndex: Int
-      var deletedPageIds: [String]
-      var pages: [Page]
-      var createdAt: String        // ISO 8601
-      var updatedAt: String
-  }
-  ```
+- [x] **P1-1** Tạo `Models/Notebook.swift` ✅ — Codable + resilient decoding + computed properties (readingProgress, primaryTemplate)
+- [x] **P1-2** Tạo `Models/Page.swift` ✅ — All 10 template fields + chartData (discovered from real data) + hasContent computed
+- [x] **P1-3** Tạo `Models/PageTemplate.swift` ✅ — enum with displayName + iconName (SF Symbols)
+- [x] **P1-4** Tạo `Models/ActionItem.swift` ✅ — + WorkStatus enum (TODO/WIP/DONE with labels)
+- [x] **P1-5** Tạo `Models/Quadrants.swift` ✅ — + ChartData struct (3 columns, found in real db.json)
+- [x] **P1-6** Tạo `Models/APIResponse.swift` ✅ — LoginResponse, NotebooksResponse, SyncResponse, SyncMetaResponse, APIErrorResponse, SyncRequest
+- [x] **P1-7** Viết Unit Tests ✅ — 15 tests: decode all templates, missing fields, roundtrip, computed props, API responses
 
-- [ ] **P1-2** Tạo `Models/Page.swift` — Codable struct:
-  ```swift
-  struct Page: Codable, Identifiable {
-      let id: String
-      var template: PageTemplate   // enum
-      var title: String?
-      var topic: String?
-      var date: String?
-      var no: String?
-      var lang: String?
-      // Cornell fields
-      var cues: String?
-      var notes: String?
-      var summary: String?
-      // Work fields
-      var project: String?
-      var deadline: String?
-      var status: String?          // "TODO", "WIP", "DONE"
-      var agenda: String?
-      var discussions: String?
-      var actions: [ActionItem]?
-      // Ruled / generic
-      var content: String?
-      // Vocab fields
-      var vocabWord: String?
-      var vocabMeaning: String?
-      var vocabExample: String?
-      var vocabReview: String?
-      // Quadrant (Eisenhower)
-      var quadrants: Quadrants?
-      // Metadata
-      var updatedAt: String?
-  }
-  ```
-
-- [ ] **P1-3** Tạo `Models/PageTemplate.swift` — enum cho 10 templates:
-  ```swift
-  enum PageTemplate: String, Codable, CaseIterable {
-      case cornell, work, ruled
-      case vocab, charting, reading
-      case dotgrid, grid, blank, quadrant
-  }
-  ```
-  > Xem danh sách đầy đủ: [`templates/index.js`](file:///Users/thaonv/Desktop/Notebook%20Project/src/templates/index.js) dòng 39-44
-
-- [ ] **P1-4** Tạo `Models/ActionItem.swift`:
-  ```swift
-  struct ActionItem: Codable {
-      var checked: Bool
-      var text: String
-  }
-  ```
-
-- [ ] **P1-5** Tạo `Models/Quadrants.swift`:
-  ```swift
-  struct Quadrants: Codable {
-      var q1, q2, q3, q4: String
-  }
-  ```
-
-- [ ] **P1-6** Tạo `Models/APIResponse.swift` — Response types:
-  ```swift
-  struct LoginResponse: Codable { let ok: Bool; let user: UserInfo? }
-  struct NotebooksResponse: Codable { let ok: Bool; let notebooks: [Notebook]; let lastSyncedAt: String? }
-  struct SyncResponse: Codable { let ok: Bool; let savedAt: String?; let count: Int?; let notebooks: [Notebook]? }
-  struct SyncMetaResponse: Codable { let ok: Bool; let lastSyncedAt: String? }
-  ```
-
-- [ ] **P1-7** Viết Unit Tests cho Codable — decode sample JSON từ [`db.json`](file:///Users/thaonv/Desktop/Notebook%20Project/data/db.json)
 
 ---
 
