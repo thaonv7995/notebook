@@ -1109,13 +1109,36 @@ final class WebTemplateGenerator {
         return result
     }
 
+    /// Strips raw AI-generated style metadata JSON from content
+    func stripStyleJsonFromContent(_ text: String) -> String {
+        var cleaned = text
+
+        // 1. Strip <<<STYLES>>>...<<<END_STYLES>>>
+        cleaned = cleaned.replacingOccurrences(of: #"<<<STYLES>>>[\s\S]*?<<<END_STYLES>>>"#, with: "", options: .regularExpression)
+
+        // 2. Strip code fences containing styles JSON
+        cleaned = cleaned.replacingOccurrences(of: #"```(?:json)?\s*\{[\s\S]*?(?:"fontSize"|"fontFamily"|"paperTone"|"lineHeight"|"paperTexture"|"styles")[\s\S]*?\}\s*```"#, with: "", options: .regularExpression)
+
+        // 3. Strip HTML divs forming style JSON blocks
+        cleaned = cleaned.replacingOccurrences(of: #"<div>\s*\{?\s*<\/div>(?:\s*<div>[\s\S]*?<\/div>)*\s*<div>\s*\}?\s*<\/div>"#, with: "", options: .regularExpression)
+
+        // 4. Strip single block tags wrapping style JSON
+        cleaned = cleaned.replacingOccurrences(of: #"<(?:div|p|blockquote)[^>]*>\s*\{[\s\S]*?(?:"fontSize"|"fontFamily"|"paperTone"|"lineHeight"|"paperTexture"|"styles")[\s\S]*?<\/(?:div|p|blockquote)>"#, with: "", options: .regularExpression)
+
+        // 5. Strip raw JSON objects containing styles
+        cleaned = cleaned.replacingOccurrences(of: #"\{[\s\r\n]*"(?:fontSize|fontFamily|paperTone|lineHeight|paperTexture|styles)"[\s\S]*?\}"#, with: "", options: .regularExpression)
+
+        return cleaned.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
     /// Formats content to block HTML elements on ruled lines with Hanzi CJK optical elevation.
     func formatContentToHtml(_ raw: String?) -> String {
         guard let raw = raw?.trimmingCharacters(in: .whitespacesAndNewlines), !raw.isEmpty else {
             return ""
         }
 
-        var html = raw
+        var html = stripStyleJsonFromContent(raw)
+        guard !html.isEmpty else { return "" }
 
         // Decode accidentally escaped markup
         html = html.replacingOccurrences(of: "&lt;strong&gt;", with: "<strong>", options: .caseInsensitive)

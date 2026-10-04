@@ -82,14 +82,33 @@ QUY TẮC CỐT LÕI: KIỂM SOÁT KÍCH THƯỚC TRANG ĐỂ TRÁNH TRÀN TRANG
    - paperTone: 'cream' (kem), 'white' (trắng), 'ivory' (ngà), 'aged' (cổ điển), 'mint' (bạc hà), 'rose' (hồng pastel), 'lavender' (tím nhạt).
    - paperTexture: 'grain' (hạt giấy), 'smooth' (mịn), 'kraft' (giấy xi măng), 'linen' (vải lanh), 'washi' (giấy Nhật), 'vellum' (da).
 
-   Khi người dùng yêu cầu chỉnh cỡ chữ/font/màu giấy, hoặc khi bạn thấy cần tinh chỉnh giao diện cho đẹp, hãy kèm đối tượng "styles":
-   "styles": {
+   Khi người dùng yêu cầu chỉnh cỡ chữ/font/màu giấy, hoặc khi bạn thấy cần tinh chỉnh giao diện cho đẹp, hãy đặt khối JSON styles ở dòng cuối cùng bọc trong thẻ <<<STYLES>>>...<<<END_STYLES>>>:
+   <<<STYLES>>>
+   {
      "fontSize": 14,
      "fontFamily": "serif",
      "paperTone": "aged",
      "lineHeight": "28"
    }
+   <<<END_STYLES>>>
+   TUYỆT ĐỐI KHÔNG để mã JSON styles lẫn vào giữa bài viết hoặc câu chữ nội dung.
 `;
+
+  if (action === 'style') {
+    return `${base}
+Nhiệm vụ: Đọc kỹ nội dung trang hiện tại và đề xuất điều chỉnh phong cách (fontSize, fontFamily, paperTone, lineHeight, paperTexture) để nội dung hiển thị vừa vặn, không tràn dòng, đạt thẩm mỹ cao nhất.
+QUY TẮC BẮT BUỘC:
+- BẠN BẮT BUỘC TRẢ VỀ DUY NHẤT MỘT KHỐI JSON HỢP LỆ (KHÔNG viết thêm bất kỳ lời chào, giải thích hay nội dung nào khác ngoài JSON):
+{
+  "styles": {
+    "fontSize": 14,
+    "fontFamily": "sans",
+    "paperTone": "cream",
+    "lineHeight": "28"
+  },
+  "message": "Đã điều chỉnh cỡ chữ 14px, font sans, tone giấy cream để trang hiển thị tối ưu nhất."
+}`;
+  }
 
   if (action === 'grammar') {
     return `${base}
@@ -464,7 +483,7 @@ ${prompt ? `Yêu cầu cụ thể: ${prompt}` : ''}`;
         max_tokens: 2000,
       };
 
-      if (action === 'autofill' && supportsJsonMode) {
+      if ((action === 'autofill' || action === 'style') && supportsJsonMode) {
         requestBody.response_format = { type: 'json_object' };
       }
 
@@ -487,7 +506,7 @@ ${prompt ? `Yêu cầu cụ thể: ${prompt}` : ''}`;
         : '';
 
       let parsedJson = null;
-      if (action === 'autofill' || rawText.startsWith('{') || rawText.includes('```json')) {
+      if (action === 'autofill' || action === 'style' || rawText.startsWith('{') || rawText.includes('```json')) {
         try {
           parsedJson = JSON.parse(rawText);
         } catch {

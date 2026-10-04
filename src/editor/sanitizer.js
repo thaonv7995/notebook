@@ -111,12 +111,59 @@ export function sanitizeRichHtml(html) {
   return container.innerHTML;
 }
 
+/**
+ * Strips raw AI-generated style metadata JSON (or HTML-escaped/div-wrapped JSON)
+ * from content so it never appears inside notebook pages.
+ */
+export function stripStyleJsonFromContent(text) {
+  if (!text || typeof text !== 'string') return text || '';
+
+  let cleaned = text;
+
+  // 1. Strip <<<STYLES>>>...<<<END_STYLES>>>
+  cleaned = cleaned.replace(/<<<STYLES>>>[\s\S]*?<<<END_STYLES>>>/gi, '');
+
+  // 2. Strip markdown code blocks containing style definitions
+  cleaned = cleaned.replace(/```(?:json)?\s*\{[\s\S]*?(?:"fontSize"|"fontFamily"|"paperTone"|"lineHeight"|"paperTexture"|"styles")[\s\S]*?\}\s*```/gi, '');
+
+  // 3. Strip preformatted HTML blocks/divs that wrapped style JSON lines (e.g. <div>{</div>...<div>"fontSize": ...</div>)
+  cleaned = cleaned.replace(/<div>\s*\{?\s*<\/div>(?:\s*<div>[\s\S]*?<\/div>)*\s*<div>\s*\}?\s*<\/div>/gi, (match) => {
+    if (/(?:"fontSize"|"fontFamily"|"paperTone"|"lineHeight"|"paperTexture"|"styles")/i.test(match)) {
+      return '';
+    }
+    return match;
+  });
+
+  // 4. Strip single block tags wrapping style JSON
+  cleaned = cleaned.replace(/<(?:div|p|blockquote)[^>]*>\s*\{[\s\S]*?(?:"fontSize"|"fontFamily"|"paperTone"|"lineHeight"|"paperTexture"|"styles")[\s\S]*?\}\s*<\/(?:div|p|blockquote)>/gi, '');
+
+  // 5. Strip raw JSON objects containing style keys
+  cleaned = cleaned.replace(/\{[\s\S]*?(?:"fontSize"|"fontFamily"|"paperTone"|"lineHeight"|"paperTexture")[\s\S]*?\}/gi, (match) => {
+    if (/(?:"fontSize"|"fontFamily"|"paperTone"|"lineHeight"|"paperTexture")/i.test(match)) {
+      try {
+        const parsed = JSON.parse(match);
+        if (parsed.fontSize || parsed.fontFamily || parsed.paperTone || parsed.lineHeight || parsed.paperTexture || parsed.styles) {
+          return '';
+        }
+      } catch {
+        if (/fontSize|fontFamily|paperTone|lineHeight/i.test(match)) {
+          return '';
+        }
+      }
+    }
+    return match;
+  });
+
+  return cleaned.trim();
+}
+
 export function formatContentToHtml(content) {
   if (content === null || content === undefined) return '';
   if (typeof content !== 'string') content = String(content);
   if (!content.trim()) return '';
 
-  let html = content;
+  let html = stripStyleJsonFromContent(content);
+  if (!html.trim()) return '';
 
   // ── Step 1: Convert escaped HTML tags back to real tags ──
   html = html.replace(/&lt;span class="pill-badge"&gt;(.*?)&lt;\/span&gt;/gi, '<span class="pill-badge">$1</span>');

@@ -506,6 +506,106 @@ export function closeNotionAiBar() {
   isGenerating = false;
 }
 
+// ─── Styles JSON Extraction & Safety Sanitization ───
+
+export function isStyleObject(obj) {
+  if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return false;
+  return Boolean(
+    obj.fontSize ||
+    obj.fontFamily ||
+    obj.paperTone ||
+    obj.lineHeight ||
+    obj.paperTexture
+  );
+}
+
+export function extractAndCleanStyles(rawText) {
+  if (!rawText || typeof rawText !== 'string') {
+    return { cleanedText: rawText || '', styles: null };
+  }
+
+  let cleaned = rawText;
+  let extractedStyles = null;
+
+  // 1. Tagged <<<STYLES>>>...<<<END_STYLES>>>
+  cleaned = cleaned.replace(/<<<STYLES>>>([\s\S]*?)<<<END_STYLES>>>/gi, (match, jsonStr) => {
+    try {
+      const parsed = JSON.parse(jsonStr.trim());
+      const st = parsed.styles || (isStyleObject(parsed) ? parsed : null);
+      if (st) extractedStyles = Object.assign(extractedStyles || {}, st);
+      return '';
+    } catch {
+      return '';
+    }
+  });
+
+  // 2. Code blocks ```json { ... } ```
+  cleaned = cleaned.replace(/```(?:json)?\s*(\{[\s\S]*?\})\s*```/gi, (match, jsonStr) => {
+    try {
+      const parsed = JSON.parse(jsonStr.trim());
+      const st = parsed.styles || (isStyleObject(parsed) ? parsed : null);
+      if (st) {
+        extractedStyles = Object.assign(extractedStyles || {}, st);
+        return '';
+      }
+    } catch {}
+    return match;
+  });
+
+  // 3. Loose "styles": { ... } without outer braces
+  cleaned = cleaned.replace(/(?:"styles"|styles)\s*:\s*(\{[^}]+\})/gi, (match, jsonStr) => {
+    try {
+      const parsed = JSON.parse(jsonStr.trim());
+      if (isStyleObject(parsed)) {
+        extractedStyles = Object.assign(extractedStyles || {}, parsed);
+        return '';
+      }
+    } catch {}
+    return match;
+  });
+
+  // 4. Raw JSON blocks containing style properties
+  cleaned = cleaned.replace(/\{[\s\S]*?\}/g, (match) => {
+    if (
+      match.includes('"fontSize"') ||
+      match.includes('"fontFamily"') ||
+      match.includes('"paperTone"') ||
+      match.includes('"lineHeight"') ||
+      match.includes('"paperTexture"') ||
+      match.includes('"styles"')
+    ) {
+      try {
+        const parsed = JSON.parse(match);
+        const st = parsed.styles || (isStyleObject(parsed) ? parsed : null);
+        if (st) {
+          extractedStyles = Object.assign(extractedStyles || {}, st);
+          return '';
+        }
+      } catch {}
+    }
+    return match;
+  });
+
+  // 5. Clean orphan backticks, leftover "styles": and whitespace
+  cleaned = cleaned
+    .replace(/(?:"styles"|styles)\s*:\s*$/gmi, '')
+    .replace(/^\s*```(?:json)?\s*$/gm, '')
+    .replace(/^\s*```\s*$/gm, '')
+    .trim();
+
+  return { cleanedText: cleaned, styles: extractedStyles };
+}
+
+export function stripStreamingStylesTail(text) {
+  if (!text) return '';
+  return text
+    .replace(/<<<STYLES>>>[\s\S]*$/i, '')
+    .replace(/```(?:json)?\s*\{[\s\S]*$/i, '')
+    .replace(/(?:"styles"|styles)\s*:\s*\{?[\s\S]*$/i, '')
+    .replace(/\{[\s\S]*?(?:"fontSize"|"fontFamily"|"paperTone"|"lineHeight"|"paperTexture"|"styles")[\s\S]*$/i, '')
+    .trim();
+}
+
 /**
  * Executes an AI prompt directly into the page
  */
@@ -554,6 +654,31 @@ async function handleExecutePrompt(promptText, actionType = 'write') {
       if (res.parsedJson) {
         applyAiAutofillToCurrentPage(res.parsedJson);
       }
+    } else if (actionType === 'style') {
+      res = await processAI({
+        action: actionType,
+        prompt: promptText,
+        selectedText: '',
+        fullContext: currentContext.slice(0, 1200),
+        template,
+        constraints
+      });
+
+      if (!res.ok) {
+        throw new Error(res.error || 'Lỗi khi tối ưu phong cách');
+      }
+
+      let styles = res.parsedJson?.styles || (res.parsedJson && isStyleObject(res.parsedJson) ? res.parsedJson : null);
+      if (!styles && res.result) {
+        const extracted = extractAndCleanStyles(res.result);
+        styles = extracted.styles;
+      }
+
+      if (styles) {
+        if (!currentAppliedStyles) currentAppliedStyles = {};
+        Object.assign(currentAppliedStyles, styles);
+        applyPageStyles(styles, false);
+      }
     } else {
       // ── Real-time SSE Token Streaming ──
       const existingHtml = currentTargetEditable ? currentTargetEditable.innerHTML.trim() : '';
@@ -572,11 +697,8 @@ async function handleExecutePrompt(promptText, actionType = 'write') {
         },
         (delta, full) => {
           rawText = full;
-          // Clean embedded styles JSON during live stream preview
-          let liveClean = full;
-          const liveMatch = full.match(/\{[\s\S]*"styles"\s*:\s*\{[^}]+\}[\s\S]*\}\s*$/);
-          if (liveMatch) liveClean = full.replace(liveMatch[0], '').trim();
-
+          // Strip incomplete/complete styles JSON during live stream preview
+          const liveClean = stripStreamingStylesTail(full);
           const formattedHtml = formatContentToHtml(liveClean);
           if (currentTargetEditable) {
             currentTargetEditable.innerHTML = basePrefix ? (basePrefix + formattedHtml) : formattedHtml;
@@ -591,61 +713,53 @@ async function handleExecutePrompt(promptText, actionType = 'write') {
         }
       );
 
-      // ── Auto-fit font size BEFORE finalizing insertion ──
-      const fittedSize = autoFitFontSize(rawText, constraints, currentTargetEditable);
-      if (fittedSize !== null) {
-        const autoStyles = { fontSize: fittedSize };
+      // ── Extract styles JSON from AI text & strip it cleanly ──
+      const { cleanedText, styles: aiStyles } = extractAndCleanStyles(rawText);
+      if (aiStyles) {
         if (!currentAppliedStyles) currentAppliedStyles = {};
-        currentAppliedStyles.fontSize = fittedSize;
-        applyPageStyles(autoStyles, false);
+        Object.assign(currentAppliedStyles, aiStyles);
+        applyPageStyles(aiStyles, false);
       }
 
-      // ── Try to extract inline styles JSON from AI text ──
-      let cleanedText = rawText;
-      const stylesMatch = rawText.match(/\{[\s\S]*"styles"\s*:\s*\{[^}]+\}[\s\S]*\}\s*$/);
-      if (stylesMatch) {
-        try {
-          const extracted = JSON.parse(stylesMatch[0]);
-          if (extracted.styles) {
-            if (!currentAppliedStyles) currentAppliedStyles = {};
-            Object.assign(currentAppliedStyles, extracted.styles);
-            applyPageStyles(extracted.styles, false);
-          }
-          cleanedText = rawText.replace(stylesMatch[0], '').trim();
-        } catch { /* ignore parse errors */ }
+      // ── Auto-fit font size BEFORE finalizing insertion (if AI didn't specify fontSize) ──
+      if (!aiStyles?.fontSize) {
+        const fittedSize = autoFitFontSize(cleanedText, constraints, currentTargetEditable);
+        if (fittedSize !== null) {
+          const autoStyles = { fontSize: fittedSize };
+          if (!currentAppliedStyles) currentAppliedStyles = {};
+          currentAppliedStyles.fontSize = fittedSize;
+          applyPageStyles(autoStyles, false);
+        }
       }
 
       // Final formatted HTML sync & immediate page persistence
-      const formattedHtml = formatContentToHtml(cleanedText);
-      if (currentTargetEditable) {
-        currentTargetEditable.innerHTML = basePrefix ? (basePrefix + formattedHtml) : formattedHtml;
-        currentTargetEditable.dispatchEvent(new Event('input', { bubbles: true }));
+      if (cleanedText && cleanedText.trim()) {
+        const formattedHtml = formatContentToHtml(cleanedText);
+        if (currentTargetEditable) {
+          currentTargetEditable.innerHTML = basePrefix ? (basePrefix + formattedHtml) : formattedHtml;
+          currentTargetEditable.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+      } else if (!basePrefix && currentTargetEditable) {
+        // If AI only returned styles and no text, keep original content
+        currentTargetEditable.innerHTML = existingHtml || '';
       }
       saveActivePages();
     }
 
-    // 3. Apply style updates if suggested or requested
-    if (res?.parsedJson?.styles) {
-      if (!currentAppliedStyles) currentAppliedStyles = {};
-      Object.assign(currentAppliedStyles, res.parsedJson.styles);
-      applyPageStyles(res.parsedJson.styles, false);
+    // 3. Apply style updates review hint
+    if (currentAppliedStyles && (currentAppliedStyles.fontSize || currentAppliedStyles.fontFamily || currentAppliedStyles.paperTone || currentAppliedStyles.lineHeight)) {
       const hint = inlineContainerEl.querySelector('.ai-notion-review-hint');
       if (hint) {
         const parts = [];
-        if (res.parsedJson.styles.fontSize) parts.push(`Cỡ ${res.parsedJson.styles.fontSize}px`);
-        if (res.parsedJson.styles.fontFamily) parts.push(`Font ${res.parsedJson.styles.fontFamily}`);
-        if (res.parsedJson.styles.paperTone) parts.push(`Giấy ${res.parsedJson.styles.paperTone}`);
+        if (currentAppliedStyles.fontSize) parts.push(`Cỡ ${currentAppliedStyles.fontSize}px`);
+        if (currentAppliedStyles.fontFamily) parts.push(`Font ${currentAppliedStyles.fontFamily}`);
+        if (currentAppliedStyles.paperTone) parts.push(`Giấy ${currentAppliedStyles.paperTone}`);
+        if (currentAppliedStyles.lineHeight) parts.push(`Dòng ${currentAppliedStyles.lineHeight}px`);
         hint.textContent = `Đã tự chỉnh style: ${parts.join(' · ')}. Bạn có muốn giữ lại?`;
       }
-    } else if (res?.parsedJson?.type === 'style_update') {
+    } else if (res?.parsedJson?.message) {
       const hint = inlineContainerEl.querySelector('.ai-notion-review-hint');
-      if (hint) hint.textContent = res.parsedJson.message || 'Đã áp dụng các điều chỉnh giao diện.';
-    } else if (currentAppliedStyles?.fontSize) {
-      // Auto-fit was applied — notify user
-      const hint = inlineContainerEl.querySelector('.ai-notion-review-hint');
-      if (hint) {
-        hint.textContent = `Tự động giảm cỡ chữ → ${currentAppliedStyles.fontSize}px để vừa trang. Bạn có muốn giữ lại?`;
-      }
+      if (hint) hint.textContent = res.parsedJson.message;
     }
 
     // Move to Review State: restore corner fab and show review bar neatly positioned
