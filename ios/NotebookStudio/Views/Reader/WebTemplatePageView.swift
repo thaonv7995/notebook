@@ -15,7 +15,7 @@ struct WebTemplatePageView: View {
 
     var body: some View {
         ZStack {
-            settings.paperTone.backgroundColor
+            Color(hex: "0f172a")
                 .ignoresSafeArea()
 
             WKWebViewContainer(

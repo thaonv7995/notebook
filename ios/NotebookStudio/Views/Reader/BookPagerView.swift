@@ -40,7 +40,7 @@ struct BookPagerView<Content: View>: UIViewControllerRepresentable {
         )
         pvc.dataSource = context.coordinator
         pvc.delegate = context.coordinator
-        pvc.view.backgroundColor = .clear
+        pvc.view.backgroundColor = UIColor(red: 15/255, green: 23/255, blue: 42/255, alpha: 1)
 
         let initialVC = context.coordinator.createVC(page: currentPage)
         pvc.setViewControllers([initialVC], direction: .forward, animated: false)
@@ -138,7 +138,7 @@ struct BookPagerView<Content: View>: UIViewControllerRepresentable {
                 pruneCache()
                 return vc
             } else {
-                let empty = AnyView(Color.clear)
+                let empty = AnyView(Color(red: 15/255, green: 23/255, blue: 42/255))
                 return PageHostingController(pageIndex: page, rootView: empty)
             }
         }
