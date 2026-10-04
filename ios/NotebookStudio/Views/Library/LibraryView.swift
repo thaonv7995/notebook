@@ -63,7 +63,7 @@ struct LibraryView: View {
             )
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    SortMenuButton(sortOrder: $viewModel.sortOrder)
+                    SortMenu(sortOrder: $viewModel.sortOrder)
                 }
             }
             .navigationDestination(for: Notebook.self) { notebook in
@@ -77,30 +77,6 @@ struct LibraryView: View {
     }
 }
 
-// MARK: - Sort Menu Button
-
-struct SortMenuButton: View {
-    @Binding var sortOrder: LibraryViewModel.SortOrder
-
-    var body: some View {
-        Menu {
-            ForEach(LibraryViewModel.SortOrder.allCases) { order in
-                Button {
-                    withAnimation(.easeInOut(duration: DesignTokens.animationNormal)) {
-                        sortOrder = order
-                    }
-                } label: {
-                    Label(order.label, systemImage: order.icon)
-                }
-                .disabled(sortOrder == order)
-            }
-        } label: {
-            Image(systemName: "arrow.up.arrow.down.circle")
-                .font(.system(size: 17, weight: .medium))
-                .foregroundStyle(DesignTokens.accentLight)
-        }
-    }
-}
 
 // MARK: - Empty State
 

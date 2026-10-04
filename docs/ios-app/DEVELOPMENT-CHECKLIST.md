@@ -101,10 +101,10 @@
 - [x] **P4-3** Tạo `Views/Library/NotebookCardView.swift` ✅:
   - Gradient thumbnail (CSS→SwiftUI via GradientParser), progress ring, pin indicator, press animation
 
-- [ ] **P4-4** Tạo `Views/Library/SortMenu.swift`:
+- [x] **P4-4** Tạo `Views/Library/SortMenu.swift` ✅:
   - Menu sort: Mới mở / Tên A-Z / Ngày tạo / Pinned first
 
-- [ ] **P4-5** Tạo `ViewModels/LibraryViewModel.swift`:
+- [x] **P4-5** Tạo `ViewModels/LibraryViewModel.swift` ✅:
   - `@Published var notebooks: [Notebook]`
   - `@Published var filteredNotebooks: [Notebook]`
   - `@Published var selectedCategory: String`
@@ -113,8 +113,8 @@
   - Filter + sort logic
   - Pull-to-refresh → SyncManager.sync()
 
-- [ ] **P4-6** Empty state — Khi chưa có notebook hoặc chưa sync
-- [ ] **P4-7** Loading skeleton animation khi đang tải
+- [x] **P4-6** Empty state — Khi chưa có notebook hoặc chưa sync ✅
+- [x] **P4-7** Loading skeleton animation khi đang tải ✅
 
 ---
 

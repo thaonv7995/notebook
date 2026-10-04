@@ -31,6 +31,7 @@
 		5495FE7CD9A87733776F45F2 /* FontExtensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA2339F2840F320C74C2DA3C /* FontExtensions.swift */; };
 		56024419C490425A3492B880 /* AuthViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = E199D6060A99C2A583344152 /* AuthViewModel.swift */; };
 		5F024B5FAA3033E9A7B65225 /* APIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = DFED30A76DAB7778F31357D8 /* APIClient.swift */; };
+		6080602F0B4841FF29EE6F3A /* SortMenu.swift in Sources */ = {isa = PBXBuildFile; fileRef = 098E7C34F90E855A8B82E8C7 /* SortMenu.swift */; };
 		72E4DF609CC224C545CADBB4 /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 76E61091018D1EE876296C84 /* LoginView.swift */; };
 		752359BC97D4E4ECC57ECA62 /* LocalStorageManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 353EC7EEF97B982363FC6ACA /* LocalStorageManager.swift */; };
 		8388FCA7AED50E7E875AEF7F /* NotebookCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCA8716EA3409F6737C0483D /* NotebookCardView.swift */; };
@@ -59,6 +60,7 @@
 
 /* Begin PBXFileReference section */
 		0067971318D337666998DCDC /* DesignTokens.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignTokens.swift; sourceTree = "<group>"; };
+		098E7C34F90E855A8B82E8C7 /* SortMenu.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SortMenu.swift; sourceTree = "<group>"; };
 		0C860B1A3DE629E770B8E396 /* PageTemplate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PageTemplate.swift; sourceTree = "<group>"; };
 		1DD15B2CB889158F95F85B29 /* Notebook.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Notebook.swift; sourceTree = "<group>"; };
 		210BCD13E2E5F6DAD81A8D66 /* NotebookStudioTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = NotebookStudioTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -157,6 +159,7 @@
 				51DAE30B118E18C767503D56 /* CategoryChipsView.swift */,
 				AE6B50A69093E8535A28E94A /* LibraryView.swift */,
 				CCA8716EA3409F6737C0483D /* NotebookCardView.swift */,
+				098E7C34F90E855A8B82E8C7 /* SortMenu.swift */,
 			);
 			path = Library;
 			sourceTree = "<group>";
@@ -465,6 +468,7 @@
 				AC6793F44DEFFE2D061EAD89 /* ReadingProgressStore.swift in Sources */,
 				12F7D239A60EDF5B5AE1309D /* SearchView.swift in Sources */,
 				18C961EEE459AEC2D907CE4E /* SettingsView.swift in Sources */,
+				6080602F0B4841FF29EE6F3A /* SortMenu.swift in Sources */,
 				F57DFD2EF6862AC878CE0079 /* SyncManager.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
