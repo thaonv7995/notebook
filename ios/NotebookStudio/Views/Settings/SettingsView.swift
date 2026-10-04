@@ -5,6 +5,7 @@ struct SettingsView: View {
     @EnvironmentObject var authViewModel: AuthViewModel
     @StateObject private var viewModel = SettingsViewModel()
     @ObservedObject private var readerSettings = ReaderSettings.shared
+    @ObservedObject private var biometricManager = BiometricAuthManager.shared
 
     @State private var showLogoutConfirmation = false
 
@@ -40,6 +41,14 @@ struct SettingsView: View {
                     } label: {
                         Label("Đăng xuất", systemImage: "rectangle.portrait.and.arrow.right")
                     }
+                }
+
+                // Security Section
+                Section("Bảo mật & Quyền riêng tư") {
+                    Toggle(isOn: $biometricManager.isBiometricEnabled) {
+                        Label("Khóa bằng \(biometricManager.biometricName)", systemImage: biometricManager.biometricIcon)
+                    }
+                    .tint(DesignTokens.accentLight)
                 }
 
                 // Section 2: Server & Sync

@@ -15,6 +15,8 @@ struct ReaderChromeView: View {
     let onToggleBookmark: () -> Void
     let onOpenTOC: () -> Void
     let onOpenSettings: () -> Void
+    var onOpenQuickNote: (() -> Void)? = nil
+    var onShare: (() -> Void)? = nil
 
     var body: some View {
         HStack(spacing: DesignTokens.spacingMD) {
@@ -59,10 +61,26 @@ struct ReaderChromeView: View {
                     .background(.ultraThinMaterial, in: Circle())
             }
 
-            // Reader Settings Button
-            Button(action: onOpenSettings) {
-                Image(systemName: "textformat.size")
-                    .font(.system(size: 15, weight: .medium))
+            // More Options Menu (Quick Note, Share, Settings)
+            Menu {
+                if let onOpenQuickNote = onOpenQuickNote {
+                    Button(action: onOpenQuickNote) {
+                        Label("Ghi chú nhanh", systemImage: "square.and.pencil")
+                    }
+                }
+
+                if let onShare = onShare {
+                    Button(action: onShare) {
+                        Label("Chia sẻ trang", systemImage: "square.and.arrow.up")
+                    }
+                }
+
+                Button(action: onOpenSettings) {
+                    Label("Tùy biến hiển thị", systemImage: "textformat.size")
+                }
+            } label: {
+                Image(systemName: "ellipsis.circle")
+                    .font(.system(size: 17, weight: .medium))
                     .foregroundStyle(.primary)
                     .frame(width: 36, height: 36)
                     .background(.ultraThinMaterial, in: Circle())

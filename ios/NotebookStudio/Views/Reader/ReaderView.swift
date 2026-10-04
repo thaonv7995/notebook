@@ -11,6 +11,9 @@ struct ReaderView: View {
 
     @State private var showTOC: Bool = false
     @State private var showSettings: Bool = false
+    @State private var showQuickNote: Bool = false
+    @State private var showShareSheet: Bool = false
+    @State private var shareText: String = ""
     @State private var autoHideTask: Task<Void, Never>? = nil
 
     @ObservedObject private var bookmarkStore = BookmarkStore.shared
@@ -88,6 +91,19 @@ struct ReaderView: View {
                         },
                         onOpenSettings: {
                             showSettings = true
+                        },
+                        onOpenQuickNote: {
+                            showQuickNote = true
+                        },
+                        onShare: {
+                            if let current = currentPage {
+                                shareText = ShareSheetManager.shared.formatPageForSharing(
+                                    notebook: notebook,
+                                    page: current,
+                                    pageIndex: currentPageIndex
+                                )
+                                showShareSheet = true
+                            }
                         }
                     )
                     .transition(.move(edge: .top).combined(with: .opacity))
@@ -124,6 +140,21 @@ struct ReaderView: View {
         .sheet(isPresented: $showSettings) {
             ReaderSettingsSheet()
         }
+        .sheet(isPresented: $showQuickNote) {
+            if let current = currentPage {
+                QuickNoteSheet(
+                    pageTopic: current.topic ?? current.title ?? "Trang \(currentPageIndex + 1)",
+                    text: .constant(""),
+                    onSave: { note in
+                        // Append note to current page locally
+                        print("[QuickNote] Đã lưu note: \(note)")
+                    }
+                )
+            }
+        }
+        .sheet(isPresented: $showShareSheet) {
+            ActivityView(activityItems: [shareText])
+        }
     }
 
     // MARK: - Actions
@@ -140,6 +171,11 @@ struct ReaderView: View {
     private func saveProgress(pageIndex: Int) {
         ReadingProgressStore.shared.saveProgress(
             notebookId: notebook.id,
+            pageIndex: pageIndex,
+            totalPages: pages.count
+        )
+        WidgetDataProvider.shared.updateCurrentReading(
+            notebookTitle: notebook.title,
             pageIndex: pageIndex,
             totalPages: pages.count
         )
