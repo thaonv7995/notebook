@@ -1,11 +1,15 @@
 import SwiftUI
 
 /// Main Reader View coordinating reading experience, navigation, chrome, and settings (P5-1).
+/// Prioritizes mobile reading mode by default with realistic 3D book page curl animation (P5-4, P5-5).
+/// Edit mode is disabled by default and enabled explicitly via the Edit button.
 struct ReaderView: View {
     let notebook: Notebook
 
     @State private var currentPageIndex: Int = 0
     @State private var isChromeVisible: Bool = true
+    @State private var isEditMode: Bool = false
+    @State private var revision: Int = 0
     @State private var zoomScale: CGFloat = 1.0
     @State private var gestureZoomScale: CGFloat = 1.0
 
@@ -44,12 +48,23 @@ struct ReaderView: View {
             readerSettings.paperTone.backgroundColor
                 .ignoresSafeArea()
 
-            // Page Content with Tap Gesture & Pinch-to-Zoom
+            // Page Content with 3D Page Curl Pager & Pinch-to-Zoom
             PageNavigationView(
                 pages: pages,
                 author: notebook.author,
                 currentPageIndex: $currentPageIndex,
-                zoomScale: $zoomScale
+                zoomScale: $zoomScale,
+                isEditable: isEditMode,
+                revision: revision,
+                onToggleChrome: {
+                    guard !isEditMode else { return }
+                    withAnimation(.easeInOut(duration: DesignTokens.animationNormal)) {
+                        isChromeVisible.toggle()
+                    }
+                    if isChromeVisible {
+                        scheduleAutoHide()
+                    }
+                }
             )
             .scaleEffect(gestureZoomScale)
             .gesture(
@@ -64,16 +79,8 @@ struct ReaderView: View {
                         }
                     }
             )
-            .onTapGesture {
-                withAnimation(.easeInOut(duration: DesignTokens.animationNormal)) {
-                    isChromeVisible.toggle()
-                }
-                if isChromeVisible {
-                    scheduleAutoHide()
-                }
-            }
 
-            // Top Bar Chrome
+            // Top Bar Chrome & Bottom Scrubber
             if isChromeVisible {
                 VStack {
                     ReaderChromeView(
@@ -81,11 +88,15 @@ struct ReaderView: View {
                         currentPageIndex: currentPageIndex,
                         totalPages: pages.count,
                         isBookmarked: isCurrentPageBookmarked,
+                        isEditMode: isEditMode,
                         onBack: {
                             dismiss()
                         },
                         onToggleBookmark: {
                             toggleBookmark()
+                        },
+                        onToggleEditMode: {
+                            toggleEditMode()
                         },
                         onOpenTOC: {
                             showTOC = true
@@ -111,14 +122,16 @@ struct ReaderView: View {
 
                     Spacer()
 
-                    // Bottom Page Scrubber
-                    PageScrubberView(
-                        currentPageIndex: $currentPageIndex,
-                        totalPages: pages.count,
-                        pageTitles: pageTitles
-                    )
-                    .padding(.bottom, DesignTokens.spacingMD)
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                    // Bottom Page Scrubber (Hidden while in edit mode to maximize typing space)
+                    if !isEditMode {
+                        PageScrubberView(
+                            currentPageIndex: $currentPageIndex,
+                            totalPages: pages.count,
+                            pageTitles: pageTitles
+                        )
+                        .padding(.bottom, DesignTokens.spacingMD)
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                    }
                 }
             }
         }
@@ -147,7 +160,6 @@ struct ReaderView: View {
                     pageTopic: current.topic ?? current.title ?? "Trang \(currentPageIndex + 1)",
                     text: .constant(""),
                     onSave: { note in
-                        // Append note to current page locally
                         print("[QuickNote] Đã lưu note: \(note)")
                     }
                 )
@@ -188,8 +200,23 @@ struct ReaderView: View {
         bookmarkStore.toggle(notebookId: notebook.id, pageId: page.id)
     }
 
+    private func toggleEditMode() {
+        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+            isEditMode.toggle()
+            revision += 1
+            if isEditMode {
+                isChromeVisible = true
+                autoHideTask?.cancel()
+            } else {
+                scheduleAutoHide()
+            }
+        }
+    }
+
     private func scheduleAutoHide() {
         autoHideTask?.cancel()
+        guard !isEditMode else { return } // Never auto-hide in edit mode
         autoHideTask = Task {
             try? await Task.sleep(nanoseconds: 3_500_000_000) // 3.5s
             if !Task.isCancelled {

@@ -7,6 +7,8 @@ struct TemplateRouter: View {
     let page: Page
     var author: String? = "@thaonv"
     var pageNumber: Int = 1
+    var isEditable: Bool = false
+    var onToggleChrome: (() -> Void)? = nil
 
     @AppStorage("use_native_renderer") private var useNativeRenderer: Bool = false
 
@@ -17,7 +19,9 @@ struct TemplateRouter: View {
             WebTemplatePageView(
                 page: page,
                 author: author,
-                pageNum: pageNumber
+                pageNum: pageNumber,
+                isEditable: isEditable,
+                onToggleChrome: onToggleChrome
             )
         }
     }

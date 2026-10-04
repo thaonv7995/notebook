@@ -1,26 +1,39 @@
 import SwiftUI
 
-/// Page container with swipe navigation, haptic feedback, and pinch-to-zoom (P5-4, P5-5, P5-21).
+/// Page container with 3D book page curl animation, haptic feedback, and reading/edit mode support.
+/// Integrates BookPagerView (inspired by bilingual-app) for realistic page flipping.
 struct PageNavigationView: View {
     let pages: [Page]
     var author: String? = "@thaonv"
     @Binding var currentPageIndex: Int
     @Binding var zoomScale: CGFloat
+    var isEditable: Bool = false
+    var revision: Int = 0
+    var onToggleChrome: (() -> Void)? = nil
 
-    @State private var lastReportedIndex: Int = 0
+    @ObservedObject private var settings = ReaderSettings.shared
 
     var body: some View {
-        TabView(selection: $currentPageIndex) {
-            ForEach(Array(pages.enumerated()), id: \.element.id) { index, page in
-                TemplateRouter(page: page, author: author, pageNumber: index + 1)
-                    .tag(index)
-                    .scaleEffect(index == currentPageIndex ? zoomScale : 1.0)
+        BookPagerView(
+            pageCount: max(1, pages.count),
+            currentPage: $currentPageIndex,
+            transitionStyle: settings.pageTransitionStyle.uiTransitionStyle,
+            revision: revision
+        ) { index in
+            if index >= 0 && index < pages.count {
+                TemplateRouter(
+                    page: pages[index],
+                    author: author,
+                    pageNumber: index + 1,
+                    isEditable: isEditable,
+                    onToggleChrome: onToggleChrome
+                )
+                .scaleEffect(index == currentPageIndex ? zoomScale : 1.0)
             }
         }
-        .tabViewStyle(.page(indexDisplayMode: .never))
+        .id("pager_\(settings.pageTransitionStyle.rawValue)")
         .onChange(of: currentPageIndex) { oldVal, newVal in
             if oldVal != newVal {
-                UIImpactFeedbackGenerator(style: .light).impactOccurred()
                 // Reset zoom on page flip
                 withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
                     zoomScale = 1.0

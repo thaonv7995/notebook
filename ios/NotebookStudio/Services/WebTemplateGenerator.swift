@@ -46,11 +46,12 @@ final class WebTemplateGenerator {
         author: String? = "@thaonv",
         pageNum: Int = 1,
         paperTone: PaperTone = .cream,
-        fontSize: Int = 15
+        fontSize: Int = 15,
+        isEditable: Bool = false
     ) -> String {
         let css = getCombinedCSS()
         let authorHandle = formatAuthorHandle(author)
-        let templateContent = generateTemplateBody(for: page, authorHandle: authorHandle, pageNum: pageNum)
+        let templateContent = generateTemplateBody(for: page, authorHandle: authorHandle, pageNum: pageNum, isEditable: isEditable)
 
         let bgHex: String
         let textHex: String
@@ -133,6 +134,55 @@ final class WebTemplateGenerator {
               padding: 22px 20px 16px 36px !important;
               border-radius: 4px;
             }
+
+            /* --- Reading Mode Optimization --- */
+            body.reading-mode {
+              -webkit-touch-callout: none !important;
+              -webkit-user-select: none !important;
+              user-select: none !important;
+            }
+
+            body.reading-mode input,
+            body.reading-mode textarea {
+              pointer-events: none !important;
+              -webkit-user-select: none !important;
+              user-select: none !important;
+              cursor: default !important;
+            }
+
+            body.reading-mode .template-writing-area {
+              cursor: default !important;
+              outline: none !important;
+              -webkit-user-select: text !important;
+              user-select: text !important;
+            }
+
+            body.reading-mode .action-check-square,
+            body.reading-mode .status-pill-btn {
+              pointer-events: none !important;
+              cursor: default !important;
+            }
+
+            /* --- Editing Mode Styling --- */
+            body.editing-mode .template-writing-area {
+              outline: 1px dashed rgba(217, 119, 6, 0.4);
+              outline-offset: 4px;
+              border-radius: 3px;
+              cursor: text;
+              min-height: 28px;
+            }
+
+            body.editing-mode .template-writing-area:focus {
+              outline: 2px solid #D97706;
+              background: rgba(217, 119, 6, 0.05);
+            }
+
+            body.editing-mode input.field-underline-input:focus,
+            body.editing-mode input.sub-field-input:focus,
+            body.editing-mode input.action-line-input:focus {
+              border-bottom-color: #D97706 !important;
+              outline: none !important;
+            }
           </style>
           <script>
             function fitScale() {
@@ -148,8 +198,11 @@ final class WebTemplateGenerator {
             window.addEventListener('DOMContentLoaded', fitScale);
             setTimeout(fitScale, 50);
 
-            // Interactive handlers
+            // Interactive handlers (Active only in edit mode)
             document.addEventListener('click', function(e) {
+              var isEdit = \(isEditable ? "true" : "false");
+              if (!isEdit) return;
+
               // Status pill click
               var pill = e.target.closest('.status-pill-btn');
               if (pill) {
@@ -178,7 +231,7 @@ final class WebTemplateGenerator {
             });
           </script>
         </head>
-        <body>
+        <body class="\(isEditable ? "editing-mode" : "reading-mode")">
           <div class="book-desk-scaler" id="sheetContainer">
             \(templateContent)
           </div>
@@ -189,29 +242,37 @@ final class WebTemplateGenerator {
 
     // MARK: - Template HTML Dispatcher
 
-    private func generateTemplateBody(for page: Page, authorHandle: String, pageNum: Int) -> String {
+    private func generateTemplateBody(for page: Page, authorHandle: String, pageNum: Int, isEditable: Bool) -> String {
         switch page.template {
         case .cornell:
-            return generateCornell(page: page, author: authorHandle, pageNum: pageNum)
+            return generateCornell(page: page, author: authorHandle, pageNum: pageNum, isEditable: isEditable)
         case .work:
-            return generateWork(page: page, author: authorHandle, pageNum: pageNum)
+            return generateWork(page: page, author: authorHandle, pageNum: pageNum, isEditable: isEditable)
         case .ruled:
-            return generateRuled(page: page, author: authorHandle, pageNum: pageNum)
+            return generateRuled(page: page, author: authorHandle, pageNum: pageNum, isEditable: isEditable)
         case .vocab:
-            return generateVocab(page: page, author: authorHandle, pageNum: pageNum)
+            return generateVocab(page: page, author: authorHandle, pageNum: pageNum, isEditable: isEditable)
         case .charting:
-            return generateCharting(page: page, author: authorHandle, pageNum: pageNum)
+            return generateCharting(page: page, author: authorHandle, pageNum: pageNum, isEditable: isEditable)
         case .reading:
-            return generateReading(page: page, author: authorHandle, pageNum: pageNum)
+            return generateReading(page: page, author: authorHandle, pageNum: pageNum, isEditable: isEditable)
         case .dotgrid:
-            return generateDotGrid(page: page, author: authorHandle, pageNum: pageNum)
+            return generateDotGrid(page: page, author: authorHandle, pageNum: pageNum, isEditable: isEditable)
         case .grid:
-            return generateGrid(page: page, author: authorHandle, pageNum: pageNum)
+            return generateGrid(page: page, author: authorHandle, pageNum: pageNum, isEditable: isEditable)
         case .blank:
-            return generateBlank(page: page, author: authorHandle, pageNum: pageNum)
+            return generateBlank(page: page, author: authorHandle, pageNum: pageNum, isEditable: isEditable)
         case .quadrant:
-            return generateEisenhower(page: page, author: authorHandle, pageNum: pageNum)
+            return generateEisenhower(page: page, author: authorHandle, pageNum: pageNum, isEditable: isEditable)
         }
+    }
+
+    private func edAttr(_ isEditable: Bool) -> String {
+        isEditable ? "contenteditable=\"true\"" : "contenteditable=\"false\""
+    }
+
+    private func roAttr(_ isEditable: Bool) -> String {
+        isEditable ? "" : "readonly tabindex=\"-1\""
     }
 
     // MARK: - Ornaments (Exact SVG matching src/templates/ornaments.js)
@@ -261,7 +322,7 @@ final class WebTemplateGenerator {
 
     // MARK: - Template 1: Cornell (src/templates/cornell.js)
 
-    private func generateCornell(page: Page, author: String, pageNum: Int) -> String {
+    private func generateCornell(page: Page, author: String, pageNum: Int, isEditable: Bool) -> String {
         """
         <div class="a4-template-sheet cornell-template-sheet">
           <div class="punch-margin-line"></div>
@@ -275,16 +336,16 @@ final class WebTemplateGenerator {
             </div>
             <div class="header-main-field">
               <span class="field-label">SUBJECT / TOPIC:</span>
-              <input type="text" class="field-underline-input topic-input" value="\(escapeAttr(page.topic ?? page.title ?? ""))" />
+              <input type="text" class="field-underline-input topic-input" value="\(escapeAttr(page.topic ?? page.title ?? ""))" \(roAttr(isEditable)) />
             </div>
             <div class="header-sub-fields">
               <div class="sub-field-group">
                 <span style="font-weight: 700;">DATE:</span>
-                <input type="text" class="sub-field-input date-input" value="\(escapeAttr(page.date ?? ""))" style="width: 80px;" />
+                <input type="text" class="sub-field-input date-input" value="\(escapeAttr(page.date ?? ""))" style="width: 80px;" \(roAttr(isEditable)) />
               </div>
               <div class="sub-field-group">
                 <span style="font-weight: 700;">NO.</span>
-                <input type="text" class="sub-field-input no-input" value="\(escapeAttr(page.no ?? String(format: "%02d", pageNum)))" style="width: 45px;" />
+                <input type="text" class="sub-field-input no-input" value="\(escapeAttr(page.no ?? String(format: "%02d", pageNum)))" style="width: 45px;" \(roAttr(isEditable)) />
               </div>
             </div>
           </div>
@@ -293,16 +354,16 @@ final class WebTemplateGenerator {
             <div class="cornell-body-split">
               <div class="cornell-cue-col">
                 <div class="col-guide-bar"><span class="section-guide-badge">CUES & QUESTIONS</span></div>
-                <div contenteditable="true" class="template-writing-area cornell-cues-text">\(page.cues ?? "")</div>
+                <div \(edAttr(isEditable)) class="template-writing-area cornell-cues-text">\(page.cues ?? "")</div>
               </div>
               <div class="cornell-notes-col">
                 <div class="col-guide-bar"><span class="section-guide-badge">NOTES</span></div>
-                <div contenteditable="true" class="template-writing-area cornell-notes-text">\((page.notes?.isEmpty ?? true) ? (page.content ?? "") : (page.notes ?? ""))</div>
+                <div \(edAttr(isEditable)) class="template-writing-area cornell-notes-text">\((page.notes?.isEmpty ?? true) ? (page.content ?? "") : (page.notes ?? ""))</div>
               </div>
             </div>
             <div class="cornell-summary-area">
               <div class="col-guide-bar"><span class="section-guide-badge">SUMMARY & SYNTHESIS</span></div>
-              <div contenteditable="true" class="template-writing-area cornell-summary-text">\(page.summary ?? "")</div>
+              <div \(edAttr(isEditable)) class="template-writing-area cornell-summary-text">\(page.summary ?? "")</div>
             </div>
           </div>
 
@@ -319,7 +380,7 @@ final class WebTemplateGenerator {
 
     // MARK: - Template 2: Work & Project Log (src/templates/work.js)
 
-    private func generateWork(page: Page, author: String, pageNum: Int) -> String {
+    private func generateWork(page: Page, author: String, pageNum: Int, isEditable: Bool) -> String {
         let storedActions = page.actions ?? []
         var actions = storedActions.map { ActionItem(checked: $0.checked, text: $0.text) }
         while actions.count < 5 {
@@ -329,9 +390,9 @@ final class WebTemplateGenerator {
         let actionRowsHtml = actions.enumerated().map { idx, act in
             """
             <div class="action-row" data-idx="\(idx)">
-              <button type="button" class="action-check-square \(act.checked ? "checked" : "")" data-idx="\(idx)" title="Đánh dấu hoàn thành"></button>
+              <button type="button" class="action-check-square \(act.checked ? "checked" : "")" data-idx="\(idx)" title="Đánh dấu hoàn thành" \(isEditable ? "" : "disabled")></button>
               \(idx == 0 ? "<span class=\"section-guide-badge\" style=\"position: static; margin-right: 4px;\">ACTION ITEMS & NEXT STEPS</span>" : "")
-              <input type="text" class="action-line-input \(act.checked ? "done-line" : "")" data-idx="\(idx)" value="\(escapeAttr(act.text))" />
+              <input type="text" class="action-line-input \(act.checked ? "done-line" : "")" data-idx="\(idx)" value="\(escapeAttr(act.text))" \(roAttr(isEditable)) />
             </div>
             """
         }.joined(separator: "\n")
@@ -351,21 +412,21 @@ final class WebTemplateGenerator {
             </div>
             <div class="header-main-field">
               <span class="field-label">PROJECT / OBJECTIVE:</span>
-              <input type="text" class="field-underline-input project-input" value="\(escapeAttr(page.project ?? page.topic ?? page.title ?? ""))" />
+              <input type="text" class="field-underline-input project-input" value="\(escapeAttr(page.project ?? page.topic ?? page.title ?? ""))" \(roAttr(isEditable)) />
             </div>
             <div class="header-sub-fields">
               <div class="sub-field-group">
                 <span style="font-weight: 700;">DATE:</span>
-                <input type="text" class="sub-field-input date-input" value="\(escapeAttr(page.date ?? ""))" style="width: 75px;" />
+                <input type="text" class="sub-field-input date-input" value="\(escapeAttr(page.date ?? ""))" style="width: 75px;" \(roAttr(isEditable)) />
                 <span style="font-weight: 700; margin-left: 6px;">DEADLINE:</span>
-                <input type="text" class="sub-field-input deadline-input" value="\(escapeAttr(page.deadline ?? ""))" style="width: 75px;" />
+                <input type="text" class="sub-field-input deadline-input" value="\(escapeAttr(page.deadline ?? ""))" style="width: 75px;" \(roAttr(isEditable)) />
               </div>
               <div class="sub-field-group">
                 <span style="font-weight: 700;">STATUS:</span>
                 <div class="status-pills">
-                  <button type="button" class="status-pill-btn \(currentStatus == "TODO" ? "active-todo" : "")" data-status="TODO">[ ] TODO</button>
-                  <button type="button" class="status-pill-btn \(currentStatus == "WIP" ? "active-wip" : "")" data-status="WIP">[ ] WIP</button>
-                  <button type="button" class="status-pill-btn \(currentStatus == "DONE" ? "active-done" : "")" data-status="DONE">[✓] DONE</button>
+                  <button type="button" class="status-pill-btn \(currentStatus == "TODO" ? "active-todo" : "")" data-status="TODO" \(isEditable ? "" : "disabled")>[ ] TODO</button>
+                  <button type="button" class="status-pill-btn \(currentStatus == "WIP" ? "active-wip" : "")" data-status="WIP" \(isEditable ? "" : "disabled")>[ ] WIP</button>
+                  <button type="button" class="status-pill-btn \(currentStatus == "DONE" ? "active-done" : "")" data-status="DONE" \(isEditable ? "" : "disabled")>[✓] DONE</button>
                 </div>
               </div>
             </div>
@@ -375,11 +436,11 @@ final class WebTemplateGenerator {
             <div class="work-body-split">
               <div class="work-side-col">
                 <div class="col-guide-bar"><span class="section-guide-badge">AGENDA & DECISIONS</span></div>
-                <div contenteditable="true" class="template-writing-area work-agenda-text">\(page.agenda ?? "")</div>
+                <div \(edAttr(isEditable)) class="template-writing-area work-agenda-text">\(page.agenda ?? "")</div>
               </div>
               <div class="work-notes-col">
                 <div class="col-guide-bar"><span class="section-guide-badge">NOTES & DISCUSSIONS</span></div>
-                <div contenteditable="true" class="template-writing-area work-notes-text">\((page.discussions?.isEmpty ?? true) ? (page.content ?? "") : (page.discussions ?? ""))</div>
+                <div \(edAttr(isEditable)) class="template-writing-area work-notes-text">\((page.discussions?.isEmpty ?? true) ? (page.content ?? "") : (page.discussions ?? ""))</div>
               </div>
             </div>
             <div class="work-action-area">
@@ -400,7 +461,7 @@ final class WebTemplateGenerator {
 
     // MARK: - Template 3: Ruled Notebook (src/templates/ruled.js)
 
-    private func generateRuled(page: Page, author: String, pageNum: Int) -> String {
+    private func generateRuled(page: Page, author: String, pageNum: Int, isEditable: Bool) -> String {
         """
         <div class="a4-template-sheet ruled-template-sheet">
           <div class="punch-margin-line"></div>
@@ -414,22 +475,22 @@ final class WebTemplateGenerator {
             </div>
             <div class="header-main-field">
               <span class="field-label">SUBJECT / TOPIC:</span>
-              <input type="text" class="field-underline-input topic-input" value="\(escapeAttr(page.topic ?? page.title ?? ""))" />
+              <input type="text" class="field-underline-input topic-input" value="\(escapeAttr(page.topic ?? page.title ?? ""))" \(roAttr(isEditable)) />
             </div>
             <div class="header-sub-fields">
               <div class="sub-field-group">
                 <span style="font-weight: 700;">DATE:</span>
-                <input type="text" class="sub-field-input date-input" value="\(escapeAttr(page.date ?? ""))" style="width: 80px;" />
+                <input type="text" class="sub-field-input date-input" value="\(escapeAttr(page.date ?? ""))" style="width: 80px;" \(roAttr(isEditable)) />
               </div>
               <div class="sub-field-group">
                 <span style="font-weight: 700;">NO.</span>
-                <input type="text" class="sub-field-input no-input" value="\(escapeAttr(page.no ?? String(format: "%02d", pageNum)))" style="width: 45px;" />
+                <input type="text" class="sub-field-input no-input" value="\(escapeAttr(page.no ?? String(format: "%02d", pageNum)))" style="width: 45px;" \(roAttr(isEditable)) />
               </div>
             </div>
           </div>
 
           <div class="ruled-full-canvas">
-            <div contenteditable="true" class="template-writing-area ruled-canvas-text">\(page.content ?? "")</div>
+            <div \(edAttr(isEditable)) class="template-writing-area ruled-canvas-text">\(page.content ?? "")</div>
           </div>
 
           <div class="scholar-footer">
@@ -445,7 +506,7 @@ final class WebTemplateGenerator {
 
     // MARK: - Template 4: Eisenhower Matrix (src/templates/quadrant.js)
 
-    private func generateEisenhower(page: Page, author: String, pageNum: Int) -> String {
+    private func generateEisenhower(page: Page, author: String, pageNum: Int, isEditable: Bool) -> String {
         let q = page.quadrants ?? Quadrants(q1: "", q2: "", q3: "", q4: "")
 
         return """
@@ -461,16 +522,16 @@ final class WebTemplateGenerator {
             </div>
             <div class="header-main-field">
               <span class="field-label">GOAL / CONTEXT:</span>
-              <input type="text" class="field-underline-input topic-input" value="\(escapeAttr(page.topic ?? page.title ?? ""))" />
+              <input type="text" class="field-underline-input topic-input" value="\(escapeAttr(page.topic ?? page.title ?? ""))" \(roAttr(isEditable)) />
             </div>
             <div class="header-sub-fields">
               <div class="sub-field-group">
                 <span style="font-weight: 700;">DATE:</span>
-                <input type="text" class="sub-field-input date-input" value="\(escapeAttr(page.date ?? ""))" style="width: 80px;" />
+                <input type="text" class="sub-field-input date-input" value="\(escapeAttr(page.date ?? ""))" style="width: 80px;" \(roAttr(isEditable)) />
               </div>
               <div class="sub-field-group">
                 <span style="font-weight: 700;">NO.</span>
-                <input type="text" class="sub-field-input no-input" value="\(escapeAttr(page.no ?? String(format: "%02d", pageNum)))" style="width: 45px;" />
+                <input type="text" class="sub-field-input no-input" value="\(escapeAttr(page.no ?? String(format: "%02d", pageNum)))" style="width: 45px;" \(roAttr(isEditable)) />
               </div>
             </div>
           </div>
@@ -483,21 +544,21 @@ final class WebTemplateGenerator {
             <div class="quadrant-row">
               <div class="quadrant-cell quadrant-tl eisenhower-do">
                 <div class="col-guide-bar eisenhower-bar do-bar"><span class="section-guide-badge eisenhower-badge do-badge">🔴 DO FIRST — Urgent & Important</span></div>
-                <div contenteditable="true" class="template-writing-area quadrant-text quadrant-q1-text">\(q.q1 ?? "")</div>
+                <div \(edAttr(isEditable)) class="template-writing-area quadrant-text quadrant-q1-text">\(q.q1 ?? "")</div>
               </div>
               <div class="quadrant-cell quadrant-tr eisenhower-schedule">
                 <div class="col-guide-bar eisenhower-bar schedule-bar"><span class="section-guide-badge eisenhower-badge schedule-badge">🟡 SCHEDULE — Important, Not Urgent</span></div>
-                <div contenteditable="true" class="template-writing-area quadrant-text quadrant-q2-text">\(q.q2 ?? "")</div>
+                <div \(edAttr(isEditable)) class="template-writing-area quadrant-text quadrant-q2-text">\(q.q2 ?? "")</div>
               </div>
             </div>
             <div class="quadrant-row">
               <div class="quadrant-cell quadrant-bl eisenhower-delegate">
                 <div class="col-guide-bar eisenhower-bar delegate-bar"><span class="section-guide-badge eisenhower-badge delegate-badge">🟠 DELEGATE — Urgent, Not Important</span></div>
-                <div contenteditable="true" class="template-writing-area quadrant-text quadrant-q3-text">\(q.q3 ?? "")</div>
+                <div \(edAttr(isEditable)) class="template-writing-area quadrant-text quadrant-q3-text">\(q.q3 ?? "")</div>
               </div>
               <div class="quadrant-cell quadrant-br eisenhower-eliminate">
                 <div class="col-guide-bar eisenhower-bar eliminate-bar"><span class="section-guide-badge eisenhower-badge eliminate-badge">⚪ ELIMINATE — Not Urgent, Not Important</span></div>
-                <div contenteditable="true" class="template-writing-area quadrant-text quadrant-q4-text">\(q.q4 ?? "")</div>
+                <div \(edAttr(isEditable)) class="template-writing-area quadrant-text quadrant-q4-text">\(q.q4 ?? "")</div>
               </div>
             </div>
           </div>
@@ -515,7 +576,7 @@ final class WebTemplateGenerator {
 
     // MARK: - Template 5: Vocabulary (src/templates/vocab.js)
 
-    private func generateVocab(page: Page, author: String, pageNum: Int) -> String {
+    private func generateVocab(page: Page, author: String, pageNum: Int, isEditable: Bool) -> String {
         let langLabel = (page.lang ?? "EN").uppercased()
 
         return """
@@ -531,16 +592,16 @@ final class WebTemplateGenerator {
             </div>
             <div class="header-main-field">
               <span class="field-label">TOPIC / THEME:</span>
-              <input type="text" class="field-underline-input topic-input" value="\(escapeAttr(page.topic ?? page.title ?? ""))" />
+              <input type="text" class="field-underline-input topic-input" value="\(escapeAttr(page.topic ?? page.title ?? ""))" \(roAttr(isEditable)) />
             </div>
             <div class="header-sub-fields">
               <div class="sub-field-group">
                 <span style="font-weight: 700;">DATE:</span>
-                <input type="text" class="sub-field-input date-input" value="\(escapeAttr(page.date ?? ""))" style="width: 80px;" />
+                <input type="text" class="sub-field-input date-input" value="\(escapeAttr(page.date ?? ""))" style="width: 80px;" \(roAttr(isEditable)) />
               </div>
               <div class="sub-field-group">
                 <span style="font-weight: 700;">NO.</span>
-                <input type="text" class="sub-field-input no-input" value="\(escapeAttr(page.no ?? String(format: "%02d", pageNum)))" style="width: 45px;" />
+                <input type="text" class="sub-field-input no-input" value="\(escapeAttr(page.no ?? String(format: "%02d", pageNum)))" style="width: 45px;" \(roAttr(isEditable)) />
               </div>
             </div>
           </div>
@@ -549,20 +610,20 @@ final class WebTemplateGenerator {
             <div class="vocab-body-split">
               <div class="vocab-word-col">
                 <div class="col-guide-bar"><span class="section-guide-badge">WORD / PHRASE</span></div>
-                <div contenteditable="true" class="template-writing-area vocab-word-text">\(page.vocabWord ?? "")</div>
+                <div \(edAttr(isEditable)) class="template-writing-area vocab-word-text">\(page.vocabWord ?? "")</div>
               </div>
               <div class="vocab-meaning-col">
                 <div class="col-guide-bar"><span class="section-guide-badge">MEANING · PRONUNCIATION</span></div>
-                <div contenteditable="true" class="template-writing-area vocab-meaning-text">\(page.vocabMeaning ?? "")</div>
+                <div \(edAttr(isEditable)) class="template-writing-area vocab-meaning-text">\(page.vocabMeaning ?? "")</div>
               </div>
               <div class="vocab-example-col">
                 <div class="col-guide-bar"><span class="section-guide-badge">EXAMPLE SENTENCE</span></div>
-                <div contenteditable="true" class="template-writing-area vocab-example-text">\((page.vocabExample?.isEmpty ?? true) ? (page.content ?? "") : (page.vocabExample ?? ""))</div>
+                <div \(edAttr(isEditable)) class="template-writing-area vocab-example-text">\((page.vocabExample?.isEmpty ?? true) ? (page.content ?? "") : (page.vocabExample ?? ""))</div>
               </div>
             </div>
             <div class="vocab-review-area">
               <div class="col-guide-bar"><span class="section-guide-badge">REVIEW NOTES · MEMORY TIPS</span></div>
-              <div contenteditable="true" class="template-writing-area vocab-review-text">\(page.vocabReview ?? "")</div>
+              <div \(edAttr(isEditable)) class="template-writing-area vocab-review-text">\(page.vocabReview ?? "")</div>
             </div>
           </div>
 
@@ -579,7 +640,7 @@ final class WebTemplateGenerator {
 
     // MARK: - Template 6: Reading Notes (src/templates/reading.js)
 
-    private func generateReading(page: Page, author: String, pageNum: Int) -> String {
+    private func generateReading(page: Page, author: String, pageNum: Int, isEditable: Bool) -> String {
         """
         <div class="a4-template-sheet reading-template-sheet">
           <div class="punch-margin-line"></div>
@@ -593,16 +654,16 @@ final class WebTemplateGenerator {
             </div>
             <div class="header-main-field">
               <span class="field-label">BOOK / ARTICLE:</span>
-              <input type="text" class="field-underline-input topic-input" value="\(escapeAttr(page.topic ?? page.title ?? ""))" />
+              <input type="text" class="field-underline-input topic-input" value="\(escapeAttr(page.topic ?? page.title ?? ""))" \(roAttr(isEditable)) />
             </div>
             <div class="header-sub-fields">
               <div class="sub-field-group">
                 <span style="font-weight: 700;">DATE:</span>
-                <input type="text" class="sub-field-input date-input" value="\(escapeAttr(page.date ?? ""))" style="width: 80px;" />
+                <input type="text" class="sub-field-input date-input" value="\(escapeAttr(page.date ?? ""))" style="width: 80px;" \(roAttr(isEditable)) />
               </div>
               <div class="sub-field-group">
                 <span style="font-weight: 700;">CH.</span>
-                <input type="text" class="sub-field-input no-input" value="\(escapeAttr(page.no ?? String(format: "%02d", pageNum)))" style="width: 45px;" />
+                <input type="text" class="sub-field-input no-input" value="\(escapeAttr(page.no ?? String(format: "%02d", pageNum)))" style="width: 45px;" \(roAttr(isEditable)) />
               </div>
             </div>
           </div>
@@ -611,16 +672,16 @@ final class WebTemplateGenerator {
             <div class="reading-body-split">
               <div class="reading-ideas-col">
                 <div class="col-guide-bar"><span class="section-guide-badge">KEY IDEAS & TAKEAWAYS</span></div>
-                <div contenteditable="true" class="template-writing-area reading-ideas-text">\(page.cues ?? "")</div>
+                <div \(edAttr(isEditable)) class="template-writing-area reading-ideas-text">\(page.cues ?? "")</div>
               </div>
               <div class="reading-quotes-col">
                 <div class="col-guide-bar"><span class="section-guide-badge">QUOTES & HIGHLIGHTS</span></div>
-                <div contenteditable="true" class="template-writing-area reading-quotes-text">\((page.notes?.isEmpty ?? true) ? (page.content ?? "") : (page.notes ?? ""))</div>
+                <div \(edAttr(isEditable)) class="template-writing-area reading-quotes-text">\((page.notes?.isEmpty ?? true) ? (page.content ?? "") : (page.notes ?? ""))</div>
               </div>
             </div>
             <div class="reading-summary-area">
               <div class="col-guide-bar"><span class="section-guide-badge">SUMMARY & PERSONAL REFLECTION</span></div>
-              <div contenteditable="true" class="template-writing-area reading-summary-text">\(page.summary ?? "")</div>
+              <div \(edAttr(isEditable)) class="template-writing-area reading-summary-text">\(page.summary ?? "")</div>
             </div>
           </div>
 
@@ -637,7 +698,7 @@ final class WebTemplateGenerator {
 
     // MARK: - Template 7: Charting Method (src/templates/charting.js)
 
-    private func generateCharting(page: Page, author: String, pageNum: Int) -> String {
+    private func generateCharting(page: Page, author: String, pageNum: Int, isEditable: Bool) -> String {
         let chart = page.chartData ?? ChartData()
 
         return """
@@ -653,16 +714,16 @@ final class WebTemplateGenerator {
             </div>
             <div class="header-main-field">
               <span class="field-label">SUBJECT / TOPIC:</span>
-              <input type="text" class="field-underline-input topic-input" value="\(escapeAttr(page.topic ?? page.title ?? ""))" />
+              <input type="text" class="field-underline-input topic-input" value="\(escapeAttr(page.topic ?? page.title ?? ""))" \(roAttr(isEditable)) />
             </div>
             <div class="header-sub-fields">
               <div class="sub-field-group">
                 <span style="font-weight: 700;">DATE:</span>
-                <input type="text" class="sub-field-input date-input" value="\(escapeAttr(page.date ?? ""))" style="width: 80px;" />
+                <input type="text" class="sub-field-input date-input" value="\(escapeAttr(page.date ?? ""))" style="width: 80px;" \(roAttr(isEditable)) />
               </div>
               <div class="sub-field-group">
                 <span style="font-weight: 700;">NO.</span>
-                <input type="text" class="sub-field-input no-input" value="\(escapeAttr(page.no ?? String(format: "%02d", pageNum)))" style="width: 45px;" />
+                <input type="text" class="sub-field-input no-input" value="\(escapeAttr(page.no ?? String(format: "%02d", pageNum)))" style="width: 45px;" \(roAttr(isEditable)) />
               </div>
             </div>
           </div>
@@ -671,20 +732,20 @@ final class WebTemplateGenerator {
             <div class="charting-columns">
               <div class="charting-col">
                 <div class="col-guide-bar"><span class="section-guide-badge">COLUMN A</span></div>
-                <div contenteditable="true" class="template-writing-area charting-col1-text">\(chart.col1 ?? "")</div>
+                <div \(edAttr(isEditable)) class="template-writing-area charting-col1-text">\(chart.col1 ?? "")</div>
               </div>
               <div class="charting-col">
                 <div class="col-guide-bar"><span class="section-guide-badge">COLUMN B</span></div>
-                <div contenteditable="true" class="template-writing-area charting-col2-text">\(chart.col2 ?? "")</div>
+                <div \(edAttr(isEditable)) class="template-writing-area charting-col2-text">\(chart.col2 ?? "")</div>
               </div>
               <div class="charting-col charting-col-last">
                 <div class="col-guide-bar"><span class="section-guide-badge">COLUMN C</span></div>
-                <div contenteditable="true" class="template-writing-area charting-col3-text">\(chart.col3 ?? "")</div>
+                <div \(edAttr(isEditable)) class="template-writing-area charting-col3-text">\(chart.col3 ?? "")</div>
               </div>
             </div>
             <div class="charting-notes-area">
               <div class="col-guide-bar"><span class="section-guide-badge">ANALYSIS & CONCLUSIONS</span></div>
-              <div contenteditable="true" class="template-writing-area charting-notes-text">\((page.summary?.isEmpty ?? true) ? (page.content ?? "") : (page.summary ?? ""))</div>
+              <div \(edAttr(isEditable)) class="template-writing-area charting-notes-text">\((page.summary?.isEmpty ?? true) ? (page.content ?? "") : (page.summary ?? ""))</div>
             </div>
           </div>
 
@@ -701,7 +762,7 @@ final class WebTemplateGenerator {
 
     // MARK: - Template 8: Dot Grid (src/templates/dotgrid.js)
 
-    private func generateDotGrid(page: Page, author: String, pageNum: Int) -> String {
+    private func generateDotGrid(page: Page, author: String, pageNum: Int, isEditable: Bool) -> String {
         """
         <div class="a4-template-sheet dotgrid-template-sheet">
           <div class="punch-margin-line"></div>
@@ -715,22 +776,22 @@ final class WebTemplateGenerator {
             </div>
             <div class="header-main-field">
               <span class="field-label">SUBJECT / TOPIC:</span>
-              <input type="text" class="field-underline-input topic-input" value="\(escapeAttr(page.topic ?? page.title ?? ""))" />
+              <input type="text" class="field-underline-input topic-input" value="\(escapeAttr(page.topic ?? page.title ?? ""))" \(roAttr(isEditable)) />
             </div>
             <div class="header-sub-fields">
               <div class="sub-field-group">
                 <span style="font-weight: 700;">DATE:</span>
-                <input type="text" class="sub-field-input date-input" value="\(escapeAttr(page.date ?? ""))" style="width: 80px;" />
+                <input type="text" class="sub-field-input date-input" value="\(escapeAttr(page.date ?? ""))" style="width: 80px;" \(roAttr(isEditable)) />
               </div>
               <div class="sub-field-group">
                 <span style="font-weight: 700;">NO.</span>
-                <input type="text" class="sub-field-input no-input" value="\(escapeAttr(page.no ?? String(format: "%02d", pageNum)))" style="width: 45px;" />
+                <input type="text" class="sub-field-input no-input" value="\(escapeAttr(page.no ?? String(format: "%02d", pageNum)))" style="width: 45px;" \(roAttr(isEditable)) />
               </div>
             </div>
           </div>
 
           <div class="dotgrid-container">
-            <div contenteditable="true" class="template-writing-area dotgrid-canvas-text">\(page.content ?? "")</div>
+            <div \(edAttr(isEditable)) class="template-writing-area dotgrid-canvas-text">\(page.content ?? "")</div>
           </div>
 
           <div class="scholar-footer">
@@ -746,7 +807,7 @@ final class WebTemplateGenerator {
 
     // MARK: - Template 9: Square Grid (src/templates/grid.js)
 
-    private func generateGrid(page: Page, author: String, pageNum: Int) -> String {
+    private func generateGrid(page: Page, author: String, pageNum: Int, isEditable: Bool) -> String {
         """
         <div class="a4-template-sheet grid-template-sheet">
           <div class="punch-margin-line"></div>
@@ -760,22 +821,22 @@ final class WebTemplateGenerator {
             </div>
             <div class="header-main-field">
               <span class="field-label">SUBJECT / TOPIC:</span>
-              <input type="text" class="field-underline-input topic-input" value="\(escapeAttr(page.topic ?? page.title ?? ""))" />
+              <input type="text" class="field-underline-input topic-input" value="\(escapeAttr(page.topic ?? page.title ?? ""))" \(roAttr(isEditable)) />
             </div>
             <div class="header-sub-fields">
               <div class="sub-field-group">
                 <span style="font-weight: 700;">DATE:</span>
-                <input type="text" class="sub-field-input date-input" value="\(escapeAttr(page.date ?? ""))" style="width: 80px;" />
+                <input type="text" class="sub-field-input date-input" value="\(escapeAttr(page.date ?? ""))" style="width: 80px;" \(roAttr(isEditable)) />
               </div>
               <div class="sub-field-group">
                 <span style="font-weight: 700;">NO.</span>
-                <input type="text" class="sub-field-input no-input" value="\(escapeAttr(page.no ?? String(format: "%02d", pageNum)))" style="width: 45px;" />
+                <input type="text" class="sub-field-input no-input" value="\(escapeAttr(page.no ?? String(format: "%02d", pageNum)))" style="width: 45px;" \(roAttr(isEditable)) />
               </div>
             </div>
           </div>
 
           <div class="grid-container">
-            <div contenteditable="true" class="template-writing-area grid-canvas-text">\(page.content ?? "")</div>
+            <div \(edAttr(isEditable)) class="template-writing-area grid-canvas-text">\(page.content ?? "")</div>
           </div>
 
           <div class="scholar-footer">
@@ -791,7 +852,7 @@ final class WebTemplateGenerator {
 
     // MARK: - Template 10: Blank Sheet (src/templates/blank.js)
 
-    private func generateBlank(page: Page, author: String, pageNum: Int) -> String {
+    private func generateBlank(page: Page, author: String, pageNum: Int, isEditable: Bool) -> String {
         """
         <div class="a4-template-sheet blank-template-sheet">
           <div class="punch-margin-line"></div>
@@ -805,22 +866,22 @@ final class WebTemplateGenerator {
             </div>
             <div class="header-main-field">
               <span class="field-label">SUBJECT / TOPIC:</span>
-              <input type="text" class="field-underline-input topic-input" value="\(escapeAttr(page.topic ?? page.title ?? ""))" />
+              <input type="text" class="field-underline-input topic-input" value="\(escapeAttr(page.topic ?? page.title ?? ""))" \(roAttr(isEditable)) />
             </div>
             <div class="header-sub-fields">
               <div class="sub-field-group">
                 <span style="font-weight: 700;">DATE:</span>
-                <input type="text" class="sub-field-input date-input" value="\(escapeAttr(page.date ?? ""))" style="width: 80px;" />
+                <input type="text" class="sub-field-input date-input" value="\(escapeAttr(page.date ?? ""))" style="width: 80px;" \(roAttr(isEditable)) />
               </div>
               <div class="sub-field-group">
                 <span style="font-weight: 700;">NO.</span>
-                <input type="text" class="sub-field-input no-input" value="\(escapeAttr(page.no ?? String(format: "%02d", pageNum)))" style="width: 45px;" />
+                <input type="text" class="sub-field-input no-input" value="\(escapeAttr(page.no ?? String(format: "%02d", pageNum)))" style="width: 45px;" \(roAttr(isEditable)) />
               </div>
             </div>
           </div>
 
           <div class="blank-container">
-            <div contenteditable="true" class="template-writing-area blank-canvas-text">\(page.content ?? "")</div>
+            <div \(edAttr(isEditable)) class="template-writing-area blank-canvas-text">\(page.content ?? "")</div>
           </div>
 
           <div class="scholar-footer">

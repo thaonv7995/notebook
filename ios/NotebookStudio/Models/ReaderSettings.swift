@@ -87,7 +87,29 @@ enum ReaderFontFamily: String, CaseIterable, Identifiable, Codable {
     }
 }
 
-/// User configurable reader settings (paper tone, font family, font size, line spacing).
+/// Available page transition styles for reader.
+enum PageTransitionStyle: String, CaseIterable, Identifiable, Codable {
+    case pageCurl = "pageCurl"
+    case scroll = "scroll"
+
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .pageCurl: return "Lật trang 3D (Page Curl)"
+        case .scroll:   return "Cuộn trượt (Slide)"
+        }
+    }
+
+    var uiTransitionStyle: UIPageViewController.TransitionStyle {
+        switch self {
+        case .pageCurl: return .pageCurl
+        case .scroll:   return .scroll
+        }
+    }
+}
+
+/// User configurable reader settings (paper tone, font family, font size, line spacing, page transition).
 @MainActor
 final class ReaderSettings: ObservableObject {
     static let shared = ReaderSettings()
@@ -96,6 +118,7 @@ final class ReaderSettings: ObservableObject {
     @AppStorage("reader_font_family") var fontFamilyRaw: String = ReaderFontFamily.plusJakartaSans.rawValue
     @AppStorage("reader_font_size") var fontSize: Double = 16.0
     @AppStorage("reader_line_spacing") var lineSpacing: Double = 6.0
+    @AppStorage("reader_page_transition") var pageTransitionStyleRaw: String = PageTransitionStyle.pageCurl.rawValue
 
     var paperTone: PaperTone {
         get { PaperTone(rawValue: paperToneRaw) ?? .cream }
@@ -105,5 +128,10 @@ final class ReaderSettings: ObservableObject {
     var fontFamily: ReaderFontFamily {
         get { ReaderFontFamily(rawValue: fontFamilyRaw) ?? .plusJakartaSans }
         set { fontFamilyRaw = newValue.rawValue; objectWillChange.send() }
+    }
+
+    var pageTransitionStyle: PageTransitionStyle {
+        get { PageTransitionStyle(rawValue: pageTransitionStyleRaw) ?? .pageCurl }
+        set { pageTransitionStyleRaw = newValue.rawValue; objectWillChange.send() }
     }
 }

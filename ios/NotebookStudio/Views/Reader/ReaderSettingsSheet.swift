@@ -47,7 +47,17 @@ struct ReaderSettingsSheet: View {
                     .padding(.vertical, 4)
                 }
 
-                // Section 2: Font Family
+                // Section 2: Page Transition
+                Section("Hiệu ứng lật trang") {
+                    Picker("Hiệu ứng", selection: $settings.pageTransitionStyle) {
+                        ForEach(PageTransitionStyle.allCases) { style in
+                            Text(style.displayName).tag(style)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                }
+
+                // Section 3: Font Family
                 Section("Kiểu chữ (Font Family)") {
                     Picker("Font", selection: $settings.fontFamily) {
                         ForEach(ReaderFontFamily.allCases) { family in

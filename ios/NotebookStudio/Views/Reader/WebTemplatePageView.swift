@@ -3,10 +3,13 @@ import WebKit
 
 /// Displays the authentic 100% web-identical template notebook page in a WKWebView.
 /// Renders the exact HTML, CSS tokens, SVG royal corners, edge notches, and fonts.
+/// Supports clean read-only viewing and interactive edit mode.
 struct WebTemplatePageView: View {
     let page: Page
     var author: String? = "@thaonv"
     var pageNum: Int = 1
+    var isEditable: Bool = false
+    var onToggleChrome: (() -> Void)? = nil
 
     @ObservedObject private var settings = ReaderSettings.shared
 
@@ -21,8 +24,11 @@ struct WebTemplatePageView: View {
                     author: author,
                     pageNum: pageNum,
                     paperTone: settings.paperTone,
-                    fontSize: Int(settings.fontSize)
-                )
+                    fontSize: Int(settings.fontSize),
+                    isEditable: isEditable
+                ),
+                isEditable: isEditable,
+                onToggleChrome: onToggleChrome
             )
         }
     }
@@ -32,6 +38,12 @@ struct WebTemplatePageView: View {
 
 struct WKWebViewContainer: UIViewRepresentable {
     let html: String
+    var isEditable: Bool = false
+    var onToggleChrome: (() -> Void)? = nil
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(onToggleChrome: onToggleChrome)
+    }
 
     func makeUIView(context: Context) -> WKWebView {
         let config = WKWebViewConfiguration()
@@ -45,14 +57,47 @@ struct WKWebViewContainer: UIViewRepresentable {
         webView.scrollView.showsHorizontalScrollIndicator = false
         webView.scrollView.showsVerticalScrollIndicator = false
 
-        // Load HTML
+        // Tap gesture to toggle chrome in reading mode
+        let tap = UITapGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.handleTap(_:)))
+        tap.numberOfTapsRequired = 1
+        tap.cancelsTouchesInView = false
+        webView.addGestureRecognizer(tap)
+        context.coordinator.tapGesture = tap
+
+        // In reading mode, disable webview scrollview so UIPageViewController page curl pan gesture works instantly
+        webView.scrollView.isScrollEnabled = isEditable
+
+        context.coordinator.lastHTML = html
         webView.loadHTMLString(html, baseURL: nil)
         return webView
     }
 
     func updateUIView(_ uiView: WKWebView, context: Context) {
-        // If HTML changed, reload content
-        uiView.loadHTMLString(html, baseURL: nil)
+        context.coordinator.onToggleChrome = onToggleChrome
+        uiView.scrollView.isScrollEnabled = isEditable
+        context.coordinator.tapGesture?.isEnabled = !isEditable
+
+        // Only reload if HTML actually changed
+        if context.coordinator.lastHTML != html {
+            context.coordinator.lastHTML = html
+            uiView.loadHTMLString(html, baseURL: nil)
+        }
+    }
+
+    final class Coordinator: NSObject {
+        var onToggleChrome: (() -> Void)?
+        var lastHTML: String = ""
+        weak var tapGesture: UITapGestureRecognizer?
+
+        init(onToggleChrome: (() -> Void)?) {
+            self.onToggleChrome = onToggleChrome
+        }
+
+        @objc func handleTap(_ gesture: UITapGestureRecognizer) {
+            DispatchQueue.main.async {
+                self.onToggleChrome?()
+            }
+        }
     }
 }
 
@@ -70,6 +115,7 @@ struct WKWebViewContainer: UIViewRepresentable {
             summary: "<p>Giải pháp tối ưu cho trải nghiệm người dùng nhất quán giữa Desktop và Mobile.</p>"
         ),
         author: "@thaonv",
-        pageNum: 1
+        pageNum: 1,
+        isEditable: false
     )
 }
