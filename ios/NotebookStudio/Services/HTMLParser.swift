@@ -21,15 +21,15 @@ enum RichTextBlock: Identifiable, Equatable {
     var id: String {
         switch self {
         case .heading(let lvl, let txt):
-            return "h\(lvl)_\(txt.characters.prefix(20).hashValue)"
+            return "h\(lvl)_\(String(txt.characters).hashValue)"
         case .paragraph(let txt):
-            return "p_\(txt.characters.prefix(20).hashValue)"
+            return "p_\(String(txt.characters).hashValue)"
         case .quote(let txt):
-            return "q_\(txt.characters.prefix(20).hashValue)"
+            return "q_\(String(txt.characters).hashValue)"
         case .codeBlock(let code):
-            return "c_\(code.prefix(20).hashValue)"
+            return "c_\(code.hashValue)"
         case .listItem(let num, let txt):
-            return "li_\(num ?? 0)_\(txt.characters.prefix(20).hashValue)"
+            return "li_\(num ?? 0)_\(String(txt.characters).hashValue)"
         case .image(let data, let cap, _):
             return "img_\(data?.count ?? 0)_\(cap?.hashValue ?? 0)"
         case .divider:
