@@ -27,8 +27,9 @@ data/
 .env
 # iOS build artifacts
 *.xcodeproj/xcuserdata/
-*.xcodeproj/project.xcworkspace/xcuserdata/
-*.xcworkspace/xcuserdata/
+*.xcodeproj/project.xcworkspace/
+*.xcworkspace/
+xcuserdata/
 DerivedData/
 build/
 *.ipa

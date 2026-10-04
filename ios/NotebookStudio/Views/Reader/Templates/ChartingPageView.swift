@@ -103,11 +103,11 @@ struct ChartingPageView: View {
         topic: "So sánh Mobile Frameworks",
         date: "04/10/2026",
         no: "01",
+        summary: "<p>SwiftUI tối ưu nhất cho trải nghiệm người dùng iOS mượt mà, chân thực chuẩn Apple HIG.</p>",
         chartData: ChartData(
             col1: "<h3>SwiftUI</h3><p>• Native Apple</p><p>• Tốc độ 60/120fps</p><p>• Tích hợp sâu iOS</p>",
             col2: "<h3>Flutter</h3><p>• Đa nền tảng</p><p>• Engine Skia/Impeller riêng</p><p>• Ngôn ngữ Dart</p>",
             col3: "<h3>React Native</h3><p>• JavaScript / TS</p><p>• Hệ sinh thái NPM lớn</p><p>• Kiến trúc New Arch</p>"
-        ),
-        summary: "<p>SwiftUI tối ưu nhất cho trải nghiệm người dùng iOS mượt mà, chân thực chuẩn Apple HIG.</p>"
+        )
     ))
 }
