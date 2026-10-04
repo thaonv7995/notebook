@@ -170,86 +170,33 @@ final class WebTemplateGenerator {
 
             .a4-template-sheet {
               width: 660px !important;
+              height: 820px !important;
               min-height: 820px !important;
+              max-height: 820px !important;
               padding: 22px 20px 16px 36px !important;
               border-radius: 4px;
               background: var(--paper-cream, \(bgHex)) !important;
+              box-sizing: border-box !important;
+              position: relative;
+              overflow: hidden !important;
             }
 
-            /* --- Mobile Full-Bleed Reading Experience (<= 640px) --- */
-            @media (max-width: 640px) {
-              html, body {
-                padding: 0 !important;
-                margin: 0 !important;
-                width: 100% !important;
-                min-height: 100% !important;
-                overflow-x: hidden !important;
-                background: var(--paper-cream, \(bgHex)) !important;
-              }
-
-              .book-desk-scaler {
-                width: 100% !important;
-                max-width: 100% !important;
-                min-height: 100% !important;
-                margin: 0 !important;
-                transform: none !important;
-                box-shadow: none !important;
-                border-radius: 0 !important;
-              }
-
-              .a4-template-sheet {
-                width: 100% !important;
-                max-width: 100% !important;
-                min-height: 100vh !important;
-                margin: 0 !important;
-                padding: 16px 14px 28px 16px !important;
-                box-shadow: none !important;
-                border-radius: 0 !important;
-                background: var(--paper-cream, \(bgHex)) !important;
-              }
-
-              /* Hide punch margin line and edge notches on phone so the page has maximum usable reading space */
-              .punch-margin-line,
-              .edge-index-markers {
-                display: none !important;
-              }
-
-              /* Ruled lines and writing area typography on mobile */
-              .template-writing-area {
-                font-size: var(--notebook-font-size, 16px) !important;
-              }
-
-              .template-writing-area div {
-                min-height: 30px !important;
-                line-height: 30px !important;
-              }
-
-              /* Phone Full Screen: clear notch / safe area comfortably without clipping */
-              body.phone-fullscreen .a4-template-sheet {
-                padding-top: \(max(24, Int(topOverlayInset) + 12))px !important;
-                padding-bottom: max(32px, env(safe-area-inset-bottom, 34px)) !important;
-              }
-            }
-
-            /* Full Screen Mode on all devices (iPhone & iPad): expand paper edge-to-edge with zero dark gaps */
+            /* Full Screen Mode on all devices (iPhone & iPad): seamless edge-to-edge paper immersion */
             body.is-fullscreen {
               background: var(--paper-cream, \(bgHex)) !important;
               margin: 0 !important;
-              padding: 0 !important;
+              padding-top: max(8px, env(safe-area-inset-top, 20px)) !important;
+              padding-bottom: max(16px, env(safe-area-inset-bottom, 20px)) !important;
             }
 
             body.is-fullscreen .book-desk-scaler {
-              margin: 0 auto !important;
               box-shadow: none !important;
               border-radius: 0 !important;
-              min-height: 100vh !important;
             }
 
             body.is-fullscreen .a4-template-sheet {
               border-radius: 0 !important;
               box-shadow: none !important;
-              min-height: 100vh !important;
-              background: var(--paper-cream, \(bgHex)) !important;
             }
 
             /* --- Reading Mode Optimization --- */
@@ -307,21 +254,16 @@ final class WebTemplateGenerator {
               var w = window.innerWidth;
               var scaler = document.getElementById('sheetContainer');
               if (!scaler) return;
-              if (w <= 640) {
-                // Mobile phone mode: full bleed, 1:1 true point size
-                if (lastComputedScale !== 0) {
-                  scaler.style.transform = 'none';
-                  scaler.style.marginBottom = '0px';
-                  lastComputedScale = 0;
-                }
-              } else {
-                // iPad / Desktop mode: scale authentic A4 sheet to fit desk smoothly
-                var scale = Math.round(Math.min((w - 16) / 660, 1.0) * 100) / 100;
-                if (scale !== lastComputedScale) {
-                  scaler.style.transform = 'scale(' + scale + ')';
-                  scaler.style.marginBottom = (820 * (scale - 1)) + 'px';
-                  lastComputedScale = scale;
-                }
+              var isFS = document.body && document.body.classList.contains('is-fullscreen');
+              // Scale the authentic 660px A4 sheet to fit the device width without any text drift
+              var availW = isFS ? w : Math.max(w - 12, 320);
+              var scale = Math.min(availW / 660, 1.0);
+              scale = Math.round(scale * 1000) / 1000;
+              if (scale !== lastComputedScale) {
+                scaler.style.transform = 'scale(' + scale + ')';
+                scaler.style.transformOrigin = 'top center';
+                scaler.style.marginBottom = (820 * (scale - 1)) + 'px';
+                lastComputedScale = scale;
               }
             }
             window.addEventListener('resize', function() {
