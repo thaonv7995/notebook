@@ -166,7 +166,7 @@ final class SearchEngine {
 
                 // 9. Check ChartData
                 if !matched, let cd = page.chartData {
-                    let cdCombined = [cd.col1, cd.col2, cd.col3].compactMap { $0 }.map { stripHtml($0) }.joined(separator: " ")
+                    let cdCombined = [cd.col1, cd.col2, cd.col3].map { stripHtml($0) }.joined(separator: " ")
                     if cdCombined.localizedCaseInsensitiveContains(cleanQuery) {
                         results.append(SearchResult(
                             notebook: notebook,

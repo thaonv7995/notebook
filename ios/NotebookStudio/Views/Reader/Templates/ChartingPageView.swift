@@ -23,7 +23,7 @@ struct ChartingPageView: View {
                 )
 
                 // 3 Columns Comparison
-                let chart = page.chartData ?? ChartData(col1: nil, col2: nil, col3: nil)
+                let chart = page.chartData ?? ChartData()
 
                 HStack(alignment: .top, spacing: 0) {
                     // Column A
