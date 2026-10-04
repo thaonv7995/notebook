@@ -22,6 +22,14 @@ settings:
     INFOPLIST_KEY_UISupportedInterfaceOrientations: "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
     INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad: "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
 
+packages:
+  Lottie:
+    url: https://github.com/airbnb/lottie-ios
+    majorVersion: 4.5.0
+  KeychainAccess:
+    url: https://github.com/kishikawakatsumi/KeychainAccess
+    majorVersion: 4.2.2
+
 targets:
   NotebookStudio:
     type: application
@@ -36,4 +44,12 @@ targets:
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
         PRODUCT_BUNDLE_IDENTIFIER: com.thaonv.notebookstudio
         INFOPLIST_KEY_CFBundleDisplayName: "Notebook Studio"
-    dependencies: []
+    dependencies:
+      - package: Lottie
+      - package: KeychainAccess
+    info:
+      path: NotebookStudio/Info.plist
+      properties:
+        UIAppFonts:
+          - "PlusJakartaSans[wght].ttf"
+          - "PlusJakartaSans-Italic[wght].ttf"

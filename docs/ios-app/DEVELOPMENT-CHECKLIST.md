@@ -5,14 +5,14 @@
 
 ---
 
-## Phase 0: Khởi tạo Project 🏗️ `~1 ngày`
+## Phase 0: Khởi tạo Project 🏗️ `~1 ngày` ✅ DONE
 
 - [x] **P0-1** Tạo Xcode project mới: SwiftUI, iOS 17+, tên "NotebookStudio" ✅
-- [ ] **P0-2** Cấu hình Bundle ID, Team, Signing & Capabilities
-- [ ] **P0-3** Thêm Swift Packages:
-  - `Lottie` (animations)
-  - `KeychainAccess` (lưu JWT an toàn)
-- [ ] **P0-4** Tạo cấu trúc folder:
+- [x] **P0-2** Cấu hình Bundle ID, Team, Signing & Capabilities ✅ `com.thaonv.notebookstudio`
+- [x] **P0-3** Thêm Swift Packages: ✅
+  - `Lottie` (animations) — v4.5.0
+  - `KeychainAccess` (lưu JWT an toàn) — v4.2.2
+- [x] **P0-4** Tạo cấu trúc folder ✅
   ```
   NotebookStudio/
   ├── App/                  # App entry, TabView
@@ -31,11 +31,11 @@
   ├── Extensions/           # Swift extensions
   └── Resources/            # Assets, Lottie files, fonts
   ```
-- [ ] **P0-5** Tạo `Theme/DesignTokens.swift` — Color palette + Typography scale
+- [x] **P0-5** Tạo `Theme/DesignTokens.swift` — Color palette + Typography scale ✅
   - Light: background `#f5f0eb`, paper `#faf5e8`, accent `#c9a84c`
   - Dark: background `#0d1117`, paper `#2a2520`, accent `#d4a849`
-- [ ] **P0-6** Import font "Plus Jakarta Sans" vào project (font nội dung notebook)
-- [ ] **P0-7** Tạo `App/NotebookStudioApp.swift` với TabView 4 tabs cơ bản
+- [x] **P0-6** Import font "Plus Jakarta Sans" vào project ✅ (variable weight + italic)
+- [x] **P0-7** Tạo `App/NotebookStudioApp.swift` với TabView 4 tabs cơ bản ✅
 
 ---
 
