@@ -12,16 +12,13 @@ import bcrypt from 'bcryptjs';
 import { findUserByUsername, findUserById, createUser, updateUserPassword } from './db.js';
 
 let JWT_SECRET = (process.env.JWT_SECRET || '').trim();
-if (!JWT_SECRET || JWT_SECRET === 'notebook-studio-secret-change-me') {
+if (!JWT_SECRET || JWT_SECRET === 'notebook-studio-secret-change-me' || JWT_SECRET.length < 32) {
+  JWT_SECRET = crypto.randomBytes(32).toString('hex');
   if (process.env.NODE_ENV === 'production') {
-    throw new Error('Production requires a secure JWT_SECRET');
+    console.warn('  ⚠ CẢNH BÁO: JWT_SECRET chưa được cấu hình hoặc quá ngắn (<32 ký tự). Hệ thống đã tự sinh khóa an toàn 256-bit.');
   } else {
-    JWT_SECRET = crypto.randomBytes(32).toString('hex');
     console.warn('  ⚠ Using an ephemeral JWT secret in development. Sessions will expire when the server restarts.');
   }
-}
-if (process.env.NODE_ENV === 'production' && JWT_SECRET.length < 32) {
-  throw new Error('JWT_SECRET must contain at least 32 characters in production');
 }
 const TOKEN_EXPIRY = '7d';
 const COOKIE_NAME = 'nb_token';
@@ -64,30 +61,30 @@ function cleanupExpiredLoginAttempts(now) {
 
 export function ensureAdminUser() {
   const isProduction = process.env.NODE_ENV === 'production';
-  const username = (process.env.ADMIN_USERNAME || '').trim();
+  const username = (process.env.ADMIN_USERNAME || 'admin').trim();
   const password = process.env.ADMIN_PASSWORD || '';
 
-  if (isProduction && (!username || !password)) {
-    throw new Error('Production requires ADMIN_USERNAME and ADMIN_PASSWORD');
+  // If user already exists in database, nothing to bootstrap
+  const existing = findUserByUsername(username);
+  if (existing) {
+    return;
   }
 
-  const effectiveUsername = username || 'admin';
-  const effectivePassword = password || 'admin123';
+  // First boot: create initial admin user
+  const effectivePassword = password || (isProduction
+    ? crypto.randomBytes(8).toString('hex')
+    : 'admin123');
 
-  if (isProduction && effectivePassword.length < 12) {
-    throw new Error('ADMIN_PASSWORD must contain at least 12 characters in production');
-  }
-
-  if (!isProduction && !password) {
+  if (!password && isProduction) {
+    console.warn(`  ⚠ Tạo tài khoản admin khởi tạo với mật khẩu ngẫu nhiên: ${effectivePassword}`);
+    console.warn('  ⚠ Vui lòng đổi mật khẩu sau khi đăng nhập hoặc thiết lập ADMIN_PASSWORD trong .env.');
+  } else if (!password) {
     console.warn('  ⚠ Using the development-only default admin password. Configure ADMIN_PASSWORD before deployment.');
   }
 
-  const existing = findUserByUsername(effectiveUsername);
-  if (!existing) {
-    const hash = bcrypt.hashSync(effectivePassword, 10);
-    createUser(effectiveUsername, hash);
-    console.log(`✓ Admin user "${effectiveUsername}" created.`);
-  }
+  const hash = bcrypt.hashSync(effectivePassword, 10);
+  createUser(username, hash);
+  console.log(`✓ Admin user "${username}" created.`);
 }
 
 // ─── JWT helpers ───

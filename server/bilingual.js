@@ -30,7 +30,7 @@ allowedBilingualHosts.add('localhost');
 allowedBilingualHosts.add('::1');
 
 if (IS_PRODUCTION && !BILINGUAL_CLIENT_ID) {
-  throw new Error('Production requires BILINGUAL_CLIENT_ID');
+  console.log('  ℹ BILINGUAL_CLIENT_ID not configured; Bilingual App sync endpoints are disabled.');
 }
 
 function normalizeBilingualUrl(value) {
