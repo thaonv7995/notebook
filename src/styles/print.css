@@ -250,11 +250,15 @@
      ══════════════════════════════════════════════════════ */
 
   /* UI Controls — hide interactive buttons only */
-  .status-pill-btn,
   .book-star-badge,
   .book-center-spine,
   .book-center-ribbon {
     display: none !important;
+  }
+
+  .status-pill-btn {
+    display: inline-block !important;
+    cursor: default !important;
   }
 
   /* AI Copilot: floating button, chat panel, settings, inline bar, selection bubble */

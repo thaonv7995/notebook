@@ -61,7 +61,7 @@ export function renderWorkLayout(sheetEl, page, pageNum, isLeft, attachListeners
             <span style="font-weight: 700; margin-left: 6px;">DEADLINE:</span>
             <input type="text" class="sub-field-input deadline-input" value="${escapeAttr(page.deadline || '')}" style="width: 75px;" />
           </div>
-          <div class="sub-field-group">
+          <div class="sub-field-group status-field-group">
             <span style="font-weight: 700;">STATUS:</span>
             <div class="status-pills">
               <button type="button" class="status-pill-btn ${page.status === 'TODO' ? 'active-todo' : ''}" data-status="TODO">[ ] TODO</button>

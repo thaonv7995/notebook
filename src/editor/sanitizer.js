@@ -59,8 +59,21 @@ export function sanitizeRichHtml(html) {
         else el.removeAttribute('class');
       } else if (name === 'src' && el.tagName === 'IMG') {
         const val = attr.value.trim();
-        if (/^(data:image\/[a-zA-Z0-9+.-]+;base64,|blob:|https?:\/\/)/i.test(val)) {
+        const isSafeDataImage = /^data:image\/(?:png|jpeg|gif|webp);base64,/i.test(val);
+        const isSafeBlobImage = /^blob:/i.test(val);
+        const isSafeHttpsImage = /^https:\/\//i.test(val);
+        const isSafeLocalHttp = /^http:\/\/(?:localhost|127\.0\.0\.1)(?::\d+)?\//i.test(val);
+        const isSafeRelativePath = /^(?:\/|\.\/)(?:api|assets|public|notebook-icon)\b/i.test(val);
+
+        if (
+          isSafeDataImage
+          || isSafeBlobImage
+          || isSafeHttpsImage
+          || isSafeLocalHttp
+          || isSafeRelativePath
+        ) {
           el.setAttribute('src', val);
+          el.setAttribute('referrerpolicy', 'no-referrer');
         } else {
           el.removeAttribute('src');
         }

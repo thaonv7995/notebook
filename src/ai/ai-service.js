@@ -2,7 +2,8 @@
  * AI Service — Frontend API Client for AI Co-pilot
  *
  * Handles communication with /api/ai/* endpoints,
- * manages API key storage in localStorage,
+ * keeps API keys in sessionStorage so credentials are cleared when the
+ * browser session ends,
  * and provides a clean interface for AI operations.
  */
 
@@ -11,16 +12,41 @@ const LS_KEY_API = 'notebook_ai_api_key';
 const LS_KEY_MODEL = 'notebook_ai_model';
 const LS_KEY_BASE_URL = 'notebook_ai_base_url';
 
+async function readJsonResponse(res) {
+  const contentType = res.headers.get('content-type') || '';
+  if (!contentType.includes('application/json')) {
+    const text = await res.text().catch(() => '');
+    return {
+      ok: false,
+      error: text
+        ? text.slice(0, 500)
+        : `Máy chủ trả về phản hồi không hợp lệ (HTTP ${res.status})`
+    };
+  }
+
+  return res.json().catch(() => ({
+    ok: false,
+    error: `Không thể đọc phản hồi từ máy chủ AI (HTTP ${res.status})`
+  }));
+}
+
 // ─── API Key & Base URL Management ───
 
 export function getSavedApiKey() {
-  return localStorage.getItem(LS_KEY_API) || '';
+  const sessionKey = sessionStorage.getItem(LS_KEY_API);
+  if (sessionKey) return sessionKey;
+  const localKey = localStorage.getItem(LS_KEY_API);
+  if (localKey) return localKey;
+  return '';
 }
 
 export function saveApiKey(key) {
   if (key && key.trim()) {
-    localStorage.setItem(LS_KEY_API, key.trim());
+    const trimmed = key.trim();
+    localStorage.setItem(LS_KEY_API, trimmed);
+    sessionStorage.setItem(LS_KEY_API, trimmed);
   } else {
+    sessionStorage.removeItem(LS_KEY_API);
     localStorage.removeItem(LS_KEY_API);
   }
 }
@@ -97,7 +123,7 @@ export async function processAI(opts = {}) {
     throw new Error('Phiên đăng nhập đã hết hạn');
   }
 
-  const data = await res.json();
+  const data = await readJsonResponse(res);
 
   if (!data.ok) {
     throw new Error(data.error || `Lỗi AI (HTTP ${res.status})`);
@@ -153,8 +179,12 @@ export async function streamAI(opts = {}, onToken, onComplete, onError) {
     }
 
     if (!res.ok) {
-      const errData = await res.json().catch(() => ({}));
+      const errData = await readJsonResponse(res);
       throw new Error(errData.error || `Lỗi AI (HTTP ${res.status})`);
+    }
+
+    if (!res.body) {
+      throw new Error('Máy chủ AI không trả về luồng dữ liệu.');
     }
 
     const reader = res.body.getReader();
@@ -225,7 +255,14 @@ export async function testApiKey(key, baseUrl, model) {
     }),
   });
 
-  const data = await res.json();
+  if (res.status === 401) {
+    window.dispatchEvent(new CustomEvent('auth:required'));
+  }
+
+  const data = await readJsonResponse(res);
+  if (!res.ok && !data.error) {
+    data.error = `Không thể kiểm tra kết nối AI (HTTP ${res.status})`;
+  }
   return data;
 }
 

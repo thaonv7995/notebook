@@ -16,16 +16,29 @@ async function request(method, path, body = null) {
   if (body !== null) opts.body = JSON.stringify(body);
 
   const res = await fetch(`${API_BASE}${path}`, opts);
-  const data = await res.json();
+  const contentType = res.headers.get('content-type') || '';
+  let data = {};
+
+  if (contentType.includes('application/json')) {
+    data = await res.json().catch(() => ({}));
+  } else {
+    const text = await res.text().catch(() => '');
+    if (text) {
+      data = { error: text.slice(0, 500) };
+    }
+  }
 
   if (res.status === 401) {
     // Trigger login screen
     window.dispatchEvent(new CustomEvent('auth:required'));
-    throw new Error(data.error || 'Unauthorized');
+    throw new Error(data.error || 'Phiên đăng nhập đã hết hạn');
   }
 
   if (!res.ok) {
-    throw new Error(data.error || `HTTP ${res.status}`);
+    throw new Error(
+      data.error
+      || `Yêu cầu thất bại với mã HTTP ${res.status}`
+    );
   }
 
   return data;

@@ -15,6 +15,23 @@ let cachedBooks = null;
 let isFetchingBooks = false;
 let messageListenerAttached = false;
 
+function escapeHTML(value) {
+  return String(value ?? '').replace(/[&<>"']/g, character => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;'
+  }[character]));
+}
+
+function isValidBookSlug(value) {
+  return typeof value === 'string'
+    && value.length > 0
+    && value.length <= 200
+    && /^[a-zA-Z0-9._-]+$/.test(value);
+}
+
 /**
  * Fetch books from Bilingual App via secure backend proxy
  */
@@ -24,10 +41,53 @@ export async function fetchBilingualBooks(forceRefresh = false) {
 
   isFetchingBooks = true;
   try {
-    const res = await fetch('/api/bilingual/books');
-    if (!res.ok) throw new Error(`HTTP error ${res.status}`);
-    const data = await res.json();
-    cachedBooks = Array.isArray(data.books) ? data.books : (Array.isArray(data) ? data : []);
+    const res = await fetch('/api/bilingual/books', {
+      credentials: 'same-origin',
+      headers: {
+        Accept: 'application/json'
+      }
+    });
+
+    if (res.status === 401) {
+      window.dispatchEvent(new CustomEvent('auth:required'));
+      throw new Error('Phiên đăng nhập đã hết hạn');
+    }
+
+    const contentType = res.headers.get('content-type') || '';
+    if (!contentType.includes('application/json')) {
+      throw new Error(`Phản hồi thư viện không hợp lệ (HTTP ${res.status})`);
+    }
+
+    const data = await res.json().catch(() => {
+      throw new Error('Không thể đọc dữ liệu thư viện');
+    });
+
+    if (!res.ok) {
+      throw new Error(data?.error || `Không thể tải thư viện (HTTP ${res.status})`);
+    }
+
+    const rawBooks = Array.isArray(data.books)
+      ? data.books
+      : (Array.isArray(data) ? data : []);
+
+    cachedBooks = rawBooks
+      .filter(book => (
+        book
+        && typeof book === 'object'
+        && isValidBookSlug(book.slug)
+      ))
+      .slice(0, 1000)
+      .map(book => ({
+        ...book,
+        slug: book.slug,
+        title: typeof book.title === 'string'
+          ? book.title.slice(0, 500)
+          : book.slug,
+        pageCount: Number.isSafeInteger(book.pageCount) && book.pageCount > 0
+          ? Math.min(book.pageCount, 100000)
+          : 1
+      }));
+
     return cachedBooks;
   } catch (err) {
     console.warn('[ReferenceBook] Failed to fetch books via backend proxy:', err.message);
@@ -46,10 +106,18 @@ export function setupReferenceBookQuoteListener() {
   messageListenerAttached = true;
 
   window.addEventListener('message', (event) => {
+    const activeFrame = document.querySelector('.ref-book-iframe');
+    if (!activeFrame || event.source !== activeFrame.contentWindow) return;
+    if (event.origin !== window.location.origin) return;
     if (!event.data || typeof event.data !== 'object') return;
     if (event.data.type === 'NOTEBOOK_INSERT_QUOTE') {
-      const { quote, title, url } = event.data;
-      if (!quote) return;
+      const quote = typeof event.data.quote === 'string'
+        ? event.data.quote.slice(0, 20000)
+        : '';
+      const title = typeof event.data.title === 'string'
+        ? event.data.title.slice(0, 500)
+        : '';
+      if (!quote.trim()) return;
       insertQuoteIntoActiveSheet(quote, title);
     }
   });
@@ -71,8 +139,8 @@ export function insertQuoteIntoActiveSheet(quote, sourceTitle) {
   if (!editable) return;
 
   editable.focus();
-  const cleanQuote = String(quote).trim().replace(/</g, '&lt;').replace(/>/g, '&gt;');
-  const cleanTitle = (sourceTitle || 'Sách tham khảo').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const cleanQuote = escapeHTML(String(quote).trim());
+  const cleanTitle = escapeHTML(sourceTitle || 'Sách tham khảo');
 
   const quoteHtml = `<blockquote class="notebook-smart-quote" style="border-left: 3px solid #3b82f6; margin: 10px 0; padding: 6px 14px; background: rgba(59, 130, 246, 0.08); font-style: italic; border-radius: 4px; line-height: 1.6;">“${cleanQuote}”<br><span style="font-size: 0.82em; color: #64748b; font-style: normal; display: inline-block; margin-top: 4px;">— ${cleanTitle}</span></blockquote><p><br></p>`;
 
@@ -148,6 +216,12 @@ export async function renderReferenceBookPanel(containerEl, activeNotebook) {
   const externalLink = containerEl.querySelector('#refExternalLink');
   const bodyEl = containerEl.querySelector('#refBookBody');
 
+  // Prevent the newly opened tab from accessing this page through
+  // window.opener, even if the generated HTML is changed later.
+  if (externalLink) {
+    externalLink.rel = 'noopener noreferrer';
+  }
+
   let books = [];
   try {
     books = await fetchBilingualBooks();
@@ -182,11 +256,25 @@ export async function renderReferenceBookPanel(containerEl, activeNotebook) {
   }
 
   // Populate books dropdown
-  dropdown.innerHTML = books.map(b => `
-    <option value="${escapeHTML(b.slug)}" ${b.slug === refState.slug ? 'selected' : ''}>
-      ${escapeHTML(b.title)} (${b.pageCount || '?'} trang)
-    </option>
-  `).join('');
+  const safeBooks = books.filter(book => (
+    book
+    && typeof book === 'object'
+    && isValidBookSlug(book.slug)
+  ));
+  if (safeBooks.length === 0) {
+    bodyEl.textContent = 'Danh sách sách không chứa dữ liệu hợp lệ.';
+    return;
+  }
+  books = safeBooks;
+
+  dropdown.replaceChildren();
+  books.forEach(book => {
+    const option = document.createElement('option');
+    option.value = book.slug;
+    option.textContent = `${String(book.title || 'Sách chưa đặt tên')} (${Number.isSafeInteger(book.pageCount) && book.pageCount > 0 ? book.pageCount : '?'} trang)`;
+    option.selected = book.slug === refState.slug;
+    dropdown.appendChild(option);
+  });
 
   // If no saved slug or invalid slug, default to first book
   let currentBook = books.find(b => b.slug === refState.slug);
@@ -199,7 +287,9 @@ export async function renderReferenceBookPanel(containerEl, activeNotebook) {
 
   const updateBookFrame = () => {
     const book = books.find(b => b.slug === refState.slug) || books[0];
-    const total = book.pageCount || 1;
+    const total = Number.isSafeInteger(book.pageCount) && book.pageCount > 0
+      ? book.pageCount
+      : 1;
     let page = parseInt(refState.page, 10) || 1;
     if (page < 1) page = 1;
     if (page > total) page = total;
@@ -214,7 +304,9 @@ export async function renderReferenceBookPanel(containerEl, activeNotebook) {
     langViBtn.classList.toggle('active', refState.lang === 'vi');
     langEnBtn.classList.toggle('active', refState.lang === 'en');
 
-    const pageUrl = `/api/bilingual/books/${encodeURIComponent(book.slug)}/page/${refState.lang}/${page}`;
+    const safeLang = refState.lang === 'en' ? 'en' : 'vi';
+    refState.lang = safeLang;
+    const pageUrl = `/api/bilingual/books/${encodeURIComponent(book.slug)}/page/${safeLang}/${page}`;
     externalLink.href = pageUrl;
 
     bodyEl.innerHTML = `
@@ -319,7 +411,8 @@ export async function renderReferenceBookPanel(containerEl, activeNotebook) {
   updateBookFrame();
 }
 
-function escapeHTML(str) {
+/* c8 ignore start -- retained temporarily for backward-compatible imports */
+function escapeHTMLLegacy(str) {
   if (!str) return '';
   return String(str)
     .replace(/&/g, '&amp;')
@@ -328,3 +421,4 @@ function escapeHTML(str) {
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
 }
+/* c8 ignore stop */

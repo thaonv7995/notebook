@@ -146,6 +146,32 @@ export function checkAndRenderPdfExport() {
           cursor: default !important;
         }
 
+        .pdf-export-sheet .header-purpose-badge {
+          letter-spacing: 0.5px !important;
+        }
+
+        .pdf-export-sheet span.field-underline-input {
+          display: inline-block !important;
+          flex: 1 !important;
+          line-height: 1.25 !important;
+          vertical-align: baseline !important;
+          min-height: 19px !important;
+        }
+
+        .pdf-export-sheet span.sub-field-input {
+          display: inline-block !important;
+          line-height: 1.25 !important;
+          vertical-align: baseline !important;
+          min-height: 15px !important;
+        }
+
+        .pdf-export-sheet span.action-line-input {
+          display: inline-block !important;
+          flex: 1 !important;
+          line-height: 1.25 !important;
+          vertical-align: baseline !important;
+        }
+
         /* Ensure ruled-line backgrounds and paper colors render in PDF */
         .pdf-export-sheet .template-writing-area,
         .pdf-export-sheet .ruled-canvas-text,
@@ -177,9 +203,25 @@ export function checkAndRenderPdfExport() {
            corner ornaments (.content-corner-frame) and edge index markers (.edge-index-markers) */
         .pdf-export-sheet .ai-corner-copilot-container,
         .pdf-export-sheet .ai-corner-fab,
-        .pdf-export-sheet .ai-corner-chat,
-        .pdf-export-sheet .status-pill-btn {
+        .pdf-export-sheet .ai-corner-chat {
           display: none !important;
+        }
+
+        .pdf-export-sheet .sub-field-group.status-field-group,
+        .pdf-export-sheet .sub-field-group:has(.status-pills) {
+          align-items: center !important;
+        }
+
+        .pdf-export-sheet .status-pill-btn {
+          display: inline-flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          line-height: 1 !important;
+          height: 16px !important;
+          padding: 0 5px 2px 5px !important;
+          box-sizing: border-box !important;
+          vertical-align: middle !important;
+          cursor: default !important;
         }
 
         .pdf-export-sheet .print-cover-sheet {
@@ -294,9 +336,41 @@ export function checkAndRenderPdfExport() {
 
         renderSheetContent(sheet, JSON.parse(JSON.stringify(page)), index + 1, true, null);
 
-        // Make inputs readonly and contenteditables non-editable
+        // Make inputs static elements for pixel-perfect PDF rendering (no native input baseline shift)
         sheet.querySelectorAll('[contenteditable]').forEach(el => el.setAttribute('contenteditable', 'false'));
-        sheet.querySelectorAll('input').forEach(input => input.setAttribute('readonly', 'readonly'));
+        sheet.querySelectorAll('input').forEach(input => {
+          const span = document.createElement('span');
+          span.className = input.className;
+          span.textContent = input.value || '';
+          if (!input.value) {
+            span.innerHTML = '&nbsp;';
+          }
+          if (input.style.cssText) {
+            span.style.cssText = input.style.cssText;
+          }
+          for (const [key, val] of Object.entries(input.dataset || {})) {
+            span.dataset[key] = val;
+          }
+          span.style.display = 'inline-block';
+          span.style.verticalAlign = 'baseline';
+          span.style.lineHeight = '1.25';
+          span.style.boxSizing = 'border-box';
+          input.replaceWith(span);
+        });
+
+        // Convert status pill buttons to static spans for perfect vertical centering in PDF
+        sheet.querySelectorAll('button.status-pill-btn').forEach(btn => {
+          const span = document.createElement('span');
+          span.className = btn.className;
+          span.innerHTML = btn.innerHTML;
+          if (btn.style.cssText) {
+            span.style.cssText = btn.style.cssText;
+          }
+          for (const [key, val] of Object.entries(btn.dataset || {})) {
+            span.dataset[key] = val;
+          }
+          btn.replaceWith(span);
+        });
 
         casing.appendChild(sheet);
         sheetWrapper.appendChild(casing);

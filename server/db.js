@@ -11,34 +11,116 @@
  * }
  */
 
-import { existsSync, mkdirSync, readFileSync, writeFileSync, renameSync } from 'fs';
+import {
+  copyFileSync,
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  renameSync,
+  unlinkSync,
+  writeFileSync
+} from 'fs';
+import { randomUUID } from 'crypto';
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const DATA_DIR = join(__dirname, '..', 'data');
 const DB_PATH = join(DATA_DIR, 'db.json');
+const DB_BACKUP_PATH = join(DATA_DIR, 'db.backup.json');
 
 if (!existsSync(DATA_DIR)) mkdirSync(DATA_DIR, { recursive: true });
 
 // ─── Load / Save ───
 
 function loadDb() {
+  let primaryDatabaseError = null;
+
   try {
     if (existsSync(DB_PATH)) {
-      return JSON.parse(readFileSync(DB_PATH, 'utf-8'));
+      const parsed = JSON.parse(readFileSync(DB_PATH, 'utf-8'));
+      if (
+        !parsed
+        || typeof parsed !== 'object'
+        || !Array.isArray(parsed.users)
+        || !parsed.notebooks
+        || typeof parsed.notebooks !== 'object'
+        || Array.isArray(parsed.notebooks)
+      ) {
+        throw new Error('Database schema is invalid');
+      }
+
+      if (!parsed.syncMeta || typeof parsed.syncMeta !== 'object' || Array.isArray(parsed.syncMeta)) {
+        parsed.syncMeta = {};
+      }
+
+      return parsed;
     }
   } catch (e) {
+    primaryDatabaseError = e;
     console.error('Error reading database:', e.message);
+
+    try {
+      if (existsSync(DB_BACKUP_PATH)) {
+        const backup = JSON.parse(readFileSync(DB_BACKUP_PATH, 'utf-8'));
+        if (
+          backup
+          && typeof backup === 'object'
+          && Array.isArray(backup.users)
+          && backup.notebooks
+          && typeof backup.notebooks === 'object'
+          && !Array.isArray(backup.notebooks)
+        ) {
+          if (!backup.syncMeta || typeof backup.syncMeta !== 'object' || Array.isArray(backup.syncMeta)) {
+            backup.syncMeta = {};
+          }
+          console.warn('Recovered database from backup file.');
+          return backup;
+        }
+      }
+    } catch (backupError) {
+      console.error('Error reading database backup:', backupError.message);
+    }
   }
-  return { users: [], notebooks: {} };
+
+  // Never silently replace an existing but unreadable database with an empty
+  // one. Doing so could make the next write permanently overwrite recoverable
+  // user data. Fail startup and require recovery from the primary or backup.
+  if (primaryDatabaseError) {
+    throw new Error(
+      `Database recovery failed. Check ${DB_PATH} and ${DB_BACKUP_PATH}: ${primaryDatabaseError.message}`
+    );
+  }
+
+  return { users: [], notebooks: {}, syncMeta: {} };
 }
 
 function saveDb(data) {
   // Atomic write: write to unique temp file then rename (prevents collision during concurrent writes)
-  const tempPath = join(DATA_DIR, `db.${process.pid}.${Date.now()}.${Math.random().toString(36).slice(2, 6)}.tmp`);
-  writeFileSync(tempPath, JSON.stringify(data, null, 2), 'utf-8');
-  renameSync(tempPath, DB_PATH);
+  const tempPath = join(
+    DATA_DIR,
+    `db.${process.pid}.${Date.now()}.${randomUUID()}.tmp`
+  );
+  try {
+    const serialized = JSON.stringify(data, null, 2);
+    writeFileSync(tempPath, serialized, {
+      encoding: 'utf-8',
+      mode: 0o600
+    });
+
+    if (existsSync(DB_PATH)) {
+      copyFileSync(DB_PATH, DB_BACKUP_PATH);
+    }
+
+    renameSync(tempPath, DB_PATH);
+  } catch (error) {
+    try {
+      if (existsSync(tempPath)) unlinkSync(tempPath);
+    } catch {
+      // Preserve the original database error.
+    }
+    throw error;
+  }
 }
 
 // In-memory cache
@@ -56,28 +138,6 @@ export function findUserByUsername(username) {
 
 export function findUserById(id) {
   return db.users.find(u => u.id === id) || null;
-}
-
-export function getActiveOrPrimaryUser(requestedIdentifier) {
-  if (requestedIdentifier) {
-    const byId = !isNaN(Number(requestedIdentifier)) ? findUserById(Number(requestedIdentifier)) : null;
-    if (byId) return byId;
-    const byName = findUserByUsername(String(requestedIdentifier));
-    if (byName) return byName;
-  }
-
-  // Find user with the most notebooks in db.notebooks
-  const entries = Object.entries(db.notebooks || {})
-    .filter(([_, list]) => Array.isArray(list) && list.length > 0)
-    .sort((a, b) => b[1].length - a[1].length);
-
-  if (entries.length > 0) {
-    const uid = parseInt(entries[0][0], 10);
-    const u = findUserById(uid);
-    if (u) return u;
-  }
-
-  return db.users[db.users.length - 1] || db.users[0] || { id: 1, username: 'admin' };
 }
 
 export function createUser(username, passwordHash) {
@@ -267,16 +327,37 @@ export function deleteNotebookById(userId, notebookId) {
 export function updateNotebookProgress(userId, notebookId, lastPageIndex) {
   const userNotebooks = db.notebooks[userId] || [];
   const nb = userNotebooks.find(n => n.id === notebookId);
-  if (nb) {
-    nb.lastPageIndex = lastPageIndex;
-    nb.updatedAt = new Date().toISOString();
-    if (!db.syncMeta) db.syncMeta = {};
-    if (!db.syncMeta[userId]) db.syncMeta[userId] = {};
-    db.syncMeta[userId].lastSyncedAt = new Date().toISOString();
-    persist();
-    return true;
+  if (!nb) {
+    return { ok: false, reason: 'not_found' };
   }
-  return false;
+
+  const pageCount = Array.isArray(nb.pages) ? nb.pages.length : 0;
+  if (
+    !Number.isSafeInteger(lastPageIndex)
+    || lastPageIndex < 0
+    || pageCount === 0
+    || lastPageIndex >= pageCount
+  ) {
+    return {
+      ok: false,
+      reason: 'out_of_range',
+      pageCount
+    };
+  }
+
+  const now = new Date().toISOString();
+  nb.lastPageIndex = lastPageIndex;
+  nb.updatedAt = now;
+  if (!db.syncMeta) db.syncMeta = {};
+  if (!db.syncMeta[userId]) db.syncMeta[userId] = {};
+  db.syncMeta[userId].lastSyncedAt = now;
+  persist();
+
+  return {
+    ok: true,
+    lastPageIndex,
+    pageCount
+  };
 }
 
 export default db;

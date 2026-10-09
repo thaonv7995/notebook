@@ -28,6 +28,20 @@ function escapeAttr(str) {
   return escapeHTML(str);
 }
 
+const DEFAULT_COVER_GRADIENT = 'linear-gradient(135deg, #1e3a8a, #0f172a)';
+
+function getSafeCoverGradient(value) {
+  return typeof value === 'string' && /^linear-gradient\([^;{}]+\)$/i.test(value)
+    ? value
+    : DEFAULT_COVER_GRADIENT;
+}
+
+function getSafeCoverTextColor(value) {
+  return typeof value === 'string' && /^#[0-9a-f]{6}$/i.test(value)
+    ? value
+    : '#ffffff';
+}
+
 export function setLibraryCallbacks({ onOpenNotebook, onCopyLink }) {
   if (onOpenNotebook) onOpenNotebookCallback = onOpenNotebook;
   if (onCopyLink) onCopyLinkCallback = onCopyLink;
@@ -121,11 +135,13 @@ export function renderLibraryGrid() {
 
   els.booksGrid.innerHTML = filtered.map(nb => {
     const totalPages = Math.max(1, (nb.pages && nb.pages.length) || 1);
-    const textColor = nb.coverTextColor || '#ffffff';
+    const title = String(nb.title || 'Sổ chưa đặt tên');
+    const coverGradient = getSafeCoverGradient(nb.coverGradient);
+    const textColor = getSafeCoverTextColor(nb.coverTextColor);
 
     return `
       <div class="book-card" data-id="${escapeAttr(nb.id)}" role="button" tabindex="0">
-        <div class="book-cover" style="background: ${nb.coverGradient || 'linear-gradient(135deg, #1e3a8a, #0f172a)'}; color: ${textColor};">
+        <div class="book-cover" style="background: ${coverGradient}; color: ${textColor};">
           <!-- Pin Button -->
           <button class="book-card-pin ${nb.isPinned ? 'is-pinned' : ''}" type="button" data-id="${escapeAttr(nb.id)}" title="${nb.isPinned ? 'Bỏ ghim cuốn sổ này' : 'Ghim cuốn sổ này lên đầu'}" aria-label="Ghim sổ">
             <svg viewBox="0 0 24 24" width="13" height="13" fill="${nb.isPinned ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
@@ -135,8 +151,8 @@ export function renderLibraryGrid() {
           </button>
 
           <div class="cover-header-meta">${escapeHTML(nb.category || 'GHI CHÉP')}</div>
-          <div class="cover-main-title" style="font-size: ${nb.title.length > 35 ? '13px' : '15px'};">
-            ${escapeHTML(nb.title)}
+          <div class="cover-main-title" style="font-size: ${title.length > 35 ? '13px' : '15px'};">
+            ${escapeHTML(title)}
           </div>
           <div class="cover-footer-meta">
             <span>${escapeHTML(nb.author || 'ARCHIVE')}</span>
@@ -144,7 +160,7 @@ export function renderLibraryGrid() {
           </div>
         </div>
         <div class="book-info">
-          <div class="book-title" title="${escapeAttr(nb.title)}">${escapeHTML(nb.title)}</div>
+          <div class="book-title" title="${escapeAttr(title)}">${escapeHTML(title)}</div>
           <div class="book-meta-row">
             <span class="book-page-count">${totalPages} trang</span>
             

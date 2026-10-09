@@ -12,7 +12,7 @@
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
-import { execSync } from 'child_process';
+import { randomUUID } from 'crypto';
 import { requireAuth } from './auth.js';
 import { loadFullState } from './db.js';
 
@@ -57,6 +57,16 @@ function findChromeExecutable() {
  */
 export function pdfRoutes(app) {
   app.get('/api/notebooks/:id/pdf', requireAuth, async (req, res) => {
+    const notebookId = req.params.id;
+    if (
+      typeof notebookId !== 'string'
+      || notebookId.length === 0
+      || notebookId.length > 200
+      || !/^[a-zA-Z0-9._:-]+$/.test(notebookId)
+    ) {
+      return res.status(400).json({ error: 'ID cuốn sổ không hợp lệ' });
+    }
+
     if (activePdfExports >= MAX_CONCURRENT_PDF) {
       return res.status(429).json({
         error: 'Server đang xử lý một tác vụ xuất PDF khác. Vui lòng đợi trong giây lát rồi thử lại.'
@@ -68,12 +78,16 @@ export function pdfRoutes(app) {
     let tempProfileDir = null;
     try {
       const notebooks = loadFullState(req.user.id);
-      const notebook = notebooks.find(nb => nb.id === req.params.id);
+      const notebook = notebooks.find(nb => String(nb.id) === notebookId);
       if (!notebook) {
         return res.status(404).json({ error: 'Không tìm thấy cuốn sổ' });
       }
 
-      if (notebook.pages && notebook.pages.length > 100) {
+      if (!Array.isArray(notebook.pages) || notebook.pages.length === 0) {
+        return res.status(400).json({ error: 'Cuốn sổ không có trang hợp lệ để xuất PDF.' });
+      }
+
+      if (notebook.pages.length > 100) {
         return res.status(400).json({ error: 'Cuốn sổ vượt quá giới hạn 100 trang để xuất PDF.' });
       }
 
@@ -96,7 +110,7 @@ export function pdfRoutes(app) {
 
       tempProfileDir = path.join(
         candidateBase,
-        `puppeteer_profile_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`
+        `puppeteer_profile_${Date.now()}_${randomUUID()}`
       );
       fs.mkdirSync(tempProfileDir, { recursive: true });
 
@@ -128,6 +142,35 @@ export function pdfRoutes(app) {
       }
 
       const browserPage = await browser.newPage();
+      browserPage.setDefaultNavigationTimeout(30000);
+      browserPage.setDefaultTimeout(60000);
+
+      // The export page only needs resources served by this application.
+      // Block unexpected outbound requests from notebook HTML or injected
+      // image/font URLs to prevent SSRF and avoid leaking the auth cookie.
+      await browserPage.setRequestInterception(true);
+      browserPage.on('request', request => {
+        try {
+          const rawUrl = request.url();
+          if (rawUrl.startsWith('data:') || rawUrl.startsWith('blob:')) {
+            request.continue();
+            return;
+          }
+          const requestUrl = new URL(rawUrl);
+          const isAllowed = requestUrl.origin === `http://localhost:${PORT}`
+            || requestUrl.origin === `http://127.0.0.1:${PORT}`
+            || requestUrl.hostname === 'fonts.googleapis.com'
+            || requestUrl.hostname === 'fonts.gstatic.com';
+
+          if (isAllowed) {
+            request.continue();
+          } else {
+            request.abort('blockedbyclient');
+          }
+        } catch {
+          request.abort('blockedbyclient');
+        }
+      });
 
       // ── SCREENSHOT-BASED PDF ──
       // Set viewport to EXACT web view dimensions (1-page mode)
@@ -154,7 +197,7 @@ export function pdfRoutes(app) {
       // Use 'domcontentloaded' (not 'networkidle') because the app has persistent
       // WebSocket/sync connections that prevent networkidle from resolving.
       // Actual readiness is signaled by __PDF_READY__ (checked via waitForFunction below).
-      const targetUrl = `http://localhost:${PORT}/?export-pdf=${encodeURIComponent(req.params.id)}&cover=${cover}`;
+      const targetUrl = `http://localhost:${PORT}/?export-pdf=${encodeURIComponent(notebookId)}&cover=${cover}`;
       await browserPage.goto(targetUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
 
       // Emulate screen media (no @media print interference)
@@ -176,6 +219,9 @@ export function pdfRoutes(app) {
       const sheetCount = await browserPage.evaluate(
         () => document.querySelectorAll('.pdf-export-sheet').length
       );
+      if (!Number.isSafeInteger(sheetCount) || sheetCount < 1 || sheetCount > 101) {
+        throw new Error('Không tìm thấy trang hợp lệ để xuất PDF');
+      }
 
       const screenshots = [];
       for (let i = 0; i < sheetCount; i++) {
@@ -239,7 +285,7 @@ export function pdfRoutes(app) {
 
       // Navigate to the composer page and generate PDF
       await browserPage.setViewport({ width: imgWidth, height: imgHeight, deviceScaleFactor: 1 });
-      await browserPage.setContent(composerHtml, { waitUntil: 'networkidle0' });
+      await browserPage.setContent(composerHtml, { waitUntil: 'load' });
 
       const pdfBuffer = await browserPage.pdf({
         width: `${imgWidth}px`,
@@ -254,8 +300,15 @@ export function pdfRoutes(app) {
 
       // RFC 5987 UTF-8 encoded filename support
       const title = notebook.title || 'notebook';
-      const asciiFallback = title.replace(/[^\x20-\x7E]/g, '_').trim() || 'notebook';
-      const encodedTitle = encodeURIComponent(title + '.pdf');
+      const safeTitle = String(title)
+        .replace(/[\r\n"]/g, ' ')
+        .trim()
+        .slice(0, 150) || 'notebook';
+      const asciiFallback = safeTitle
+        .replace(/[^\x20-\x7E]/g, '_')
+        .replace(/[\\/]/g, '_')
+        .trim() || 'notebook';
+      const encodedTitle = encodeURIComponent(safeTitle + '.pdf');
 
       res.set({
         'Content-Type': 'application/pdf',
@@ -265,7 +318,11 @@ export function pdfRoutes(app) {
       res.send(pdfBuffer);
     } catch (err) {
       console.error('PDF generation error:', err);
-      res.status(500).json({ error: 'Lỗi tạo PDF: ' + err.message });
+      if (!res.headersSent) {
+        res.status(500).json({
+          error: 'Không thể tạo PDF. Vui lòng thử lại sau.'
+        });
+      }
     } finally {
       if (browser) {
         try { await browser.close(); } catch {}

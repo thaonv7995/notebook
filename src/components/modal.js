@@ -434,7 +434,7 @@ export function showConfirmModal(title, message, { confirmText = 'Xác nhận', 
     if (!m.overlay) { resolve(confirm(message)); return; }
 
     m.title.textContent = title;
-    m.desc.innerHTML = message;
+    m.desc.textContent = String(message ?? '');
     m.input.style.display = 'none';
     m.btnCancel.style.display = '';
     m.btnCancel.textContent = 'Hủy bỏ';

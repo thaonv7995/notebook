@@ -195,9 +195,11 @@ function bindSettingsEvents() {
 
     if (key) {
       const masked = `${key.slice(0, 7)}${'•'.repeat(Math.max(8, key.length - 11))}${key.slice(-4)}`;
-      statusEl.innerHTML = `<span class="ai-key-saved">✓ Đã lưu cài đặt! (${masked})</span>`;
+      statusEl.className = 'ai-key-saved';
+      statusEl.textContent = `✓ Đã lưu cài đặt! (${masked})`;
     } else {
-      statusEl.innerHTML = '<span class="ai-key-empty">✓ Đã lưu URL & Model (Key trống).</span>';
+      statusEl.className = 'ai-key-empty';
+      statusEl.textContent = '✓ Đã lưu URL & Model (Key trống).';
     }
   });
 
@@ -209,17 +211,21 @@ function bindSettingsEvents() {
 
     testBtn.disabled = true;
     testBtn.textContent = '⏳ Đang kiểm tra...';
-    statusEl.innerHTML = '<span>Đang kết nối tới máy chủ AI...</span>';
+    statusEl.className = '';
+    statusEl.textContent = 'Đang kết nối tới máy chủ AI...';
 
     try {
       const result = await testApiKey(key, baseUrl, model);
       if (result.ok) {
-        statusEl.innerHTML = `<span class="ai-key-valid">✓ ${result.message || 'Kết nối thành công!'}</span>`;
+        statusEl.className = 'ai-key-valid';
+        statusEl.textContent = `✓ ${String(result.message || 'Kết nối thành công!')}`;
       } else {
-        statusEl.innerHTML = `<span class="ai-key-invalid">✕ ${result.error || 'Kết nối thất bại'}</span>`;
+        statusEl.className = 'ai-key-invalid';
+        statusEl.textContent = `✕ ${String(result.error || 'Kết nối thất bại')}`;
       }
     } catch (err) {
-      statusEl.innerHTML = `<span class="ai-key-invalid">✕ Lỗi kết nối: ${err.message}</span>`;
+      statusEl.className = 'ai-key-invalid';
+      statusEl.textContent = `✕ Lỗi kết nối: ${String(err?.message || 'Không xác định')}`;
     } finally {
       testBtn.disabled = false;
       testBtn.textContent = '🧪 Test kết nối';
@@ -230,7 +236,8 @@ function bindSettingsEvents() {
   removeBtn.addEventListener('click', () => {
     saveApiKey('');
     keyInput.value = '';
-    statusEl.innerHTML = '<span class="ai-key-empty">Đã xóa Key.</span>';
+    statusEl.className = 'ai-key-empty';
+    statusEl.textContent = 'Đã xóa Key.';
   });
 
   // Custom Model Input & Sync
@@ -291,12 +298,15 @@ function bindSettingsEvents() {
         });
         const data = await res.json();
         if (data.ok) {
-          bilingualStatus.innerHTML = '<span class="ai-key-saved">✓ Đã lưu cấu hình Bilingual URL thành công!</span>';
+          bilingualStatus.className = 'ai-key-saved';
+          bilingualStatus.textContent = '✓ Đã lưu cấu hình Bilingual URL thành công!';
         } else {
-          bilingualStatus.innerHTML = `<span class="ai-key-empty">✕ Lỗi: ${data.error || 'Không lưu được'}</span>`;
+          bilingualStatus.className = 'ai-key-empty';
+          bilingualStatus.textContent = `✕ Lỗi: ${String(data.error || 'Không lưu được')}`;
         }
       } catch (err) {
-        bilingualStatus.innerHTML = `<span class="ai-key-empty">✕ Lỗi kết nối: ${err.message}</span>`;
+        bilingualStatus.className = 'ai-key-empty';
+        bilingualStatus.textContent = `✕ Lỗi kết nối: ${String(err?.message || 'Không xác định')}`;
       } finally {
         bilingualSaveBtn.disabled = false;
         bilingualSaveBtn.textContent = '💾 Lưu cấu hình Sách';
@@ -307,20 +317,26 @@ function bindSettingsEvents() {
   // Test Bilingual App Connection
   if (bilingualTestBtn) {
     bilingualTestBtn.addEventListener('click', async () => {
-      const url = bilingualUrlInput.value.trim();
       bilingualTestBtn.disabled = true;
       bilingualTestBtn.textContent = '⏳ Đang kiểm tra...';
-      bilingualStatus.innerHTML = '<span style="color: #94a3b8;">⏳ Đang gửi tín hiệu kiểm tra tới máy chủ...</span>';
+      bilingualStatus.className = '';
+      bilingualStatus.style.color = '#94a3b8';
+      bilingualStatus.textContent = '⏳ Đang gửi tín hiệu kiểm tra tới máy chủ...';
       try {
-        const res = await fetch(`/api/bilingual/test?url=${encodeURIComponent(url)}`);
+        const res = await fetch('/api/bilingual/test');
         const data = await res.json();
+        bilingualStatus.style.color = '';
         if (data.ok) {
-          bilingualStatus.innerHTML = `<span class="ai-key-saved">✓ ${data.message}</span>`;
+          bilingualStatus.className = 'ai-key-saved';
+          bilingualStatus.textContent = `✓ ${String(data.message || 'Kết nối thành công!')}`;
         } else {
-          bilingualStatus.innerHTML = `<span class="ai-key-empty">✕ ${data.error}</span>`;
+          bilingualStatus.className = 'ai-key-empty';
+          bilingualStatus.textContent = `✕ ${String(data.error || 'Kết nối thất bại')}`;
         }
       } catch (err) {
-        bilingualStatus.innerHTML = `<span class="ai-key-empty">✕ Lỗi kết nối: ${err.message}</span>`;
+        bilingualStatus.style.color = '';
+        bilingualStatus.className = 'ai-key-empty';
+        bilingualStatus.textContent = `✕ Lỗi kết nối: ${String(err?.message || 'Không xác định')}`;
       } finally {
         bilingualTestBtn.disabled = false;
         bilingualTestBtn.textContent = '🧪 Test kết nối Sách';

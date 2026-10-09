@@ -653,7 +653,7 @@ export async function deletePageByIndex(idx) {
   const pageTitle = nb.pages[idx].topic || nb.pages[idx].title || `Trang ${pageNum}`;
   const confirmed = await showConfirmModal(
     'Xóa trang',
-    `Bạn có chắc chắn muốn xóa <strong>Trang ${pageNum} (${escapeHTML(pageTitle)})</strong> khỏi cuốn sổ <strong>"${escapeHTML(nb.title)}"</strong>?`,
+    `Bạn có chắc chắn muốn xóa Trang ${pageNum} (${pageTitle}) khỏi cuốn sổ "${nb.title}"?`,
     { confirmText: 'Xóa trang', danger: true }
   );
 
@@ -1128,7 +1128,7 @@ export async function deleteCurrentPage() {
   const pageNum = state.activePageIndex + 1;
   const confirmed = await showConfirmModal(
     'Xóa trang',
-    `Bạn có chắc muốn xóa <strong>Trang ${pageNum}</strong> khỏi cuốn sổ <strong>"${nb.title}"</strong>?`,
+    `Bạn có chắc muốn xóa Trang ${pageNum} khỏi cuốn sổ "${nb.title}"?`,
     { confirmText: 'Xóa trang', danger: true }
   );
   if (confirmed) {

@@ -7,6 +7,7 @@
 
 import fs from 'fs';
 import path from 'path';
+import { randomUUID } from 'crypto';
 import { fileURLToPath } from 'url';
 import { requireAuth } from './auth.js';
 import { loadFullState, saveFullState } from './db.js';
@@ -14,8 +15,106 @@ import { loadFullState, saveFullState } from './db.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-let BILINGUAL_URL = (process.env.BILINGUAL_APP_URL || 'http://127.0.0.1:27099').replace(/\/+$/, '');
-const BILINGUAL_CLIENT_ID = process.env.BILINGUAL_CLIENT_ID || 'notebook_client_v1';
+const IS_PRODUCTION = process.env.NODE_ENV === 'production';
+const BILINGUAL_CLIENT_ID = (process.env.BILINGUAL_CLIENT_ID || '').trim();
+const allowedBilingualHosts = new Set(
+  (process.env.BILINGUAL_ALLOWED_HOSTS || '')
+    .split(',')
+    .map(host => host.trim().toLowerCase())
+    .filter(Boolean)
+);
+
+// Safe defaults for local, single-machine installations.
+allowedBilingualHosts.add('127.0.0.1');
+allowedBilingualHosts.add('localhost');
+allowedBilingualHosts.add('::1');
+
+if (IS_PRODUCTION && !BILINGUAL_CLIENT_ID) {
+  throw new Error('Production requires BILINGUAL_CLIENT_ID');
+}
+
+function normalizeBilingualUrl(value) {
+  if (typeof value !== 'string' || !value.trim()) {
+    throw new Error('Bilingual URL không hợp lệ');
+  }
+
+  let parsed;
+  try {
+    parsed = new URL(value.trim());
+  } catch {
+    throw new Error('Bilingual URL không đúng định dạng');
+  }
+
+  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+    throw new Error('Bilingual URL chỉ hỗ trợ HTTP hoặc HTTPS');
+  }
+  if (parsed.username || parsed.password) {
+    throw new Error('Bilingual URL không được chứa thông tin đăng nhập');
+  }
+  if (parsed.pathname !== '/' || parsed.search || parsed.hash) {
+    throw new Error('Bilingual URL chỉ được chứa protocol, hostname và port');
+  }
+  if (!allowedBilingualHosts.has(parsed.hostname.toLowerCase())) {
+    throw new Error('Hostname của Bilingual App chưa được cho phép');
+  }
+
+  return parsed.origin;
+}
+
+let BILINGUAL_URL = normalizeBilingualUrl(
+  process.env.BILINGUAL_APP_URL || 'http://127.0.0.1:27099'
+);
+
+function bilingualHeaders() {
+  return BILINGUAL_CLIENT_ID
+    ? { 'X-Client-ID': BILINGUAL_CLIENT_ID }
+    : {};
+}
+
+async function readBilingualJson(response) {
+  const contentType = response.headers.get('content-type') || '';
+  if (!contentType.toLowerCase().includes('application/json')) {
+    throw new Error(`Bilingual App trả về định dạng không hợp lệ (HTTP ${response.status})`);
+  }
+
+  return response.json().catch(() => {
+    throw new Error('Không thể đọc phản hồi JSON từ Bilingual App');
+  });
+}
+
+function getBilingualProxyError(err) {
+  if (err?.name === 'TimeoutError' || err?.name === 'AbortError') {
+    return {
+      status: 504,
+      message: 'Bilingual App phản hồi quá chậm. Vui lòng thử lại.'
+    };
+  }
+
+  return {
+    status: 502,
+    message: 'Không thể kết nối hoặc nhận phản hồi hợp lệ từ Bilingual App.'
+  };
+}
+
+function escapeHtml(value) {
+  return String(value ?? '').replace(/[&<>"']/g, character => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;'
+  }[character]));
+}
+
+function normalizeText(value, maxLength, fallback = '') {
+  if (typeof value !== 'string') return fallback;
+  return value.trim().slice(0, maxLength);
+}
+
+function isValidSlug(value) {
+  return typeof value === 'string'
+    && /^[a-zA-Z0-9._-]{1,200}$/.test(value);
+}
 
 export function bilingualRoutes(app) {
   // ─── GET /api/bilingual/config — Get current Bilingual App config ───
@@ -29,42 +128,61 @@ export function bilingualRoutes(app) {
   // ─── POST /api/bilingual/config — Update Bilingual App URL & persist to .env ───
   app.post('/api/bilingual/config', requireAuth, (req, res) => {
     const { bilingualUrl } = req.body || {};
-    if (bilingualUrl && typeof bilingualUrl === 'string') {
-      const trimmed = bilingualUrl.trim().replace(/\/+$/, '');
-      if (trimmed) {
-        BILINGUAL_URL = trimmed;
-        process.env.BILINGUAL_APP_URL = trimmed;
-        try {
-          const envPath = path.resolve(__dirname, '..', '.env');
-          if (fs.existsSync(envPath)) {
-            let envContent = fs.readFileSync(envPath, 'utf8');
-            if (/^BILINGUAL_APP_URL=.*$/m.test(envContent)) {
-              envContent = envContent.replace(/^BILINGUAL_APP_URL=.*$/m, `BILINGUAL_APP_URL=${trimmed}`);
-            } else {
-              envContent += `\nBILINGUAL_APP_URL=${trimmed}\n`;
-            }
-            fs.writeFileSync(envPath, envContent, 'utf8');
+    try {
+      const normalizedUrl = normalizeBilingualUrl(bilingualUrl);
+      BILINGUAL_URL = normalizedUrl;
+      process.env.BILINGUAL_APP_URL = normalizedUrl;
+
+      try {
+        const envPath = path.resolve(__dirname, '..', '.env');
+        if (fs.existsSync(envPath)) {
+          let envContent = fs.readFileSync(envPath, 'utf8');
+          if (/^BILINGUAL_APP_URL=.*$/m.test(envContent)) {
+            envContent = envContent.replace(
+              /^BILINGUAL_APP_URL=.*$/m,
+              `BILINGUAL_APP_URL=${normalizedUrl}`
+            );
+          } else {
+            envContent += `\nBILINGUAL_APP_URL=${normalizedUrl}\n`;
           }
-        } catch (e) {
-          console.warn('[BilingualConfig] Failed to save .env:', e.message);
+
+          const tempEnvPath = `${envPath}.${process.pid}.${randomUUID()}.tmp`;
+          try {
+            fs.writeFileSync(tempEnvPath, envContent, {
+              encoding: 'utf8',
+              mode: 0o600
+            });
+            fs.renameSync(tempEnvPath, envPath);
+          } catch (writeError) {
+            try {
+              if (fs.existsSync(tempEnvPath)) {
+                fs.unlinkSync(tempEnvPath);
+              }
+            } catch {
+              // Preserve the original write error.
+            }
+            throw writeError;
+          }
         }
+      } catch (e) {
+        console.warn('[BilingualConfig] Failed to save .env:', e.message);
       }
+
+      return res.json({ ok: true, bilingualUrl: BILINGUAL_URL });
+    } catch (err) {
+      return res.status(400).json({ ok: false, error: err.message });
     }
-    res.json({ ok: true, bilingualUrl: BILINGUAL_URL });
   });
 
   // ─── GET /api/bilingual/test — Test connectivity to Bilingual App ───
   app.get('/api/bilingual/test', requireAuth, async (req, res) => {
     try {
-      const targetUrl = req.query.url ? String(req.query.url).trim().replace(/\/+$/, '') : BILINGUAL_URL;
-      const resp = await fetch(`${targetUrl}/api/books`, {
-        headers: {
-          'X-Client-ID': BILINGUAL_CLIENT_ID
-        },
+      const resp = await fetch(`${BILINGUAL_URL}/api/books`, {
+        headers: bilingualHeaders(),
         signal: AbortSignal.timeout(4000)
       });
       if (resp.ok) {
-        const books = await resp.json();
+        const books = await readBilingualJson(resp);
         const count = Array.isArray(books) ? books.length : (books?.books?.length || 0);
         return res.json({
           ok: true,
@@ -78,9 +196,10 @@ export function bilingualRoutes(app) {
         });
       }
     } catch (err) {
-      return res.status(502).json({
+      const safeError = getBilingualProxyError(err);
+      return res.status(safeError.status).json({
         ok: false,
-        error: `Không thể kết nối đến máy chủ: ${err.message}`
+        error: safeError.message
       });
     }
   });
@@ -88,9 +207,8 @@ export function bilingualRoutes(app) {
   app.get('/api/bilingual/books', requireAuth, async (req, res) => {
     try {
       const resp = await fetch(`${BILINGUAL_URL}/api/books`, {
-        headers: {
-          'X-Client-ID': BILINGUAL_CLIENT_ID
-        }
+        headers: bilingualHeaders(),
+        signal: AbortSignal.timeout(10000)
       });
 
       if (!resp.ok) {
@@ -100,13 +218,14 @@ export function bilingualRoutes(app) {
         });
       }
 
-      const books = await resp.json();
+      const books = await readBilingualJson(resp);
       res.json({ ok: true, books });
     } catch (err) {
       console.warn('[BilingualProxy] Failed to connect to Bilingual App:', err.message);
-      res.status(502).json({
+      const safeError = getBilingualProxyError(err);
+      res.status(safeError.status).json({
         ok: false,
-        error: 'Không thể kết nối đến máy chủ Bilingual App'
+        error: safeError.message
       });
     }
   });
@@ -115,15 +234,31 @@ export function bilingualRoutes(app) {
   app.get('/api/bilingual/books/:slug/page/:lang/:page', requireAuth, async (req, res) => {
     try {
       const { slug, lang } = req.params;
-      const page = parseInt(req.params.page, 10) || 1;
+      if (!/^[a-zA-Z0-9._-]{1,200}$/.test(slug)) {
+        return res.status(400).send('Slug sách không hợp lệ');
+      }
+      if (lang !== 'vi' && lang !== 'en') {
+        return res.status(400).send('Ngôn ngữ không hợp lệ');
+      }
+
+      const page = Number(req.params.page);
+      if (!Number.isSafeInteger(page) || page < 1 || page > 100000) {
+        return res.status(400).send('Số trang không hợp lệ');
+      }
       const padPage = String(page).padStart(4, '0');
 
-      const targetUrl = `${BILINGUAL_URL}/books/${encodeURIComponent(slug)}/output/${encodeURIComponent(lang)}/page_${padPage}.html?client_id=${BILINGUAL_CLIENT_ID}&embed=1`;
+      const targetUrl = new URL(
+        `/books/${encodeURIComponent(slug)}/output/${encodeURIComponent(lang)}/page_${padPage}.html`,
+        BILINGUAL_URL
+      );
+      targetUrl.searchParams.set('embed', '1');
+      if (BILINGUAL_CLIENT_ID) {
+        targetUrl.searchParams.set('client_id', BILINGUAL_CLIENT_ID);
+      }
 
       const resp = await fetch(targetUrl, {
-        headers: {
-          'X-Client-ID': BILINGUAL_CLIENT_ID
-        }
+        headers: bilingualHeaders(),
+        signal: AbortSignal.timeout(10000)
       });
 
       if (!resp.ok) {
@@ -252,17 +387,47 @@ export function bilingualRoutes(app) {
   });
 
   // ─── GET /api/bilingual/books/:slug/assets/{*assetPath} — Proxy static assets (CSS, images, fonts) ───
-  app.get('/api/bilingual/books/:slug/assets/{*assetPath}', async (req, res) => {
+  app.get('/api/bilingual/books/:slug/assets/{*assetPath}', requireAuth, async (req, res) => {
     try {
       const { slug } = req.params;
-      const assetPath = req.params.assetPath || '';
+      if (!/^[a-zA-Z0-9._-]{1,200}$/.test(slug)) {
+        return res.status(400).end();
+      }
 
-      const targetUrl = `${BILINGUAL_URL}/books/${encodeURIComponent(slug)}/output/assets/${assetPath}?client_id=${BILINGUAL_CLIENT_ID}`;
+      const rawSegments = Array.isArray(req.params.assetPath)
+        ? req.params.assetPath
+        : String(req.params.assetPath || '').split('/');
+      const pathSegments = rawSegments.map(s => String(s || '').trim()).filter(Boolean);
+      const joinedPath = pathSegments.join('/');
+
+      if (
+        pathSegments.length === 0
+        || joinedPath.length > 2000
+        || pathSegments.some(segment => (
+          segment === '.'
+          || segment === '..'
+          || segment.includes('/')
+          || segment.includes('\\')
+          || segment.includes('\0')
+        ))
+      ) {
+        return res.status(400).end();
+      }
+
+      const safeAssetPath = pathSegments
+        .map(segment => encodeURIComponent(segment))
+        .join('/');
+      const targetUrl = new URL(
+        `/books/${encodeURIComponent(slug)}/output/assets/${safeAssetPath}`,
+        BILINGUAL_URL
+      );
+      if (BILINGUAL_CLIENT_ID) {
+        targetUrl.searchParams.set('client_id', BILINGUAL_CLIENT_ID);
+      }
 
       const resp = await fetch(targetUrl, {
-        headers: {
-          'X-Client-ID': BILINGUAL_CLIENT_ID
-        }
+        headers: bilingualHeaders(),
+        signal: AbortSignal.timeout(10000)
       });
 
       if (!resp.ok) {
@@ -306,6 +471,13 @@ export function bilingualRoutes(app) {
   app.post('/api/bilingual/notebooks', requireAuth, (req, res) => {
     try {
       const { title, bookSlug, bookTitle, category = 'Sách song ngữ' } = req.body || {};
+      if (bookSlug && !isValidSlug(bookSlug)) {
+        return res.status(400).json({ ok: false, error: 'Book slug không hợp lệ' });
+      }
+
+      const safeTitle = normalizeText(title, 200);
+      const safeBookTitle = normalizeText(bookTitle, 200);
+      const safeCategory = normalizeText(category, 100, 'Sách song ngữ');
       const notebooks = loadFullState(req.user.id) || [];
       const now = new Date().toISOString();
       const newId = `nb-${Date.now()}`;
@@ -313,9 +485,9 @@ export function bilingualRoutes(app) {
 
       const newNotebook = {
         id: newId,
-        title: title || (bookTitle ? `[Ghi chép] ${bookTitle}` : 'Sổ ghi chép mới'),
+        title: safeTitle || (safeBookTitle ? `[Ghi chép] ${safeBookTitle}` : 'Sổ ghi chép mới'),
         author: `@${req.user.username || 'user'}`,
-        category,
+        category: safeCategory,
         lang: 'EN · VI',
         coverGradient: 'linear-gradient(135deg, #4f46e5, #0f172a)',
         coverTextColor: '#ffffff',
@@ -328,15 +500,15 @@ export function bilingualRoutes(app) {
           {
             id: firstPageId,
             lang: 'VI',
-            title: `Trang mở đầu — ${bookTitle || 'Ghi chép'}`,
-            topic: bookTitle || 'Đọc sách song ngữ',
+            title: `Trang mở đầu — ${safeBookTitle || 'Ghi chép'}`,
+            topic: safeBookTitle || 'Đọc sách song ngữ',
             project: bookSlug || '',
             date: new Date().toLocaleDateString('vi-VN'),
             no: '01',
             status: 'WIP',
             template: 'cornell',
             updatedAt: now,
-            content: `<h2>${title || (bookTitle ? `Ghi chép: ${bookTitle}` : 'Ghi chép mới')}</h2><p>Bắt đầu ghi chép các ý tưởng, từ vựng và câu trích dẫn từ sách...</p>`,
+            content: `<h2>${escapeHtml(safeTitle || (safeBookTitle ? `Ghi chép: ${safeBookTitle}` : 'Ghi chép mới'))}</h2><p>Bắt đầu ghi chép các ý tưởng, từ vựng và câu trích dẫn từ sách...</p>`,
             cues: '<div>✦ <strong>Mục tiêu:</strong> Đọc hiểu và tích lũy từ vựng</div>',
             notes: '',
             summary: ''
@@ -358,7 +530,21 @@ export function bilingualRoutes(app) {
     try {
       const { slug } = req.params;
       const { notebookId } = req.body || {};
+      if (!isValidSlug(slug)) {
+        return res.status(400).json({ ok: false, error: 'Book slug không hợp lệ' });
+      }
+      if (
+        notebookId !== null
+        && notebookId !== undefined
+        && (typeof notebookId !== 'string' || notebookId.length === 0 || notebookId.length > 200)
+      ) {
+        return res.status(400).json({ ok: false, error: 'Notebook ID không hợp lệ' });
+      }
+
       const notebooks = loadFullState(req.user.id) || [];
+      if (notebookId && !notebooks.some(nb => nb.id === notebookId)) {
+        return res.status(404).json({ ok: false, error: 'Không tìm thấy sổ tay' });
+      }
 
       notebooks.forEach(nb => {
         if (nb.id === notebookId) {
@@ -381,6 +567,10 @@ export function bilingualRoutes(app) {
   app.get('/api/bilingual/books/:slug/notebook-status', requireAuth, (req, res) => {
     try {
       const { slug } = req.params;
+      if (!isValidSlug(slug)) {
+        return res.status(400).json({ ok: false, error: 'Book slug không hợp lệ' });
+      }
+
       const notebooks = loadFullState(req.user.id) || [];
       
       let linked = notebooks.find(nb => nb.bookSlug === slug);
@@ -442,6 +632,24 @@ export function bilingualRoutes(app) {
     try {
       const { id } = req.params;
       const { bookSlug, bookTitle, page, type = 'note', text = '', note = '', vocab = null } = req.body || {};
+      if (typeof id !== 'string' || id.length === 0 || id.length > 200) {
+        return res.status(400).json({ ok: false, error: 'Notebook ID không hợp lệ' });
+      }
+      if (bookSlug && !isValidSlug(bookSlug)) {
+        return res.status(400).json({ ok: false, error: 'Book slug không hợp lệ' });
+      }
+      if (!['note', 'quote', 'vocab'].includes(type)) {
+        return res.status(400).json({ ok: false, error: 'Loại ghi chú không hợp lệ' });
+      }
+
+      const pageNum = Number(page);
+      if (!Number.isSafeInteger(pageNum) || pageNum < 1 || pageNum > 100000) {
+        return res.status(400).json({ ok: false, error: 'Số trang không hợp lệ' });
+      }
+
+      const safeText = normalizeText(text, 20000);
+      const safeNote = normalizeText(note, 10000);
+      const safeBookTitle = normalizeText(bookTitle, 200);
       const notebooks = loadFullState(req.user.id) || [];
       const notebook = notebooks.find(nb => nb.id === id);
 
@@ -454,7 +662,6 @@ export function bilingualRoutes(app) {
       }
 
       const now = new Date().toISOString();
-      const pageNum = parseInt(page, 10) || 1;
 
       if (!Array.isArray(notebook.pages)) notebook.pages = [];
       let targetPage = notebook.pages.find(p => p.bookPage === pageNum || (p.project === bookSlug && p.bookPage === pageNum));
@@ -463,8 +670,8 @@ export function bilingualRoutes(app) {
         targetPage = {
           id: `p-${Date.now()}-${notebook.pages.length + 1}`,
           lang: 'VI',
-          title: `${bookTitle || 'Sách'} — Trang ${pageNum}`,
-          topic: bookTitle || 'Đọc hiểu',
+          title: `${safeBookTitle || 'Sách'} — Trang ${pageNum}`,
+          topic: safeBookTitle || 'Đọc hiểu',
           project: bookSlug || '',
           bookPage: pageNum,
           date: new Date().toLocaleDateString('vi-VN'),
@@ -481,28 +688,40 @@ export function bilingualRoutes(app) {
       }
 
       if (type === 'vocab' && vocab) {
+        if (!vocab || typeof vocab !== 'object' || Array.isArray(vocab)) {
+          return res.status(400).json({ ok: false, error: 'Dữ liệu từ vựng không hợp lệ' });
+        }
+        const word = escapeHtml(normalizeText(vocab.word || safeText, 200));
+        const ipa = escapeHtml(normalizeText(vocab.ipa, 200));
+        const meaning = escapeHtml(normalizeText(vocab.meaningVi || vocab.meaningEn, 2000, '—'));
+        const example = escapeHtml(normalizeText(vocab.example, 5000));
+        const sourceTitle = escapeHtml(safeBookTitle || bookSlug);
         const vocabCardHtml = `
 <div class="note-vocab-card" style="margin: 10px 0; padding: 12px 14px; background: rgba(56, 189, 248, 0.08); border-left: 3px solid #38bdf8; border-radius: 6px;">
-  <div style="font-weight: 700; font-size: 15px; color: #0284c7;">✦ ${vocab.word || text} <span style="font-weight: 400; font-size: 13px; color: #64748b;">${vocab.ipa ? `/${vocab.ipa}/` : ''}</span></div>
-  <div style="margin-top: 4px; font-size: 14px; color: #334155;"><strong>Ý nghĩa:</strong> ${vocab.meaningVi || vocab.meaningEn || '—'}</div>
-  ${vocab.example ? `<div style="margin-top: 4px; font-size: 13px; font-style: italic; color: #64748b;">Ví dụ: "${vocab.example}"</div>` : ''}
-  <div style="margin-top: 6px; font-size: 11px; color: #94a3b8;">📖 ${bookTitle || bookSlug} (Trang ${pageNum})</div>
+  <div style="font-weight: 700; font-size: 15px; color: #0284c7;">✦ ${word} <span style="font-weight: 400; font-size: 13px; color: #64748b;">${ipa ? `/${ipa}/` : ''}</span></div>
+  <div style="margin-top: 4px; font-size: 14px; color: #334155;"><strong>Ý nghĩa:</strong> ${meaning}</div>
+  ${example ? `<div style="margin-top: 4px; font-size: 13px; font-style: italic; color: #64748b;">Ví dụ: "${example}"</div>` : ''}
+  <div style="margin-top: 6px; font-size: 11px; color: #94a3b8;">📖 ${sourceTitle} (Trang ${pageNum})</div>
 </div>`;
-        targetPage.cues = (targetPage.cues ? targetPage.cues + '<br>' : '') + `✦ <strong>${vocab.word || text}</strong>: ${vocab.meaningVi || vocab.meaningEn || ''}`;
+        targetPage.cues = (targetPage.cues ? targetPage.cues + '<br>' : '') + `✦ <strong>${word}</strong>: ${meaning}`;
         targetPage.notes = (targetPage.notes || '') + vocabCardHtml;
       } else if (type === 'quote') {
+        const escapedText = escapeHtml(safeText);
+        const escapedNote = escapeHtml(safeNote);
+        const escapedBookTitle = escapeHtml(safeBookTitle || bookSlug);
         const quoteHtml = `
 <blockquote style="margin: 10px 0; padding: 10px 14px; border-left: 3px solid #8b5cf6; background: rgba(139, 92, 246, 0.08); border-radius: 4px; font-style: italic; color: #1e293b;">
-  "${text}"
-  <div style="font-style: normal; font-size: 11px; color: #64748b; margin-top: 5px;">— Trích từ <strong>${bookTitle || bookSlug}</strong>, Trang ${pageNum}</div>
+  "${escapedText}"
+  <div style="font-style: normal; font-size: 11px; color: #64748b; margin-top: 5px;">— Trích từ <strong>${escapedBookTitle}</strong>, Trang ${pageNum}</div>
 </blockquote>
-${note ? `<p style="margin: 4px 0 10px 12px; color: #334155;">💬 <strong>Ghi chú:</strong> ${note}</p>` : ''}`;
+${escapedNote ? `<p style="margin: 4px 0 10px 12px; color: #334155;">💬 <strong>Ghi chú:</strong> ${escapedNote}</p>` : ''}`;
         targetPage.notes = (targetPage.notes || '') + quoteHtml;
       } else {
+        const escapedText = escapeHtml(safeText);
         const noteHtml = `
 <div style="margin: 10px 0; padding: 8px 12px; background: rgba(16, 185, 129, 0.08); border-left: 3px solid #10b981; border-radius: 4px;">
   <div style="font-size: 11px; color: #059669; font-weight: 600;">📝 Ghi chú Trang ${pageNum} (${new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })})</div>
-  <p style="margin: 4px 0; color: #1e293b;">${text}</p>
+  <p style="margin: 4px 0; color: #1e293b;">${escapedText}</p>
 </div>`;
         targetPage.notes = (targetPage.notes || '') + noteHtml;
       }
@@ -529,10 +748,27 @@ ${note ? `<p style="margin: 4px 0 10px 12px; color: #334155;">💬 <strong>Ghi c
   app.get('/api/bilingual/notebooks/:id/page-detail', requireAuth, (req, res) => {
     try {
       const { id } = req.params;
-      const pageId = req.query.pageId || '';
-      const bookSlug = req.query.bookSlug || '';
-      const bookTitle = req.query.bookTitle || '';
-      const pageNum = req.query.page ? parseInt(req.query.page, 10) : null;
+      if (typeof id !== 'string' || id.length === 0 || id.length > 200) {
+        return res.status(400).json({ ok: false, error: 'Notebook ID không hợp lệ' });
+      }
+
+      const pageId = normalizeText(req.query.pageId, 200);
+      const bookSlug = normalizeText(req.query.bookSlug, 200);
+      const bookTitle = normalizeText(req.query.bookTitle, 200);
+      if (bookSlug && !isValidSlug(bookSlug)) {
+        return res.status(400).json({ ok: false, error: 'Book slug không hợp lệ' });
+      }
+
+      const pageNum = req.query.page !== undefined
+        ? Number(req.query.page)
+        : null;
+      if (
+        pageNum !== null
+        && (!Number.isSafeInteger(pageNum) || pageNum < 1 || pageNum > 100000)
+      ) {
+        return res.status(400).json({ ok: false, error: 'Số trang không hợp lệ' });
+      }
+
       const notebooks = loadFullState(req.user.id) || [];
       const notebook = notebooks.find(nb => nb.id === id);
 
@@ -612,7 +848,6 @@ ${note ? `<p style="margin: 4px 0 10px 12px; color: #334155;">💬 <strong>Ghi c
   app.put('/api/bilingual/notebooks/:id/page-detail', requireAuth, (req, res) => {
     try {
       const { id } = req.params;
-      console.log(`\n🔥🔥🔥 [PUT /page-detail] pageId=${req.body?.pageId} notes=${JSON.stringify(req.body?.notes?.slice(0, 100))}\n`);
       const {
         pageId,
         bookSlug,
@@ -630,6 +865,55 @@ ${note ? `<p style="margin: 4px 0 10px 12px; color: #334155;">💬 <strong>Ghi c
         content = ''
       } = req.body || {};
 
+      if (typeof id !== 'string' || id.length === 0 || id.length > 200) {
+        return res.status(400).json({ ok: false, error: 'Notebook ID không hợp lệ' });
+      }
+      if (
+        pageId !== undefined
+        && pageId !== null
+        && (typeof pageId !== 'string' || pageId.length === 0 || pageId.length > 200)
+      ) {
+        return res.status(400).json({ ok: false, error: 'Page ID không hợp lệ' });
+      }
+      if (bookSlug && !isValidSlug(bookSlug)) {
+        return res.status(400).json({ ok: false, error: 'Book slug không hợp lệ' });
+      }
+
+      const pageNum = page !== undefined && page !== null ? Number(page) : null;
+      if (
+        pageNum !== null
+        && (!Number.isSafeInteger(pageNum) || pageNum < 1 || pageNum > 100000)
+      ) {
+        return res.status(400).json({ ok: false, error: 'Số trang không hợp lệ' });
+      }
+
+      const allowedTemplates = new Set([
+        'cornell',
+        'reading',
+        'ruled',
+        'vocab',
+        'work',
+        'blank',
+        'grid',
+        'dotgrid',
+        'charting',
+        'quadrant'
+      ]);
+      if (!allowedTemplates.has(template)) {
+        return res.status(400).json({ ok: false, error: 'Mẫu trang không hợp lệ' });
+      }
+
+      const safeBookTitle = normalizeText(bookTitle, 200);
+      const safeTopic = normalizeText(topic, 500);
+      const safeTitle = normalizeText(title, 500);
+      const safeDate = normalizeText(date, 100);
+      const safeNo = normalizeText(no, 50);
+      const safeStatus = normalizeText(status, 50, 'WIP');
+      const safeCues = normalizeText(cues, 200000);
+      const safeNotes = normalizeText(notes, 500000);
+      const safeSummary = normalizeText(summary, 200000);
+      const safeContent = normalizeText(content, 500000);
+
       const notebooks = loadFullState(req.user.id) || [];
       const notebook = notebooks.find(nb => nb.id === id);
 
@@ -642,7 +926,6 @@ ${note ? `<p style="margin: 4px 0 10px 12px; color: #334155;">💬 <strong>Ghi c
       }
 
       const now = new Date().toISOString();
-      const pageNum = page !== undefined && page !== null ? parseInt(page, 10) : null;
 
       if (!Array.isArray(notebook.pages)) notebook.pages = [];
       let targetPage = null;
@@ -662,35 +945,35 @@ ${note ? `<p style="margin: 4px 0 10px 12px; color: #334155;">💬 <strong>Ghi c
         targetPage = {
           id: pageId || `p-${Date.now()}-${notebook.pages.length + 1}`,
           lang: 'VI',
-          title: title || `${bookTitle || 'Sách'} — Trang ${fallbackNum}`,
-          topic: topic || bookTitle || 'Đọc hiểu',
+          title: safeTitle || `${safeBookTitle || 'Sách'} — Trang ${fallbackNum}`,
+          topic: safeTopic || safeBookTitle || 'Đọc hiểu',
           project: bookSlug || '',
           bookPage: fallbackNum,
-          date: date || new Date().toLocaleDateString('vi-VN'),
-          no: no || String(fallbackNum).padStart(2, '0'),
-          status,
+          date: safeDate || new Date().toLocaleDateString('vi-VN'),
+          no: safeNo || String(fallbackNum).padStart(2, '0'),
+          status: safeStatus,
           template,
           updatedAt: now,
-          cues,
-          notes,
-          summary,
-          content: content || notes || ''
+          cues: safeCues,
+          notes: safeNotes,
+          summary: safeSummary,
+          content: safeContent || safeNotes || ''
         };
         notebook.pages.push(targetPage);
       } else {
         if (template) targetPage.template = template;
-        if (topic !== undefined) targetPage.topic = topic;
-        if (title !== undefined) targetPage.title = title;
-        if (date !== undefined) targetPage.date = date;
-        if (no !== undefined) targetPage.no = no;
-        if (status !== undefined) targetPage.status = status;
-        if (cues !== undefined) targetPage.cues = cues;
+        if (topic !== undefined) targetPage.topic = safeTopic;
+        if (title !== undefined) targetPage.title = safeTitle;
+        if (date !== undefined) targetPage.date = safeDate;
+        if (no !== undefined) targetPage.no = safeNo;
+        if (status !== undefined) targetPage.status = safeStatus;
+        if (cues !== undefined) targetPage.cues = safeCues;
         if (notes !== undefined) {
-          targetPage.notes = notes;
-          if (!content) targetPage.content = notes;
+          targetPage.notes = safeNotes;
+          if (!safeContent) targetPage.content = safeNotes;
         }
-        if (summary !== undefined) targetPage.summary = summary;
-        if (content !== undefined && content !== '') targetPage.content = content;
+        if (summary !== undefined) targetPage.summary = safeSummary;
+        if (content !== undefined && safeContent !== '') targetPage.content = safeContent;
         targetPage.updatedAt = now;
       }
 

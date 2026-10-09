@@ -11,6 +11,40 @@ import { openNotebook, returnToLibrary } from '../components/reader.js';
 
 export const DEFAULT_APP_TITLE = 'Notebook Studio • Sổ Tay Thông Minh & Mẫu A4';
 
+function normalizeRouteBookId(value) {
+  if (typeof value !== 'string') return null;
+
+  let decoded = value;
+  try {
+    decoded = decodeURIComponent(value);
+  } catch {
+    return null;
+  }
+
+  decoded = decoded.trim();
+  if (
+    decoded.length === 0
+    || decoded.length > 200
+    || !/^[a-zA-Z0-9._:-]+$/.test(decoded)
+  ) {
+    return null;
+  }
+
+  return decoded;
+}
+
+function normalizePageIndex(value, maxPages = null) {
+  const pageNumber = Number.parseInt(value, 10);
+  if (!Number.isSafeInteger(pageNumber) || pageNumber < 1) return 0;
+
+  const pageIndex = pageNumber - 1;
+  if (Number.isSafeInteger(maxPages) && maxPages > 0) {
+    return Math.min(pageIndex, maxPages - 1);
+  }
+
+  return Math.min(pageIndex, 99999);
+}
+
 export function copyTextToClipboard(text, successMsg = 'Đã sao chép vào clipboard!') {
   if (navigator.clipboard && navigator.clipboard.writeText) {
     navigator.clipboard.writeText(text).then(() => {
@@ -67,19 +101,21 @@ export function parseRouteFromUrl() {
         if (found) bookId = found.id;
       }
 
+      bookId = normalizeRouteBookId(bookId);
       if (bookId) {
         let pageIndex = 0;
         const targetBook = (state.notebooks || []).find(n => n.id === bookId);
-        const rawTargetNum = parseInt(bookPageParam || params.get('page') || params.get('p') || '', 10);
-        if (targetBook && !isNaN(rawTargetNum)) {
+        const rawPageValue = bookPageParam || params.get('page') || params.get('p') || '';
+        const rawTargetNum = Number.parseInt(rawPageValue, 10);
+        if (targetBook && Number.isSafeInteger(rawTargetNum) && rawTargetNum > 0) {
           const pageFoundIdx = (targetBook.pages || []).findIndex(p => p.bookPage === rawTargetNum || parseInt(p.no, 10) === rawTargetNum);
           if (pageFoundIdx >= 0) {
             pageIndex = pageFoundIdx;
           } else {
-            pageIndex = Math.max(0, Math.min(rawTargetNum - 1, (targetBook.pages || []).length - 1));
+            pageIndex = normalizePageIndex(rawPageValue, (targetBook.pages || []).length);
           }
         }
-        return { bookId: decodeURIComponent(bookId), pageIndex };
+        return { bookId, pageIndex };
       }
     }
   } catch (e) {
@@ -93,27 +129,26 @@ export function parseRouteFromUrl() {
       if (hash.startsWith('#/book/') || hash.startsWith('#/notebook/')) {
         const cleanHash = hash.replace(/^#(?:(?:\/book\/)|(?:\/notebook\/))/, '');
         const parts = cleanHash.split('/');
-        const bookId = decodeURIComponent(parts[0]);
+        const bookId = normalizeRouteBookId(parts[0]);
         let pageIndex = 0;
         if (parts[1]) {
           if (parts[1] === 'page' && parts[2]) {
-            const p = parseInt(parts[2], 10);
-            if (!isNaN(p) && p > 0) pageIndex = p - 1;
+            pageIndex = normalizePageIndex(parts[2]);
           } else {
-            const p = parseInt(parts[1], 10);
-            if (!isNaN(p) && p > 0) pageIndex = p - 1;
+            pageIndex = normalizePageIndex(parts[1]);
           }
         }
         if (bookId) return { bookId, pageIndex };
       } else if (hash.includes('book=') || hash.includes('id=')) {
         const hashQuery = hash.replace(/^#\??/, '');
         const hashParams = new URLSearchParams(hashQuery);
-        const bookId = hashParams.get('book') || hashParams.get('id') || hashParams.get('notebook');
+        const bookId = normalizeRouteBookId(
+          hashParams.get('book') || hashParams.get('id') || hashParams.get('notebook')
+        );
         if (bookId) {
           const rawPage = hashParams.get('page') || hashParams.get('p');
-          const parsedPage = rawPage ? parseInt(rawPage, 10) : 1;
-          const pageIndex = !isNaN(parsedPage) && parsedPage > 0 ? parsedPage - 1 : 0;
-          return { bookId: decodeURIComponent(bookId), pageIndex };
+          const pageIndex = normalizePageIndex(rawPage || '1');
+          return { bookId, pageIndex };
         }
       }
     }

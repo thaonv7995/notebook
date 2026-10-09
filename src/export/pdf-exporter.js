@@ -163,6 +163,52 @@ export async function exportPdfFromServer(includeCover = false) {
     await new Promise(r => setTimeout(r, 300));
 
     // ── Pre-capture fixes for html2canvas ──
+    // Convert inputs to static spans to prevent html2canvas input vertical baseline shifts and text clipping
+    offscreen.querySelectorAll('input').forEach(input => {
+      const span = document.createElement('span');
+      span.className = input.className;
+      span.textContent = input.value || '';
+      if (!input.value) {
+        span.innerHTML = '&nbsp;';
+      }
+      if (input.style.cssText) {
+        span.style.cssText = input.style.cssText;
+      }
+      for (const [key, val] of Object.entries(input.dataset || {})) {
+        span.dataset[key] = val;
+      }
+      span.style.display = 'inline-block';
+      span.style.verticalAlign = 'baseline';
+      span.style.lineHeight = '1.25';
+      span.style.boxSizing = 'border-box';
+      input.replaceWith(span);
+    });
+
+    // Convert status pill buttons to static spans for perfect vertical centering in html2canvas
+    offscreen.querySelectorAll('button.status-pill-btn').forEach(btn => {
+      const span = document.createElement('span');
+      span.className = btn.className;
+      span.innerHTML = btn.innerHTML;
+      span.style.display = 'inline-flex';
+      span.style.alignItems = 'center';
+      span.style.justifyContent = 'center';
+      span.style.fontFamily = 'inherit';
+      span.style.fontSize = '8.5px';
+      span.style.fontWeight = '700';
+      span.style.lineHeight = '1';
+      span.style.height = '16px';
+      span.style.padding = '0 5px 2px 5px';
+      span.style.borderRadius = '3px';
+      span.style.boxSizing = 'border-box';
+      span.style.verticalAlign = 'middle';
+      btn.replaceWith(span);
+    });
+
+    // Fix header purpose badge letter-spacing to prevent word-break artifacts in html2canvas
+    offscreen.querySelectorAll('.header-purpose-badge').forEach(badge => {
+      badge.style.letterSpacing = '0.5px';
+    });
+
     // Paper background and line color lookup
     const paperBgs = {
       cream: '#faf7f0', white: '#ffffff', ivory: '#f5f0e0',

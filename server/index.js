@@ -25,6 +25,19 @@ import { bilingualRoutes } from './bilingual.js';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PORT = parseInt(process.env.PORT, 10) || 27972;
 const IS_DEV = process.env.NODE_ENV !== 'production';
+const allowedOrigins = new Set(
+  (process.env.CORS_ORIGINS || '')
+    .split(',')
+    .map(origin => origin.trim())
+    .filter(Boolean)
+);
+
+if (IS_DEV) {
+  allowedOrigins.add(`http://localhost:${PORT}`);
+  allowedOrigins.add(`http://127.0.0.1:${PORT}`);
+  allowedOrigins.add(`http://localhost:${PORT + 1}`);
+  allowedOrigins.add(`http://127.0.0.1:${PORT + 1}`);
+}
 
 // Ensure writable TMPDIR for environments with read-only /tmp (e.g. systemd ProtectSystem=strict, containers)
 const localTempDir = join(__dirname, '..', 'data', 'temp');
@@ -47,8 +60,70 @@ try {
 const app = express();
 
 // ─── Middleware ───
-app.use(cors({ origin: true, credentials: true }));
-app.use(express.json({ limit: '50mb' }));
+app.disable('x-powered-by');
+
+// Only trust forwarded client IPs when the deployment explicitly enables it.
+// Set TRUST_PROXY=1 for a single trusted reverse proxy such as Nginx.
+if (process.env.TRUST_PROXY) {
+  const trustProxy = /^\d+$/.test(process.env.TRUST_PROXY)
+    ? Number(process.env.TRUST_PROXY)
+    : process.env.TRUST_PROXY;
+  app.set('trust proxy', trustProxy);
+}
+
+// Baseline security headers. CSP is intentionally scoped to production because
+// Vite development mode requires websocket and development script connections.
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+  res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
+  res.setHeader('Cross-Origin-Resource-Policy', 'same-origin');
+
+  if (!IS_DEV) {
+    res.setHeader(
+      'Content-Security-Policy',
+      [
+        "default-src 'self'",
+        "base-uri 'self'",
+        "object-src 'none'",
+        "frame-ancestors 'self'",
+        "form-action 'self'",
+        "script-src 'self'",
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+        "img-src 'self' data: blob: https:",
+        "font-src 'self' data: https://fonts.gstatic.com",
+        "connect-src 'self' https:",
+        "frame-src 'self'",
+        "worker-src 'self' blob:",
+        "manifest-src 'self'"
+      ].join('; ')
+    );
+  }
+
+  next();
+});
+
+app.use(cors((req, callback) => {
+  const origin = req.header('Origin');
+  const host = req.get('host');
+  const isSameOrigin = Boolean(
+    origin && host && (
+      origin === `http://${host}` ||
+      origin === `https://${host}` ||
+      origin === `${req.protocol}://${host}`
+    )
+  );
+
+  // Native apps, CLI clients, same-origin requests, or explicit allowedOrigins
+  if (!origin || isSameOrigin || allowedOrigins.has(origin)) {
+    return callback(null, { origin: true, credentials: true });
+  }
+
+  return callback(new Error('Origin is not allowed by CORS policy'));
+}));
+app.use(express.json({ limit: process.env.JSON_BODY_LIMIT || '10mb' }));
 app.use(cookieParser());
 
 // ─── API Routes ───
@@ -64,6 +139,45 @@ app.all('/api/{*path}', (req, res) => {
 });
 app.all('/api', (req, res) => {
   res.status(404).json({ ok: false, error: 'Endpoint không tồn tại' });
+});
+
+// Return controlled JSON errors for API requests, including rejected CORS
+// origins and oversized/malformed JSON payloads.
+app.use((err, req, res, next) => {
+  if (res.headersSent) {
+    return next(err);
+  }
+
+  if (err?.message === 'Origin is not allowed by CORS policy') {
+    return res.status(403).json({
+      ok: false,
+      error: 'Origin không được phép'
+    });
+  }
+
+  if (err?.type === 'entity.too.large') {
+    return res.status(413).json({
+      ok: false,
+      error: 'Dữ liệu gửi lên vượt quá giới hạn cho phép'
+    });
+  }
+
+  if (err instanceof SyntaxError && err?.type === 'entity.parse.failed') {
+    return res.status(400).json({
+      ok: false,
+      error: 'JSON không hợp lệ'
+    });
+  }
+
+  console.error('Unhandled request error:', err);
+  if (req.path.startsWith('/api')) {
+    return res.status(500).json({
+      ok: false,
+      error: 'Lỗi máy chủ nội bộ'
+    });
+  }
+
+  return next(err);
 });
 
 // ─── PWA & Asset Handlers (guarantees correct MIME types in dev & prod) ───

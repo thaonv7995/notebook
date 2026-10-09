@@ -9,11 +9,159 @@
 import { requireAuth } from './auth.js';
 
 const DEFAULT_BASE_URL = (process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1').replace(/\/+$/, '');
+const AI_REQUEST_TIMEOUT_MS = Math.max(
+  5000,
+  Math.min(Number(process.env.AI_REQUEST_TIMEOUT_MS) || 120000, 300000)
+);
+const MAX_MODEL_LENGTH = 200;
+const MAX_PROMPT_LENGTH = 50000;
+const MAX_SELECTED_TEXT_LENGTH = 100000;
+const MAX_CONTEXT_LENGTH = 100000;
+const ALLOWED_ACTIONS = new Set([
+  'write',
+  'continue',
+  'rewrite',
+  'summarize',
+  'expand',
+  'shorten',
+  'grammar',
+  'translate',
+  'autofill',
+  'style'
+]);
+const ALLOWED_TEMPLATES = new Set([
+  'cornell',
+  'reading',
+  'ruled',
+  'vocab',
+  'work',
+  'blank',
+  'grid',
+  'dotgrid',
+  'charting',
+  'quadrant'
+]);
+
+function normalizeModel(value) {
+  if (typeof value !== 'string') return 'gpt-4o-mini';
+  const model = value.trim();
+  if (!model) return 'gpt-4o-mini';
+  if (
+    model.length > MAX_MODEL_LENGTH
+    || !/^[a-zA-Z0-9._:/-]+$/.test(model)
+  ) {
+    throw new Error('Tên model không hợp lệ.');
+  }
+  return model;
+}
+
+function normalizeAiPayload(body = {}) {
+  const prompt = typeof body.prompt === 'string' ? body.prompt : '';
+  const selectedText = typeof body.selectedText === 'string' ? body.selectedText : '';
+  const fullContext = typeof body.fullContext === 'string' ? body.fullContext : '';
+  const targetLang = typeof body.targetLang === 'string'
+    ? body.targetLang.trim().slice(0, 100)
+    : '';
+  const action = ALLOWED_ACTIONS.has(body.action) ? body.action : 'write';
+  const template = ALLOWED_TEMPLATES.has(body.template) ? body.template : 'ruled';
+
+  if (prompt.length > MAX_PROMPT_LENGTH) {
+    throw new Error(`Prompt vượt quá ${MAX_PROMPT_LENGTH} ký tự.`);
+  }
+  if (selectedText.length > MAX_SELECTED_TEXT_LENGTH) {
+    throw new Error(`Văn bản được chọn vượt quá ${MAX_SELECTED_TEXT_LENGTH} ký tự.`);
+  }
+  if (fullContext.length > MAX_CONTEXT_LENGTH) {
+    throw new Error(`Ngữ cảnh vượt quá ${MAX_CONTEXT_LENGTH} ký tự.`);
+  }
+
+  const rawConstraints = body.constraints
+    && typeof body.constraints === 'object'
+    && !Array.isArray(body.constraints)
+    ? body.constraints
+    : {};
+
+  const clampInteger = (value, fallback, min, max) => {
+    const number = Number(value);
+    return Number.isFinite(number)
+      ? Math.max(min, Math.min(Math.trunc(number), max))
+      : fallback;
+  };
+
+  const normalizeShortText = (value, fallback, maxLength = 100) => (
+    typeof value === 'string'
+      ? value.trim().slice(0, maxLength) || fallback
+      : fallback
+  );
+
+  const constraints = {
+    totalLineCapacity: clampInteger(rawConstraints.totalLineCapacity, 18, 1, 200),
+    remainingLines: clampInteger(rawConstraints.remainingLines, 15, 0, 200),
+    charsPerLine: clampInteger(rawConstraints.charsPerLine, 50, 10, 500),
+    fontSize: normalizeShortText(rawConstraints.fontSize, '16px', 20),
+    lineHeight: normalizeShortText(rawConstraints.lineHeight, '28px', 20),
+    sheetSize: normalizeShortText(rawConstraints.sheetSize, '480x680px', 50),
+    pageMode: normalizeShortText(rawConstraints.pageMode, '2-page', 30),
+    areaWidth: normalizeShortText(rawConstraints.areaWidth, '440px', 20)
+  };
+
+  if (constraints.remainingLines > constraints.totalLineCapacity) {
+    constraints.remainingLines = constraints.totalLineCapacity;
+  }
+
+  return {
+    prompt,
+    selectedText,
+    fullContext,
+    action,
+    template,
+    targetLang,
+    model: normalizeModel(body.model),
+    constraints
+  };
+}
+
+function getSafeAiError(err) {
+  if (err?.name === 'TimeoutError' || err?.name === 'AbortError') {
+    return {
+      status: 504,
+      message: 'Máy chủ AI phản hồi quá chậm. Vui lòng thử lại.'
+    };
+  }
+
+  const message = typeof err?.message === 'string' ? err.message : '';
+  const isValidationError = [
+    'Base URL',
+    'Giao thức',
+    'Tên model',
+    'Prompt vượt quá',
+    'Văn bản được chọn vượt quá',
+    'Ngữ cảnh vượt quá',
+    'Không thể kết nối đến địa chỉ mạng nội bộ',
+    'Địa chỉ Base URL bị từ chối'
+  ].some(prefix => message.startsWith(prefix));
+
+  if (isValidationError) {
+    return {
+      status: 400,
+      message
+    };
+  }
+
+  return {
+    status: 502,
+    message: 'Không thể kết nối hoặc nhận phản hồi hợp lệ từ máy chủ AI.'
+  };
+}
 
 function validateAndResolveEndpoint(req, path = '/chat/completions') {
   const headerBase = req.headers['x-base-url'];
   const bodyBase = req.body && req.body.baseUrl;
-  const rawBase = (headerBase || bodyBase || DEFAULT_BASE_URL).trim();
+  const selectedBase = headerBase || bodyBase || DEFAULT_BASE_URL;
+  if (typeof selectedBase !== 'string' || !selectedBase.trim() || selectedBase.length > 2048) {
+    throw new Error('Base URL không hợp lệ.');
+  }
+  const rawBase = selectedBase.trim();
 
   let parsedUrl;
   try {
@@ -25,6 +173,12 @@ function validateAndResolveEndpoint(req, path = '/chat/completions') {
   // Only allow HTTP/HTTPS
   if (parsedUrl.protocol !== 'http:' && parsedUrl.protocol !== 'https:') {
     throw new Error('Giao thức không được hỗ trợ. Chỉ chấp nhận http: hoặc https:.');
+  }
+  if (parsedUrl.username || parsedUrl.password) {
+    throw new Error('Base URL không được chứa thông tin đăng nhập.');
+  }
+  if (parsedUrl.search || parsedUrl.hash) {
+    throw new Error('Base URL không được chứa query string hoặc fragment.');
   }
 
   const hostname = parsedUrl.hostname.toLowerCase();
@@ -40,24 +194,36 @@ function validateAndResolveEndpoint(req, path = '/chat/completions') {
     throw new Error('Địa chỉ Base URL bị từ chối vì lý do an toàn bảo mật (SSRF Guard).');
   }
 
-  // In production, block private internal networks unless explicitly allowed
-  if (process.env.NODE_ENV === 'production' && process.env.ALLOW_LOCAL_AI !== 'true') {
-    const isPrivateIp = /^10\./.test(hostname)
-      || /^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(hostname)
-      || /^192\.168\./.test(hostname)
-      || hostname === '0.0.0.0';
+  const isPrivateIp = /^10\./.test(hostname)
+    || /^127\./.test(hostname)
+    || /^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(hostname)
+    || /^192\.168\./.test(hostname)
+    || /^169\.254\./.test(hostname)
+    || hostname === '0.0.0.0'
+    || hostname === '::'
+    || hostname === '::1';
 
-    if (isPrivateIp) {
-      throw new Error('Không thể kết nối đến địa chỉ mạng nội bộ trong môi trường production.');
-    }
+  if (
+    process.env.NODE_ENV === 'production'
+    && process.env.ALLOW_LOCAL_AI !== 'true'
+    && (isLocal || isPrivateIp)
+  ) {
+    throw new Error('Không thể kết nối đến địa chỉ mạng nội bộ trong môi trường production.');
   }
 
-  let normalizedBase = rawBase.replace(/\/+$/, '');
-  let finalUrl = normalizedBase.endsWith(path) ? normalizedBase : `${normalizedBase}${path}`;
+  const normalizedPath = parsedUrl.pathname.replace(/\/+$/, '');
+  parsedUrl.pathname = normalizedPath.endsWith(path)
+    ? normalizedPath
+    : `${normalizedPath}${path}`;
 
-  const isCustomBaseUrl = normalizedBase !== DEFAULT_BASE_URL;
+  const endpointUrl = parsedUrl.toString();
+  const normalizedDefault = new URL(DEFAULT_BASE_URL);
+  normalizedDefault.pathname = normalizedDefault.pathname.replace(/\/+$/, '');
+  const normalizedBaseOrigin = `${parsedUrl.origin}${normalizedPath}`;
+  const normalizedDefaultBase = `${normalizedDefault.origin}${normalizedDefault.pathname}`;
+  const isCustomBaseUrl = normalizedBaseOrigin !== normalizedDefaultBase;
 
-  return { endpointUrl: finalUrl, isCustomBaseUrl, isLocal };
+  return { endpointUrl, isCustomBaseUrl, isLocal };
 }
 
 function resolveApiKey(req, isCustomBaseUrl = false) {
@@ -320,8 +486,7 @@ export function aiRoutes(app) {
         });
       }
 
-      const { model = 'gpt-4o-mini' } = req.body || {};
-      const targetModel = (typeof model === 'string' && model.trim()) ? model.trim() : 'gpt-4o-mini';
+      const targetModel = normalizeModel(req.body?.model);
 
       const headers = {
         'Content-Type': 'application/json'
@@ -338,7 +503,8 @@ export function aiRoutes(app) {
           model: targetModel,
           messages: [{ role: 'user', content: 'ping' }],
           max_tokens: 5
-        })
+        }),
+        signal: AbortSignal.timeout(Math.min(AI_REQUEST_TIMEOUT_MS, 15000))
       });
 
       if (!response.ok) {
@@ -353,7 +519,11 @@ export function aiRoutes(app) {
       res.json({ ok: true, message: `Kết nối thành công tới ${targetModel}!` });
     } catch (err) {
       console.error('Test API key error:', err);
-      res.status(500).json({ ok: false, error: 'Không thể kết nối đến máy chủ AI: ' + (err.message || String(err)) });
+      const safeError = getSafeAiError(err);
+      res.status(safeError.status).json({
+        ok: false,
+        error: safeError.message
+      });
     }
   });
 
@@ -373,17 +543,15 @@ export function aiRoutes(app) {
       }
 
       const {
-        prompt = '',
-        selectedText = '',
-        fullContext = '',
-        action = 'write',
-        template = 'ruled',
-        targetLang = '',
-        model = 'gpt-4o-mini',
-        constraints = {}
-      } = req.body || {};
-
-      const targetModel = (typeof model === 'string' && model.trim()) ? model.trim() : 'gpt-4o-mini';
+        prompt,
+        selectedText,
+        fullContext,
+        action,
+        template,
+        targetLang,
+        model: targetModel,
+        constraints
+      } = normalizeAiPayload(req.body);
       const systemPrompt = buildSystemPrompt(action, template, targetLang, constraints);
 
       let userContent = '';
@@ -413,7 +581,8 @@ export function aiRoutes(app) {
       const aiResponse = await fetch(chatUrl, {
         method: 'POST',
         headers,
-        body: JSON.stringify(requestBody)
+        body: JSON.stringify(requestBody),
+        signal: AbortSignal.timeout(AI_REQUEST_TIMEOUT_MS)
       });
 
       if (!aiResponse.ok) {
@@ -464,10 +633,14 @@ export function aiRoutes(app) {
       res.end();
     } catch (err) {
       console.error('AI Stream Error:', err);
+      const safeError = getSafeAiError(err);
       if (!res.headersSent) {
-        res.status(500).json({ ok: false, error: err.message || String(err) });
+        res.status(safeError.status).json({
+          ok: false,
+          error: safeError.message
+        });
       } else {
-        res.write(`data: ${JSON.stringify({ error: err.message || String(err) })}\n\n`);
+        res.write(`data: ${JSON.stringify({ error: safeError.message })}\n\n`);
         res.end();
       }
     }
@@ -489,17 +662,15 @@ export function aiRoutes(app) {
       }
 
       const {
-        prompt = '',
-        selectedText = '',
-        fullContext = '',
-        action = 'write',
-        template = 'ruled',
-        targetLang = '',
-        model = 'gpt-4o-mini',
-        constraints = {}
-      } = req.body || {};
-
-      const targetModel = (typeof model === 'string' && model.trim()) ? model.trim() : 'gpt-4o-mini';
+        prompt,
+        selectedText,
+        fullContext,
+        action,
+        template,
+        targetLang,
+        model: targetModel,
+        constraints
+      } = normalizeAiPayload(req.body);
       const systemPrompt = buildSystemPrompt(action, template, targetLang, constraints);
 
       let userContent = '';
@@ -550,7 +721,8 @@ ${prompt ? `Yêu cầu cụ thể: ${prompt}` : ''}`;
       const response = await fetch(chatUrl, {
         method: 'POST',
         headers,
-        body: JSON.stringify(requestBody)
+        body: JSON.stringify(requestBody),
+        signal: AbortSignal.timeout(AI_REQUEST_TIMEOUT_MS)
       });
 
       if (!response.ok) {
@@ -591,9 +763,10 @@ ${prompt ? `Yêu cầu cụ thể: ${prompt}` : ''}`;
       });
     } catch (err) {
       console.error('AI Processing Error:', err);
-      res.status(500).json({
+      const safeError = getSafeAiError(err);
+      res.status(safeError.status).json({
         ok: false,
-        error: 'Lỗi trong quá trình xử lý AI: ' + (err.message || String(err))
+        error: safeError.message
       });
     }
   });
