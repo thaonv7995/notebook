@@ -32,6 +32,16 @@ function isValidBookSlug(value) {
     && /^[a-zA-Z0-9._-]+$/.test(value);
 }
 
+function escapeHtml(value) {
+  return String(value ?? '').replace(/[&<>"']/g, character => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;'
+  }[character]));
+}
+
 /**
  * Fetch books from Bilingual App via secure backend proxy
  */
@@ -48,22 +58,12 @@ export async function fetchBilingualBooks(forceRefresh = false) {
       }
     });
 
-    if (res.status === 401) {
-      window.dispatchEvent(new CustomEvent('auth:required'));
-      throw new Error('Phiên đăng nhập đã hết hạn');
-    }
-
     const contentType = res.headers.get('content-type') || '';
-    if (!contentType.includes('application/json')) {
-      throw new Error(`Phản hồi thư viện không hợp lệ (HTTP ${res.status})`);
-    }
-
-    const data = await res.json().catch(() => {
-      throw new Error('Không thể đọc dữ liệu thư viện');
-    });
+    const isJson = contentType.includes('application/json');
+    const data = isJson ? await res.json().catch(() => ({})) : {};
 
     if (!res.ok) {
-      throw new Error(data?.error || `Không thể tải thư viện (HTTP ${res.status})`);
+      throw new Error(data?.error || `Không thể tải thư viện sách (HTTP ${res.status})`);
     }
 
     const rawBooks = Array.isArray(data.books)
@@ -230,7 +230,8 @@ export async function renderReferenceBookPanel(containerEl, activeNotebook) {
       <div class="ref-book-error">
         <div class="ref-error-icon">📚</div>
         <h3>Chưa kết nối Thư viện Bilingual App</h3>
-        <p>Vui lòng đảm bảo máy chủ <strong>Bilingual App</strong> đang chạy trên cổng <strong>27099</strong>.</p>
+        <p style="margin: 6px 0 10px; color: #f87171; font-size: 13px; font-weight: 500;">${escapeHtml(err.message)}</p>
+        <p style="font-size: 12px; color: #94a3b8;">Vui lòng đảm bảo máy chủ <strong>Bilingual App</strong> đang chạy và cấu hình kết nối chính xác trong phần Cài đặt.</p>
         <code style="background: rgba(0,0,0,0.3); padding: 4px 8px; border-radius: 4px; display: inline-block; margin: 8px 0; font-size: 12px;">python3 server.py</code>
         <br>
         <button type="button" class="ref-retry-btn" id="refRetryBtn">🔄 Thử kết nối lại</button>

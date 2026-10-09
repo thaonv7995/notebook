@@ -6,14 +6,32 @@
  * - JWT stored in httpOnly cookie for security
  */
 
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import { findUserByUsername, findUserById, createUser, updateUserPassword } from './db.js';
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 let JWT_SECRET = (process.env.JWT_SECRET || '').trim();
 if (!JWT_SECRET || JWT_SECRET === 'notebook-studio-secret-change-me' || JWT_SECRET.length < 32) {
   JWT_SECRET = crypto.randomBytes(32).toString('hex');
+  try {
+    const envPath = path.resolve(__dirname, '..', '.env');
+    if (fs.existsSync(envPath)) {
+      let envContent = fs.readFileSync(envPath, 'utf8');
+      if (/^JWT_SECRET=.*$/m.test(envContent)) {
+        envContent = envContent.replace(/^JWT_SECRET=.*$/m, `JWT_SECRET=${JWT_SECRET}`);
+      } else {
+        envContent += `\nJWT_SECRET=${JWT_SECRET}\n`;
+      }
+      fs.writeFileSync(envPath, envContent, 'utf8');
+    }
+  } catch {}
   if (process.env.NODE_ENV === 'production') {
     console.warn('  ⚠ CẢNH BÁO: JWT_SECRET chưa được cấu hình hoặc quá ngắn (<32 ký tự). Hệ thống đã tự sinh khóa an toàn 256-bit.');
   } else {
@@ -106,7 +124,7 @@ function verifyToken(token) {
 export function requireAuth(req, res, next) {
   // Allow server-to-server integration via BILINGUAL_CLIENT_ID
   const incomingClientId = req.headers['x-client-id'];
-  const expectedClientId = (process.env.BILINGUAL_CLIENT_ID || '').trim();
+  const expectedClientId = (process.env.BILINGUAL_CLIENT_ID || 'notebook_client_v1').trim();
   if (expectedClientId && incomingClientId === expectedClientId) {
     const requestedUser = req.headers['x-notebook-user'] || req.headers['x-notebook-user-id'];
     const adminUsername = (process.env.ADMIN_USERNAME || 'admin').trim();

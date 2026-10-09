@@ -115,6 +115,15 @@ function createPanelHTML() {
                    placeholder="http://127.0.0.1:27099" value="http://127.0.0.1:27099"
                    autocomplete="off" spellcheck="false" />
           </div>
+          <label class="ai-settings-label" for="bilingualClientIdInput" style="margin-top: 10px;">
+            🔑 Bilingual Client ID (Server-to-Server)
+            <span class="ai-settings-sublabel">Khóa kết nối bí mật (Mặc định: notebook_client_v1)</span>
+          </label>
+          <div class="ai-settings-key-row">
+            <input type="text" id="bilingualClientIdInput" class="ai-settings-input"
+                   placeholder="notebook_client_v1" value="notebook_client_v1"
+                   autocomplete="off" spellcheck="false" />
+          </div>
           <div class="ai-settings-key-status" id="bilingualStatus">
             <span class="ai-key-saved">🔒 Kết nối qua Backend Proxy an toàn (Server-to-Server)</span>
           </div>
@@ -267,6 +276,7 @@ function bindSettingsEvents() {
 
   // ─── Bilingual App Integration Handlers ───
   const bilingualUrlInput = panelEl.querySelector('#bilingualUrlInput');
+  const bilingualClientIdInput = panelEl.querySelector('#bilingualClientIdInput');
   const bilingualStatus = panelEl.querySelector('#bilingualStatus');
   const bilingualSaveBtn = panelEl.querySelector('#bilingualSaveBtn');
   const bilingualTestBtn = panelEl.querySelector('#bilingualTestBtn');
@@ -276,17 +286,21 @@ function bindSettingsEvents() {
     fetch('/api/bilingual/config')
       .then(res => res.json())
       .then(data => {
-        if (data.ok && data.bilingualUrl) {
-          bilingualUrlInput.value = data.bilingualUrl;
+        if (data.ok) {
+          if (data.bilingualUrl) bilingualUrlInput.value = data.bilingualUrl;
+          if (data.bilingualClientId && bilingualClientIdInput) {
+            bilingualClientIdInput.value = data.bilingualClientId;
+          }
         }
       })
       .catch(() => {});
   }
 
-  // Save Bilingual App URL
+  // Save Bilingual App URL & Client ID
   if (bilingualSaveBtn) {
     bilingualSaveBtn.addEventListener('click', async () => {
       const url = bilingualUrlInput.value.trim();
+      const clientId = bilingualClientIdInput ? bilingualClientIdInput.value.trim() : '';
       if (!url) return;
       bilingualSaveBtn.disabled = true;
       bilingualSaveBtn.textContent = '⏳ Đang lưu...';
@@ -294,12 +308,15 @@ function bindSettingsEvents() {
         const res = await fetch('/api/bilingual/config', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ bilingualUrl: url })
+          body: JSON.stringify({
+            bilingualUrl: url,
+            bilingualClientId: clientId
+          })
         });
         const data = await res.json();
         if (data.ok) {
           bilingualStatus.className = 'ai-key-saved';
-          bilingualStatus.textContent = '✓ Đã lưu cấu hình Bilingual URL thành công!';
+          bilingualStatus.textContent = '✓ Đã lưu cấu hình Bilingual thành công!';
         } else {
           bilingualStatus.className = 'ai-key-empty';
           bilingualStatus.textContent = `✕ Lỗi: ${String(data.error || 'Không lưu được')}`;
@@ -353,6 +370,7 @@ export function openSettings() {
   const customModelInput = panelEl.querySelector('#aiCustomModelInput');
   const activeModelLabel = panelEl.querySelector('#aiActiveModelLabel');
   const bilingualUrlInput = panelEl.querySelector('#bilingualUrlInput');
+  const bilingualClientIdInput = panelEl.querySelector('#bilingualClientIdInput');
 
   if (keyInput) keyInput.value = getSavedApiKey();
   if (baseUrlInput) baseUrlInput.value = getSavedBaseUrl();
@@ -364,8 +382,11 @@ export function openSettings() {
     fetch('/api/bilingual/config')
       .then(res => res.json())
       .then(data => {
-        if (data.ok && data.bilingualUrl) {
-          bilingualUrlInput.value = data.bilingualUrl;
+        if (data.ok) {
+          if (data.bilingualUrl) bilingualUrlInput.value = data.bilingualUrl;
+          if (data.bilingualClientId && bilingualClientIdInput) {
+            bilingualClientIdInput.value = data.bilingualClientId;
+          }
         }
       })
       .catch(() => {});

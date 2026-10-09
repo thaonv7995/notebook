@@ -16,7 +16,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const IS_PRODUCTION = process.env.NODE_ENV === 'production';
-const BILINGUAL_CLIENT_ID = (process.env.BILINGUAL_CLIENT_ID || '').trim();
+let BILINGUAL_CLIENT_ID = (process.env.BILINGUAL_CLIENT_ID || 'notebook_client_v1').trim();
 const allowedBilingualHosts = new Set(
   (process.env.BILINGUAL_ALLOWED_HOSTS || '')
     .split(',')
@@ -29,8 +29,8 @@ allowedBilingualHosts.add('127.0.0.1');
 allowedBilingualHosts.add('localhost');
 allowedBilingualHosts.add('::1');
 
-if (IS_PRODUCTION && !BILINGUAL_CLIENT_ID) {
-  console.log('  ℹ BILINGUAL_CLIENT_ID not configured; Bilingual App sync endpoints are disabled.');
+if (IS_PRODUCTION && !process.env.BILINGUAL_CLIENT_ID) {
+  console.log('  ℹ BILINGUAL_CLIENT_ID not explicitly configured in .env, using default "notebook_client_v1".');
 }
 
 function normalizeBilingualUrl(value) {
@@ -121,17 +121,26 @@ export function bilingualRoutes(app) {
   app.get('/api/bilingual/config', requireAuth, (req, res) => {
     res.json({
       ok: true,
-      bilingualUrl: BILINGUAL_URL
+      bilingualUrl: BILINGUAL_URL,
+      bilingualClientId: BILINGUAL_CLIENT_ID
     });
   });
 
-  // ─── POST /api/bilingual/config — Update Bilingual App URL & persist to .env ───
+  // ─── POST /api/bilingual/config — Update Bilingual App URL & Client ID & persist to .env ───
   app.post('/api/bilingual/config', requireAuth, (req, res) => {
-    const { bilingualUrl } = req.body || {};
+    const { bilingualUrl, bilingualClientId } = req.body || {};
     try {
-      const normalizedUrl = normalizeBilingualUrl(bilingualUrl);
-      BILINGUAL_URL = normalizedUrl;
-      process.env.BILINGUAL_APP_URL = normalizedUrl;
+      if (bilingualUrl !== undefined) {
+        const normalizedUrl = normalizeBilingualUrl(bilingualUrl);
+        BILINGUAL_URL = normalizedUrl;
+        process.env.BILINGUAL_APP_URL = normalizedUrl;
+      }
+
+      if (typeof bilingualClientId === 'string') {
+        const trimmed = bilingualClientId.trim();
+        BILINGUAL_CLIENT_ID = trimmed || 'notebook_client_v1';
+        process.env.BILINGUAL_CLIENT_ID = BILINGUAL_CLIENT_ID;
+      }
 
       try {
         const envPath = path.resolve(__dirname, '..', '.env');
@@ -140,10 +149,19 @@ export function bilingualRoutes(app) {
           if (/^BILINGUAL_APP_URL=.*$/m.test(envContent)) {
             envContent = envContent.replace(
               /^BILINGUAL_APP_URL=.*$/m,
-              `BILINGUAL_APP_URL=${normalizedUrl}`
+              `BILINGUAL_APP_URL=${BILINGUAL_URL}`
             );
           } else {
-            envContent += `\nBILINGUAL_APP_URL=${normalizedUrl}\n`;
+            envContent += `\nBILINGUAL_APP_URL=${BILINGUAL_URL}\n`;
+          }
+
+          if (/^BILINGUAL_CLIENT_ID=.*$/m.test(envContent)) {
+            envContent = envContent.replace(
+              /^BILINGUAL_CLIENT_ID=.*$/m,
+              `BILINGUAL_CLIENT_ID=${BILINGUAL_CLIENT_ID}`
+            );
+          } else {
+            envContent += `\nBILINGUAL_CLIENT_ID=${BILINGUAL_CLIENT_ID}\n`;
           }
 
           const tempEnvPath = `${envPath}.${process.pid}.${randomUUID()}.tmp`;
@@ -168,7 +186,11 @@ export function bilingualRoutes(app) {
         console.warn('[BilingualConfig] Failed to save .env:', e.message);
       }
 
-      return res.json({ ok: true, bilingualUrl: BILINGUAL_URL });
+      return res.json({
+        ok: true,
+        bilingualUrl: BILINGUAL_URL,
+        bilingualClientId: BILINGUAL_CLIENT_ID
+      });
     } catch (err) {
       return res.status(400).json({ ok: false, error: err.message });
     }
@@ -190,9 +212,12 @@ export function bilingualRoutes(app) {
           count
         });
       } else {
-        return res.status(resp.status).json({
+        const detail = (resp.status === 401 || resp.status === 403)
+          ? 'Bilingual App từ chối xác thực (HTTP 401). Vui lòng kiểm tra BILINGUAL_CLIENT_ID.'
+          : `Máy chủ Bilingual App phản hồi mã lỗi HTTP ${resp.status}`;
+        return res.status(502).json({
           ok: false,
-          error: `Máy chủ phản hồi mã lỗi HTTP ${resp.status}`
+          error: detail
         });
       }
     } catch (err) {
@@ -203,6 +228,7 @@ export function bilingualRoutes(app) {
       });
     }
   });
+
   // ─── GET /api/bilingual/books — List books from Bilingual App ───
   app.get('/api/bilingual/books', requireAuth, async (req, res) => {
     try {
@@ -212,9 +238,13 @@ export function bilingualRoutes(app) {
       });
 
       if (!resp.ok) {
-        return res.status(resp.status).json({
+        const detail = (resp.status === 401 || resp.status === 403)
+          ? 'Bilingual App từ chối xác thực (HTTP 401). Vui lòng kiểm tra BILINGUAL_CLIENT_ID.'
+          : `Bilingual App phản hồi lỗi (HTTP ${resp.status})`;
+        return res.status(502).json({
           ok: false,
-          error: `Bilingual App error (${resp.status})`
+          error: detail,
+          upstreamStatus: resp.status
         });
       }
 
@@ -262,7 +292,7 @@ export function bilingualRoutes(app) {
       });
 
       if (!resp.ok) {
-        return res.status(resp.status).send(`Không thể tải trang sách (HTTP ${resp.status})`);
+        return res.status(502).send(`Không thể tải trang sách từ Bilingual App (HTTP ${resp.status})`);
       }
 
       let html = await resp.text();
@@ -431,7 +461,7 @@ export function bilingualRoutes(app) {
       });
 
       if (!resp.ok) {
-        return res.status(resp.status).end();
+        return res.status(502).end();
       }
 
       // Forward content type and cache headers
