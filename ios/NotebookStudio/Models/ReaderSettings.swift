@@ -82,15 +82,15 @@ enum ReaderFontFamily: String, CaseIterable, Identifiable, Codable {
     var cssValue: String {
         switch self {
         case .plusJakartaSans:
-            return "'CJK-Smart-Enlarged', 'Plus Jakarta Sans', 'Noto Serif SC', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, serif"
+            return "'CJK-Smart-Enlarged', 'Plus Jakarta Sans', 'Be Vietnam Pro', 'Noto Serif SC', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
         case .vietnam:
-            return "'CJK-Smart-Enlarged', 'Be Vietnam Pro', 'Noto Serif SC', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, serif"
+            return "'CJK-Smart-Enlarged', 'Be Vietnam Pro', 'Inter', 'Noto Serif SC', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
         case .serif:
-            return "'CJK-Smart-Enlarged', 'Cormorant Garamond', 'Noto Serif SC', Georgia, serif"
+            return "'CJK-Smart-Enlarged', 'Cormorant Garamond', 'Noto Serif', 'Be Vietnam Pro', Georgia, 'Times New Roman', 'Noto Serif SC', serif"
         case .kaiti:
-            return "'CJK-Smart-Enlarged', 'STKaitiSC-Regular', 'Kaiti SC', 'STKaiti', 'KaiTi', 'SimKai', 'STSongti-SC-Regular', 'Songti SC', 'Noto Serif SC', serif"
+            return "'CJK-Smart-Enlarged', 'Be Vietnam Pro', 'STKaitiSC-Regular', 'Kaiti SC', 'STKaiti', 'KaiTi', 'SimKai', 'STSongti-SC-Regular', 'Songti SC', 'Noto Serif SC', serif"
         case .monospace:
-            return "'JetBrains Mono', 'CJK-Smart-Enlarged', 'Noto Serif SC', 'Courier New', monospace"
+            return "'JetBrains Mono', 'CJK-Smart-Enlarged', 'Be Vietnam Pro', 'Noto Serif SC', 'Cascadia Code', 'Courier New', monospace"
         }
     }
 

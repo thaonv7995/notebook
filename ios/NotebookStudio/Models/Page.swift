@@ -21,6 +21,7 @@ struct Page: Codable, Identifiable, Equatable {
     var date: String?
     var no: String?
     var lang: String?
+    var phase: String?         // "I", "II", "III", "IV", "V", "VI"
     var updatedAt: String?
 
     // MARK: - Cornell fields
@@ -72,6 +73,7 @@ struct Page: Codable, Identifiable, Equatable {
         date = try c.decodeIfPresent(String.self, forKey: .date)
         no = try c.decodeIfPresent(String.self, forKey: .no)
         lang = try c.decodeIfPresent(String.self, forKey: .lang)
+        phase = try c.decodeIfPresent(String.self, forKey: .phase)
         updatedAt = try c.decodeIfPresent(String.self, forKey: .updatedAt)
 
         // Cornell
@@ -113,6 +115,7 @@ struct Page: Codable, Identifiable, Equatable {
         date: String? = nil,
         no: String? = nil,
         lang: String? = "VI",
+        phase: String? = nil,
         updatedAt: String? = nil,
         cues: String? = nil,
         notes: String? = nil,
@@ -138,6 +141,7 @@ struct Page: Codable, Identifiable, Equatable {
         self.date = date
         self.no = no
         self.lang = lang
+        self.phase = phase
         self.updatedAt = updatedAt
         self.cues = cues
         self.notes = notes

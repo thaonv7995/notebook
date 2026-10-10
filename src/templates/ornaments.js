@@ -26,16 +26,25 @@ export const ROYAL_CORNERS_SVG = `
   </svg>
 `;
 
-export const EDGE_NOTCHES_HTML = `
-  <div class="edge-index-markers">
-    <div class="index-notch">I</div>
-    <div class="index-notch">II</div>
-    <div class="index-notch">III</div>
-    <div class="index-notch">IV</div>
-    <div class="index-notch">V</div>
-    <div class="index-notch">VI</div>
+export function renderEdgeNotches(activePhase = '') {
+  const phases = ['I', 'II', 'III', 'IV', 'V', 'VI'];
+  const normPhase = String(activePhase || '').trim().toUpperCase();
+  const notchesHtml = phases.map(p => {
+    const isActive = normPhase === p || normPhase === `PHASE ${p}` || normPhase === `PHASE_${p}`;
+    const title = isActive
+      ? `Giai đoạn ${p} · Đang chọn (Bấm để bỏ đánh dấu)`
+      : `Giai đoạn ${p} (Bấm để đánh dấu)`;
+    return `<div class="index-notch${isActive ? ' is-active' : ''}" data-phase="${p}" role="button" tabindex="0" title="${title}" aria-label="Giai đoạn ${p}" aria-pressed="${isActive}">${p}</div>`;
+  }).join('\n    ');
+
+  return `
+  <div class="edge-index-markers" role="group" aria-label="Đánh dấu giai đoạn I - VI">
+    ${notchesHtml}
   </div>
 `;
+}
+
+export const EDGE_NOTCHES_HTML = renderEdgeNotches('');
 
 function escapeSealHTML(str) {
   if (str == null) return '';

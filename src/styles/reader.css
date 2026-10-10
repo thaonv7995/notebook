@@ -475,6 +475,7 @@
   transition: transform 0.25s cubic-bezier(0.2, 0, 0, 1);
   display: flex;
   justify-content: center;
+  align-items: flex-start;
   flex: 0 0 auto;
   min-width: 0;
   min-height: 0;
@@ -491,6 +492,11 @@
     0 25px 60px -10px rgba(0, 0, 0, 0.85),
     0 0 0 1px rgba(255, 255, 255, 0.06);
   transform-style: preserve-3d;
+  box-sizing: border-box;
+  min-height: 704px;
+}
+.book-spread-casing.mode-1-page {
+  min-height: 844px;
 }
 
 /* Silk Bookmark Ribbon (Smart Focus Indicator) */

@@ -2,7 +2,7 @@
  * Blank / Freeform Notebook Template Layout & Event Handlers
  */
 
-import { ROYAL_CORNERS_SVG, EDGE_NOTCHES_HTML, renderSignatureSeal } from './ornaments.js';
+import { ROYAL_CORNERS_SVG, renderEdgeNotches, EDGE_NOTCHES_HTML, renderSignatureSeal } from './ornaments.js';
 import { formatContentToHtml } from '../editor/sanitizer.js';
 import { getActiveNotebook } from '../state/store.js';
 
@@ -27,7 +27,7 @@ export function renderBlankLayout(sheetEl, page, pageNum, isLeft, attachListener
   sheetEl.innerHTML = `
     <div class="a4-template-sheet blank-template-sheet">
       <div class="punch-margin-line"></div>
-      ${EDGE_NOTCHES_HTML}
+      ${renderEdgeNotches(page.phase)}
       ${ROYAL_CORNERS_SVG}
 
       <div class="functional-header">

@@ -1,0 +1,278 @@
+/* ========================================================
+   UNIVERSAL QUICK CAPTURE
+   Keyboard-first capture dialog shared by tasks and commands
+   ======================================================== */
+
+.quick-capture-open {
+  overflow: hidden;
+}
+
+.quick-capture-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 5000;
+  display: grid;
+  place-items: start center;
+  padding: clamp(72px, 12vh, 132px) 18px 24px;
+  background: rgba(2, 6, 23, 0.72);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.quick-capture-overlay[hidden] {
+  display: none;
+}
+
+.quick-capture-dialog {
+  width: min(680px, 100%);
+  max-height: calc(100dvh - 96px);
+  overflow-y: auto;
+  color: #e2e8f0;
+  background:
+    linear-gradient(145deg, rgba(30, 41, 59, 0.98), rgba(15, 23, 42, 0.99));
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  border-radius: 18px;
+  box-shadow:
+    0 28px 90px rgba(0, 0, 0, 0.56),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.quick-capture-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 21px 22px 15px;
+}
+
+.quick-capture-eyebrow {
+  margin: 0 0 5px;
+  color: #38bdf8;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.17em;
+}
+
+.quick-capture-header h2 {
+  margin: 0;
+  color: #f8fafc;
+  font-size: 21px;
+  line-height: 1.25;
+}
+
+.quick-capture-close {
+  width: 34px;
+  height: 34px;
+  padding: 0 0 2px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  color: #94a3b8;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 9px;
+  font: 400 24px/1 sans-serif;
+  cursor: pointer;
+}
+
+.quick-capture-close:hover {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.quick-capture-field {
+  display: block;
+  padding: 0 22px;
+}
+
+.quick-capture-field input {
+  width: 100%;
+  min-height: 54px;
+  padding: 0 16px;
+  color: #f8fafc;
+  caret-color: #38bdf8;
+  background: rgba(2, 6, 23, 0.5);
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  border-radius: 12px;
+  outline: none;
+  box-sizing: border-box;
+  font: 500 15px/1.4 'Be Vietnam Pro', sans-serif;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.quick-capture-field input::placeholder {
+  color: #64748b;
+}
+
+.quick-capture-field input:focus {
+  border-color: #38bdf8;
+  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.16);
+}
+
+.quick-capture-preview {
+  min-height: 91px;
+  margin: 14px 22px 0;
+  padding: 14px 15px;
+  background: rgba(15, 23, 42, 0.72);
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  border-radius: 12px;
+  box-sizing: border-box;
+}
+
+.quick-capture-preview-title {
+  margin-bottom: 10px;
+  color: #f8fafc;
+  font-size: 14px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.quick-capture-chips {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.quick-capture-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 25px;
+  padding: 3px 8px;
+  color: #cbd5e1;
+  background: rgba(51, 65, 85, 0.66);
+  border: 1px solid rgba(148, 163, 184, 0.15);
+  border-radius: 999px;
+  font-size: 11px;
+  line-height: 1.2;
+}
+
+.quick-capture-chip strong {
+  color: #94a3b8;
+  font-weight: 600;
+}
+
+.quick-capture-chip--p1 {
+  color: #fecaca;
+  background: rgba(127, 29, 29, 0.36);
+  border-color: rgba(248, 113, 113, 0.28);
+}
+
+.quick-capture-chip--p2 {
+  color: #fed7aa;
+  background: rgba(154, 52, 18, 0.3);
+}
+
+.quick-capture-chip--p3 {
+  color: #fef08a;
+  background: rgba(133, 77, 14, 0.28);
+}
+
+.quick-capture-empty,
+.quick-capture-warning {
+  margin: 0;
+  color: #94a3b8;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.quick-capture-empty code {
+  color: #bae6fd;
+  white-space: normal;
+}
+
+.quick-capture-warning {
+  margin-top: 10px;
+  color: #fbbf24;
+}
+
+.quick-capture-help {
+  margin: 13px 22px 0;
+  color: #94a3b8;
+  font-size: 11px;
+  line-height: 1.65;
+}
+
+.quick-capture-dialog kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  min-height: 19px;
+  padding: 1px 5px;
+  color: #cbd5e1;
+  background: rgba(2, 6, 23, 0.6);
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  border-radius: 5px;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.08);
+  box-sizing: border-box;
+  font: 600 10px/1 'JetBrains Mono', monospace;
+}
+
+.quick-capture-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-top: 17px;
+  padding: 15px 22px 20px;
+  border-top: 1px solid rgba(148, 163, 184, 0.12);
+}
+
+.quick-capture-footer > span {
+  color: #64748b;
+  font-size: 11px;
+}
+
+.quick-capture-submit {
+  min-height: 38px;
+  padding: 0 13px;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  color: #ffffff;
+  background: #0284c7;
+  border: 1px solid #0ea5e9;
+  border-radius: 9px;
+  font: 700 12px/1 'Be Vietnam Pro', sans-serif;
+  cursor: pointer;
+}
+
+.quick-capture-submit:hover:not(:disabled) {
+  background: #0369a1;
+}
+
+.quick-capture-submit:disabled {
+  opacity: 0.42;
+  cursor: not-allowed;
+}
+
+@media (max-width: 600px) {
+  .quick-capture-overlay {
+    place-items: end center;
+    padding: 12px 8px max(8px, env(safe-area-inset-bottom));
+  }
+
+  .quick-capture-dialog {
+    max-height: min(84dvh, 720px);
+    border-radius: 17px;
+  }
+
+  .quick-capture-header,
+  .quick-capture-field {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .quick-capture-preview,
+  .quick-capture-help {
+    margin-left: 16px;
+    margin-right: 16px;
+  }
+
+  .quick-capture-footer {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+}

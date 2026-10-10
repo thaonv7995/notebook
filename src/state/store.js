@@ -29,6 +29,57 @@ export function normalizeState(rawState) {
   const state = rawState && typeof rawState === 'object' ? rawState : {};
   const previousVersion = Number(state.version) || 0;
   state.version = STATE_VERSION;
+  const validTaskStatuses = new Set([
+    'inbox',
+    'todo',
+    'in_progress',
+    'waiting',
+    'done',
+    'cancelled'
+  ]);
+  const taskIds = new Set();
+  state.tasks = (Array.isArray(state.tasks) ? state.tasks : [])
+    .filter(task => task && typeof task === 'object')
+    .map((task) => {
+      const requestedTaskId = typeof task.id === 'string' ? task.id.trim() : '';
+      const id = requestedTaskId && !taskIds.has(requestedTaskId)
+        ? requestedTaskId
+        : createUniqueId('task', taskIds);
+      taskIds.add(id);
+
+      const status = validTaskStatuses.has(task.status) ? task.status : 'inbox';
+      const priorityValue = Number(task.priority);
+      const priority = [1, 2, 3, 4].includes(priorityValue) ? priorityValue : 4;
+      const createdAt = typeof task.createdAt === 'string' && task.createdAt
+        ? task.createdAt
+        : new Date().toISOString();
+
+      return {
+        id,
+        title: String(task.title || '').trim().slice(0, 500),
+        description: String(task.description || '').slice(0, 5000),
+        status,
+        priority,
+        dueDate: typeof task.dueDate === 'string' ? task.dueDate : '',
+        dueTime: typeof task.dueTime === 'string' ? task.dueTime : '',
+        reminderAt: typeof task.reminderAt === 'string' ? task.reminderAt : '',
+        recurrence: typeof task.recurrence === 'string' ? task.recurrence : '',
+        notebookId: typeof task.notebookId === 'string' ? task.notebookId : '',
+        pageId: typeof task.pageId === 'string' ? task.pageId : '',
+        sourceBlockId: typeof task.sourceBlockId === 'string' ? task.sourceBlockId : '',
+        tags: Array.isArray(task.tags)
+          ? [...new Set(task.tags.map(tag => String(tag).trim()).filter(Boolean))].slice(0, 20)
+          : [],
+        createdAt,
+        updatedAt: typeof task.updatedAt === 'string' && task.updatedAt
+          ? task.updatedAt
+          : createdAt,
+        completedAt: status === 'done' && typeof task.completedAt === 'string'
+          ? task.completedAt
+          : ''
+      };
+    })
+    .filter(task => task.title);
   state.deletedNotebookIds = Array.isArray(state.deletedNotebookIds) ? state.deletedNotebookIds.slice(-200) : [];
   const deletedNotebookSet = new Set(state.deletedNotebookIds);
   state.notebooks = (Array.isArray(state.notebooks) ? state.notebooks : []).filter(nb => nb && nb.id && !deletedNotebookSet.has(nb.id));
@@ -284,11 +335,17 @@ export function extractTemplateDataFromSheet(sheetEl, page) {
   if (topicInput) {
     page.topic = topicInput.value;
     page.title = topicInput.value || page.title;
+    if (topicInput.dataset.fontKey) page.topicFont = topicInput.dataset.fontKey;
   }
   const projectInput = sheetEl.querySelector('.project-input');
   if (projectInput) {
     page.project = projectInput.value;
     page.title = projectInput.value || page.title;
+    if (projectInput.dataset.fontKey) page.topicFont = projectInput.dataset.fontKey;
+  }
+  const labelEl = sheetEl.querySelector('.field-label');
+  if (labelEl && labelEl.dataset.fontKey) {
+    page.labelFont = labelEl.dataset.fontKey;
   }
   const dateInput = sheetEl.querySelector('.date-input');
   if (dateInput) page.date = dateInput.value;
@@ -296,6 +353,12 @@ export function extractTemplateDataFromSheet(sheetEl, page) {
   if (noInput) page.no = noInput.value;
   const deadlineInput = sheetEl.querySelector('.deadline-input');
   if (deadlineInput) page.deadline = deadlineInput.value;
+
+  const notchContainer = sheetEl.querySelector('.edge-index-markers');
+  if (notchContainer) {
+    const activeNotch = notchContainer.querySelector('.index-notch.is-active');
+    page.phase = activeNotch ? (activeNotch.dataset.phase || activeNotch.textContent.trim()) : '';
+  }
 
   if (template === 'cornell') {
     const cuesText = sheetEl.querySelector('.cornell-cues-text');

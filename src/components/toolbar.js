@@ -5,8 +5,9 @@
  * font selectors, line height settings, and collapse/expand state.
  */
 
-import { getState, setState, persistState, getActiveNotebook } from '../state/store.js';
+import { getState, setState, persistState, getActiveNotebook, scheduleSave } from '../state/store.js';
 import { getEls } from '../utils/dom.js';
+import { FONT_FAMILIES } from '../config/constants.js';
 import {
   applyFormattingToActiveTarget,
   saveCurrentSelection,
@@ -14,10 +15,13 @@ import {
   applyFontFamily,
   updateFontSize,
   setLineHeight,
-  getActiveEditableArea
+  getActiveEditableArea,
+  getLastActiveHeaderLabel,
+  getLastActiveTextarea,
+  getLastActiveEditable
 } from '../editor/formatter.js';
 import { showToast } from './modal.js';
-import { handleFitPage } from './reader.js';
+import { handleFitPage, saveActivePages } from './reader.js';
 import { compressAndProcessImageFile, insertImageCardIntoEditable } from '../editor/image-manager.js';
 import { renderEmojiPickerContent } from '../editor/emoji-picker.js';
 
@@ -230,13 +234,45 @@ export function setupToolbarListeners() {
     });
   }
 
-  // Font family selector — per-selection, not global
+  // Font family selector — per-selection, active input/label, or notebook default
   if (els.fmtFontFamily) {
     els.fmtFontFamily.addEventListener('change', (e) => {
       const chosen = e.target.value;
+      const cssFont = FONT_FAMILIES[chosen] || chosen;
+      const act = document.activeElement;
+      const lastInput = getLastActiveTextarea();
+      const lastLabel = getLastActiveHeaderLabel();
+
+      // 1. Check if an input or header label is focused or was last active
+      const targetHeader = (act && (act.tagName === 'INPUT' || act.tagName === 'TEXTAREA' || act.classList?.contains('field-label')))
+        ? act
+        : (lastLabel && document.contains(lastLabel) ? lastLabel : (lastInput && document.contains(lastInput) ? lastInput : null));
+
+      if (targetHeader) {
+        targetHeader.style.fontFamily = cssFont;
+        targetHeader.dataset.fontKey = chosen;
+        saveActivePages();
+      }
+
+      // 2. Check if text is currently highlighted in a writing area
+      const sel = window.getSelection();
+      const hasSelection = sel && !sel.isCollapsed && sel.rangeCount > 0;
       const editable = getActiveEditableArea();
-      if (editable) {
+
+      if (hasSelection && editable) {
         applyFontFamilyToSelection(editable, chosen);
+      } else {
+        // No selection: update notebook default font so all template fields inherit the new font
+        const nb = getActiveNotebook();
+        if (nb) {
+          nb.fontFamily = chosen;
+          persistState();
+        }
+        applyFontFamily(chosen);
+
+        if (editable && !targetHeader) {
+          applyFontFamilyToSelection(editable, chosen);
+        }
       }
     });
   }
@@ -343,12 +379,15 @@ export function setupToolbarListeners() {
 
   // ─── Active State Tracking ───
   // Update toolbar button states when the text cursor or selection changes
-  document.addEventListener('selectionchange', () => {
-    const act = document.activeElement;
-    if (act && act.classList && act.classList.contains('template-writing-area')) {
-      updateToolbarActiveStates();
-    }
-  });
+  const handleSelectionOrCursorChange = () => {
+    const sel = window.getSelection();
+    updateToolbarActiveStates();
+  };
+
+  document.addEventListener('selectionchange', handleSelectionOrCursorChange);
+  window.addEventListener('notebook:active-target-change', handleSelectionOrCursorChange);
+  document.addEventListener('keyup', handleSelectionOrCursorChange);
+  document.addEventListener('mouseup', handleSelectionOrCursorChange);
 }
 
 // ─── Toolbar Active State Detection ───
@@ -358,6 +397,137 @@ function rgbToHex(rgb) {
   const m = rgb.match(/^rgb\((\d+),\s*(\d+),\s*(\d+)\)$/i);
   if (!m) return rgb;
   return `#${((1 << 24) + (parseInt(m[1]) << 16) + (parseInt(m[2]) << 8) + parseInt(m[3])).toString(16).slice(1)}`;
+}
+
+export function getFontKeyFromFamilyString(fontStr) {
+  if (!fontStr || typeof fontStr !== 'string') return null;
+  const s = fontStr.toLowerCase();
+
+  // Handwriting styles
+  if (s.includes('sriracha') || s.includes('caveat')) return 'sriracha';
+  if (s.includes('itim') || s.includes('kalam')) return 'itim';
+  if (s.includes('mali') || s.includes('indie flower') || s.includes('indieflower')) return 'mali';
+  if (s.includes('dancing script') || s.includes('dancing')) return 'dancing';
+  if (s.includes('patrick hand') || s.includes('patrickhand')) return 'patrickhand';
+
+  // Monospace
+  if (s.includes('jetbrains mono') || s.includes('cascadia code') || s.includes('monospace')) return 'mono';
+
+  // Serif
+  if (s.includes('cormorant') || s.includes('garamond') || s.includes('noto serif') || s.includes('georgia')) return 'serif';
+
+  // CJK / Khải thể
+  if (s.includes('stkaiti') || s.includes('kaiti') || s.includes('simkai') || s.includes('songti')) return 'kaiti';
+
+  // Jakarta Sans vs Việt Pro
+  if (s.includes('plus jakarta') || s.includes('jakarta')) return 'sans';
+  if (s.includes('be vietnam') || s.includes('vietnam')) return 'vietnam';
+
+  return null;
+}
+
+function detectFontFamilyAtSelection() {
+  const act = document.activeElement;
+  const lastInput = getLastActiveTextarea();
+  const lastLabel = getLastActiveHeaderLabel();
+
+  // 1. Check if an input, textarea or header label was active
+  const candidate = (act && (act.tagName === 'INPUT' || act.tagName === 'TEXTAREA' || act.classList?.contains('field-label')))
+    ? act
+    : (lastLabel && document.contains(lastLabel) ? lastLabel : (lastInput && document.contains(lastInput) ? lastInput : null));
+
+  if (candidate) {
+    if (candidate.dataset && candidate.dataset.fontKey) {
+      return candidate.dataset.fontKey;
+    }
+    if (candidate.style && candidate.style.fontFamily) {
+      const matched = getFontKeyFromFamilyString(candidate.style.fontFamily);
+      if (matched) return matched;
+    }
+    const comp = window.getComputedStyle(candidate).fontFamily;
+    const matched = getFontKeyFromFamilyString(comp);
+    if (matched) return matched;
+    const nb = getActiveNotebook();
+    const state = getState();
+    return (nb && nb.fontFamily) || state.fontFamily || 'sans';
+  }
+
+  // 2. Selection inside DOM
+  const sel = window.getSelection();
+  if (sel && sel.rangeCount) {
+    const range = sel.getRangeAt(0);
+    let node = range.startContainer;
+    if (node.nodeType === Node.TEXT_NODE) {
+      node = node.parentElement;
+    }
+    if (node) {
+      const label = node.closest('.field-label');
+      if (label) {
+        if (label.dataset && label.dataset.fontKey) return label.dataset.fontKey;
+        if (label.style && label.style.fontFamily) {
+          const matched = getFontKeyFromFamilyString(label.style.fontFamily);
+          if (matched) return matched;
+        }
+        const comp = window.getComputedStyle(label).fontFamily;
+        const matched = getFontKeyFromFamilyString(comp);
+        if (matched) return matched;
+      }
+
+      const writingArea = node.closest('.template-writing-area');
+      if (writingArea) {
+        let curr = node;
+        while (curr && curr !== writingArea) {
+          if (curr.dataset && curr.dataset.fontKey) {
+            return curr.dataset.fontKey;
+          }
+          if (curr.style && curr.style.fontFamily) {
+            const matched = getFontKeyFromFamilyString(curr.style.fontFamily);
+            if (matched) return matched;
+          }
+          if (curr.getAttribute && curr.getAttribute('face')) {
+            const matched = getFontKeyFromFamilyString(curr.getAttribute('face'));
+            if (matched) return matched;
+          }
+          curr = curr.parentElement;
+        }
+      }
+    }
+  }
+
+  // 3. Fallback to active notebook's default font family
+  const nb = getActiveNotebook();
+  const state = getState();
+  return (nb && nb.fontFamily) || state.fontFamily || 'sans';
+}
+
+function detectFontSizeAtSelection() {
+  const sel = window.getSelection();
+  if (!sel || !sel.rangeCount) return null;
+  const range = sel.getRangeAt(0);
+  let node = range.startContainer;
+  if (node.nodeType === Node.TEXT_NODE) {
+    node = node.parentElement;
+  }
+  if (!node) return null;
+
+  const writingArea = node.closest('.template-writing-area');
+  if (!writingArea) return null;
+
+  let curr = node;
+  while (curr && curr !== writingArea) {
+    if (curr.style && curr.style.fontSize) {
+      const px = parseInt(curr.style.fontSize, 10);
+      if (px) return px;
+    }
+    curr = curr.parentElement;
+  }
+
+  const computed = window.getComputedStyle(node).fontSize;
+  const px = parseInt(computed, 10);
+  if (px) return px;
+
+  const state = getState();
+  return state.fontSize || 16;
 }
 
 function updateToolbarActiveStates() {
@@ -395,5 +565,24 @@ function updateToolbarActiveStates() {
         els.currentBgBar.style.backgroundColor = hex;
       }
     } catch (e) { /* ignore */ }
+  }
+
+  // Font family dropdown detection
+  if (els.fmtFontFamily) {
+    const activeFont = detectFontFamilyAtSelection();
+    if (activeFont && els.fmtFontFamily.value !== activeFont) {
+      const opt = els.fmtFontFamily.querySelector(`option[value="${activeFont}"]`);
+      if (opt) {
+        els.fmtFontFamily.value = activeFont;
+      }
+    }
+  }
+
+  // Font size indicator label detection
+  if (els.fontSizeLabel) {
+    const activeSize = detectFontSizeAtSelection();
+    if (activeSize && els.fontSizeLabel.textContent !== String(activeSize)) {
+      els.fontSizeLabel.textContent = activeSize;
+    }
   }
 }

@@ -9,6 +9,7 @@ import { showToast } from '../components/modal.js';
 
 let lastActiveEditable = null;
 let lastActiveTextarea = null;
+let lastActiveHeaderLabel = null;
 let savedSelectionRange = null;
 let savedSelectionEditable = null;
 
@@ -18,6 +19,22 @@ export function setLastActiveEditable(el) {
 
 export function setLastActiveTextarea(el) {
   lastActiveTextarea = el;
+}
+
+export function getLastActiveTextarea() {
+  return lastActiveTextarea;
+}
+
+export function setLastActiveHeaderLabel(el) {
+  lastActiveHeaderLabel = el;
+}
+
+export function getLastActiveHeaderLabel() {
+  return lastActiveHeaderLabel;
+}
+
+export function getLastActiveEditable() {
+  return lastActiveEditable;
 }
 
 export function getActiveEditableArea(focusedPageSide = 'left', currentPageMode = '2-page') {
@@ -534,6 +551,7 @@ export function applyFontFamily(fontKey) {
   const nb = getActiveNotebook();
   const key = fontKey || (nb && nb.fontFamily) || state.fontFamily || 'sans';
   const cssFont = FONT_FAMILIES[key] || FONT_FAMILIES['sans'];
+
   document.documentElement.style.setProperty('--notebook-font-family', cssFont);
   const els = getEls();
   if (els.fmtFontFamily) els.fmtFontFamily.value = key;
@@ -554,6 +572,7 @@ export function applyFontFamilyToSelection(editable, fontValue) {
       const range = sel.getRangeAt(0);
       const span = document.createElement('span');
       span.style.fontFamily = cssFont;
+      span.dataset.fontKey = fontValue;
       span.appendChild(range.extractContents());
       range.insertNode(span);
       range.selectNodeContents(span);
@@ -568,6 +587,7 @@ export function applyFontFamilyToSelection(editable, fontValue) {
     const range = sel.getRangeAt(0);
     const span = document.createElement('span');
     span.style.fontFamily = cssFont;
+    span.dataset.fontKey = fontValue;
     span.textContent = '\u200B'; // zero-width space
     range.insertNode(span);
 

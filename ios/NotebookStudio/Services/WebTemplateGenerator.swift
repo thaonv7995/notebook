@@ -94,7 +94,7 @@ final class WebTemplateGenerator {
           <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=3.0, user-scalable=yes">
           <link rel="preconnect" href="https://fonts.googleapis.com">
           <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-          <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Cormorant+Garamond:ital,wght@0,600;0,700;1,600&family=Plus+Jakarta+Sans:wght@500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&family=Noto+Serif+SC:wght@400;600;700;900&family=Dancing+Script:wght@400;500;600;700&family=Caveat:wght@400;500;600;700&family=Patrick+Hand&family=Kalam:wght@300;400;700&family=Indie+Flower&family=Ma+Shan+Zheng&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
+          <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,600&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500;600;700&family=Noto+Serif+SC:wght@400;600;700;900&family=Dancing+Script:wght@400;500;600;700&family=Caveat:wght@400;500;600;700&family=Patrick+Hand&family=Kalam:wght@300;400;700&family=Indie+Flower&family=Sriracha&family=Itim&family=Mali:wght@400;600&family=Ma+Shan+Zheng&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
           <style>
             \(css)
 
@@ -444,16 +444,26 @@ final class WebTemplateGenerator {
       </svg>
     """
 
-    private let edgeNotchesHTML = """
-      <div class="edge-index-markers">
-        <div class="index-notch">I</div>
-        <div class="index-notch">II</div>
-        <div class="index-notch">III</div>
-        <div class="index-notch">IV</div>
-        <div class="index-notch">V</div>
-        <div class="index-notch">VI</div>
-      </div>
-    """
+    private func renderEdgeNotches(activePhase: String? = nil) -> String {
+        let phases = ["I", "II", "III", "IV", "V", "VI"]
+        let normPhase = (activePhase ?? "").trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+        let notches = phases.map { p in
+            let isActive = normPhase == p || normPhase == "PHASE \(p)" || normPhase == "PHASE_\(p)"
+            let activeClass = isActive ? " is-active" : ""
+            let title = isActive ? "Giai đoạn \(p) · Đang chọn" : "Giai đoạn \(p)"
+            return "<div class=\"index-notch\(activeClass)\" data-phase=\"\(p)\" title=\"\(title)\">\(p)</div>"
+        }.joined(separator: "\n        ")
+
+        return """
+        <div class="edge-index-markers" role="group">
+          \(notches)
+        </div>
+        """
+    }
+
+    private var edgeNotchesHTML: String {
+        renderEdgeNotches(activePhase: nil)
+    }
 
     private func renderSeal(author: String, sub: String) -> String {
         """
@@ -470,7 +480,7 @@ final class WebTemplateGenerator {
         """
         <div class="a4-template-sheet cornell-template-sheet">
           <div class="punch-margin-line"></div>
-          \(edgeNotchesHTML)
+          \(renderEdgeNotches(activePhase: page.phase))
           \(royalCornersSVG)
 
           <div class="functional-header">
@@ -546,7 +556,7 @@ final class WebTemplateGenerator {
         return """
         <div class="a4-template-sheet work-template-sheet">
           <div class="punch-margin-line"></div>
-          \(edgeNotchesHTML)
+          \(renderEdgeNotches(activePhase: page.phase))
           \(royalCornersSVG)
 
           <div class="functional-header">
@@ -609,7 +619,7 @@ final class WebTemplateGenerator {
         """
         <div class="a4-template-sheet ruled-template-sheet">
           <div class="punch-margin-line"></div>
-          \(edgeNotchesHTML)
+          \(renderEdgeNotches(activePhase: page.phase))
           \(royalCornersSVG)
 
           <div class="functional-header">
@@ -656,7 +666,7 @@ final class WebTemplateGenerator {
         return """
         <div class="a4-template-sheet eisenhower-template-sheet">
           <div class="punch-margin-line"></div>
-          \(edgeNotchesHTML)
+          \(renderEdgeNotches(activePhase: page.phase))
           \(royalCornersSVG)
 
           <div class="functional-header">
@@ -726,7 +736,7 @@ final class WebTemplateGenerator {
         return """
         <div class="a4-template-sheet vocab-template-sheet">
           <div class="punch-margin-line"></div>
-          \(edgeNotchesHTML)
+          \(renderEdgeNotches(activePhase: page.phase))
           \(royalCornersSVG)
 
           <div class="functional-header">
@@ -788,7 +798,7 @@ final class WebTemplateGenerator {
         """
         <div class="a4-template-sheet reading-template-sheet">
           <div class="punch-margin-line"></div>
-          \(edgeNotchesHTML)
+          \(renderEdgeNotches(activePhase: page.phase))
           \(royalCornersSVG)
 
           <div class="functional-header">
@@ -848,7 +858,7 @@ final class WebTemplateGenerator {
         return """
         <div class="a4-template-sheet charting-template-sheet">
           <div class="punch-margin-line"></div>
-          \(edgeNotchesHTML)
+          \(renderEdgeNotches(activePhase: page.phase))
           \(royalCornersSVG)
 
           <div class="functional-header">
@@ -910,7 +920,7 @@ final class WebTemplateGenerator {
         """
         <div class="a4-template-sheet dotgrid-template-sheet">
           <div class="punch-margin-line"></div>
-          \(edgeNotchesHTML)
+          \(renderEdgeNotches(activePhase: page.phase))
           \(royalCornersSVG)
 
           <div class="functional-header">
@@ -955,7 +965,7 @@ final class WebTemplateGenerator {
         """
         <div class="a4-template-sheet grid-template-sheet">
           <div class="punch-margin-line"></div>
-          \(edgeNotchesHTML)
+          \(renderEdgeNotches(activePhase: page.phase))
           \(royalCornersSVG)
 
           <div class="functional-header">
@@ -1000,7 +1010,7 @@ final class WebTemplateGenerator {
         """
         <div class="a4-template-sheet blank-template-sheet">
           <div class="punch-margin-line"></div>
-          \(edgeNotchesHTML)
+          \(renderEdgeNotches(activePhase: page.phase))
           \(royalCornersSVG)
 
           <div class="functional-header">
@@ -1220,27 +1230,27 @@ final class WebTemplateGenerator {
     func cssFontFamily(for key: String?) -> String {
         switch key?.lowercased() {
         case "vietnam":
-            return "'CJK-Smart-Enlarged', 'Be Vietnam Pro', 'Noto Serif SC', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, serif"
+            return "'CJK-Smart-Enlarged', 'Be Vietnam Pro', 'Inter', 'Noto Serif SC', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
         case "serif":
-            return "'CJK-Smart-Enlarged', 'Cormorant Garamond', 'Noto Serif SC', Georgia, serif"
+            return "'CJK-Smart-Enlarged', 'Cormorant Garamond', 'Noto Serif', 'Be Vietnam Pro', Georgia, 'Times New Roman', 'Noto Serif SC', serif"
         case "kaiti":
-            return "'CJK-Smart-Enlarged', 'STKaitiSC-Regular', 'Kaiti SC', 'STKaiti', 'KaiTi', 'SimKai', 'STSongti-SC-Regular', 'Songti SC', 'Noto Serif SC', serif"
+            return "'CJK-Smart-Enlarged', 'Be Vietnam Pro', 'STKaitiSC-Regular', 'Kaiti SC', 'STKaiti', 'KaiTi', 'SimKai', 'STSongti-SC-Regular', 'Songti SC', 'Noto Serif SC', serif"
         case "mono", "monospace":
-            return "'JetBrains Mono', 'CJK-Smart-Enlarged', 'Noto Serif SC', 'Courier New', monospace"
+            return "'JetBrains Mono', 'CJK-Smart-Enlarged', 'Be Vietnam Pro', 'Noto Serif SC', 'Cascadia Code', 'Courier New', monospace"
         case "dancing":
-            return "'Dancing Script', 'CJK-Smart-Enlarged', 'Noto Serif SC', cursive"
-        case "caveat":
-            return "'Caveat', 'CJK-Smart-Enlarged', 'Noto Serif SC', cursive"
+            return "'Dancing Script', 'Patrick Hand', 'Be Vietnam Pro', 'CJK-Smart-Enlarged', 'Noto Serif SC', cursive"
+        case "sriracha", "caveat":
+            return "'Sriracha', 'Patrick Hand', 'Dancing Script', 'Be Vietnam Pro', 'CJK-Smart-Enlarged', 'Noto Serif SC', cursive"
         case "patrickhand":
-            return "'Patrick Hand', 'CJK-Smart-Enlarged', 'Noto Serif SC', cursive"
-        case "kalam":
-            return "'Kalam', 'CJK-Smart-Enlarged', 'Noto Serif SC', cursive"
-        case "indieflower":
-            return "'Indie Flower', 'CJK-Smart-Enlarged', 'Noto Serif SC', cursive"
+            return "'Patrick Hand', 'Dancing Script', 'Be Vietnam Pro', 'CJK-Smart-Enlarged', 'Noto Serif SC', cursive"
+        case "itim", "kalam":
+            return "'Itim', 'Patrick Hand', 'Dancing Script', 'Be Vietnam Pro', 'CJK-Smart-Enlarged', 'Noto Serif SC', cursive"
+        case "mali", "indieflower":
+            return "'Mali', 'Patrick Hand', 'Dancing Script', 'Be Vietnam Pro', 'CJK-Smart-Enlarged', 'Noto Serif SC', cursive"
         case "sans", "jakarta":
             fallthrough
         default:
-            return "'CJK-Smart-Enlarged', 'Plus Jakarta Sans', 'Noto Serif SC', var(--cjk-calligraphic-font)"
+            return "'CJK-Smart-Enlarged', 'Plus Jakarta Sans', 'Be Vietnam Pro', 'Noto Serif SC', var(--cjk-calligraphic-font)"
         }
     }
 

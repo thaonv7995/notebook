@@ -10,16 +10,21 @@ export const SAVE_DEBOUNCE_MS = 400;
 export const FONT_SIZES = [11, 12, 13, 14, 15, 16, 18, 20, 22, 24, 28];
 
 export const FONT_FAMILIES = {
-  sans: "'CJK-Smart-Enlarged', 'Plus Jakarta Sans', 'Noto Serif SC', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, serif",
-  vietnam: "'CJK-Smart-Enlarged', 'Be Vietnam Pro', 'Noto Serif SC', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, serif",
-  serif: "'CJK-Smart-Enlarged', 'Cormorant Garamond', 'Noto Serif SC', Georgia, serif",
-  kaiti: "'CJK-Smart-Enlarged', 'STKaitiSC-Regular', 'Kaiti SC', 'STKaiti', 'KaiTi', 'SimKai', 'STSongti-SC-Regular', 'Songti SC', 'Noto Serif SC', serif",
-  mono: "'JetBrains Mono', 'CJK-Smart-Enlarged', 'Noto Serif SC', 'Courier New', monospace",
-  dancing: "'Dancing Script', 'CJK-Smart-Enlarged', 'Noto Serif SC', cursive",
-  caveat: "'Caveat', 'CJK-Smart-Enlarged', 'Noto Serif SC', cursive",
-  patrickhand: "'Patrick Hand', 'CJK-Smart-Enlarged', 'Noto Serif SC', cursive",
-  kalam: "'Kalam', 'CJK-Smart-Enlarged', 'Noto Serif SC', cursive",
-  indieflower: "'Indie Flower', 'CJK-Smart-Enlarged', 'Noto Serif SC', cursive"
+  sans: "'CJK-Smart-Enlarged', 'Plus Jakarta Sans', 'Be Vietnam Pro', 'Noto Serif SC', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+  vietnam: "'CJK-Smart-Enlarged', 'Be Vietnam Pro', 'Inter', 'Noto Serif SC', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+  serif: "'CJK-Smart-Enlarged', 'Cormorant Garamond', 'Noto Serif', 'Be Vietnam Pro', Georgia, 'Times New Roman', 'Noto Serif SC', serif",
+  kaiti: "'CJK-Smart-Enlarged', 'Be Vietnam Pro', 'STKaitiSC-Regular', 'Kaiti SC', 'STKaiti', 'KaiTi', 'SimKai', 'STSongti-SC-Regular', 'Songti SC', 'Noto Serif SC', serif",
+  mono: "'JetBrains Mono', 'CJK-Smart-Enlarged', 'Be Vietnam Pro', 'Noto Serif SC', 'Cascadia Code', 'Courier New', monospace",
+  dancing: "'Dancing Script', 'Patrick Hand', 'Be Vietnam Pro', 'CJK-Smart-Enlarged', 'Noto Serif SC', cursive",
+  sriracha: "'Sriracha', 'Patrick Hand', 'Dancing Script', 'Be Vietnam Pro', 'CJK-Smart-Enlarged', 'Noto Serif SC', cursive",
+  patrickhand: "'Patrick Hand', 'Dancing Script', 'Be Vietnam Pro', 'CJK-Smart-Enlarged', 'Noto Serif SC', cursive",
+  itim: "'Itim', 'Patrick Hand', 'Dancing Script', 'Be Vietnam Pro', 'CJK-Smart-Enlarged', 'Noto Serif SC', cursive",
+  mali: "'Mali', 'Patrick Hand', 'Dancing Script', 'Be Vietnam Pro', 'CJK-Smart-Enlarged', 'Noto Serif SC', cursive",
+
+  // Legacy aliases for backward compatibility with existing saved notes
+  caveat: "'Sriracha', 'Patrick Hand', 'Dancing Script', 'Be Vietnam Pro', 'CJK-Smart-Enlarged', 'Noto Serif SC', cursive",
+  kalam: "'Itim', 'Patrick Hand', 'Dancing Script', 'Be Vietnam Pro', 'CJK-Smart-Enlarged', 'Noto Serif SC', cursive",
+  indieflower: "'Mali', 'Patrick Hand', 'Dancing Script', 'Be Vietnam Pro', 'CJK-Smart-Enlarged', 'Noto Serif SC', cursive"
 };
 
 export const LINE_HEIGHT_MAP = {

@@ -50,7 +50,7 @@ export function applyPageStyles(styles = {}, persist = true) {
     }
   }
 
-  if (styles.fontFamily && ['sans', 'vietnam', 'serif', 'kaiti', 'mono', 'dancing', 'caveat', 'patrickhand', 'kalam', 'indieflower'].includes(styles.fontFamily)) {
+  if (styles.fontFamily && ['sans', 'vietnam', 'serif', 'kaiti', 'mono', 'dancing', 'sriracha', 'patrickhand', 'itim', 'mali', 'caveat', 'kalam', 'indieflower'].includes(styles.fontFamily)) {
     applyFontFamily(styles.fontFamily);
   }
 

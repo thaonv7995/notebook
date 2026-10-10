@@ -79,7 +79,6 @@
     #cbd5e1 calc(var(--notebook-line-height, 28px) - 1px),
     #cbd5e1 var(--notebook-line-height, 28px)
   );
-  --paper-zoom: 1.0;
   --cjk-calligraphic-font: "CJK-Smart-Enlarged", "STKaitiSC-Regular", "Kaiti SC", "STKaiti", "KaiTi", "SimKai", "STSongti-SC-Regular", "Songti SC", "STSong", "Noto Serif SC", "ZCOOL XiaoWei", serif;
-  --notebook-font-family: 'CJK-Smart-Enlarged', 'Plus Jakarta Sans', 'Noto Serif SC', var(--cjk-calligraphic-font);
+  --notebook-font-family: 'CJK-Smart-Enlarged', 'Plus Jakarta Sans', 'Be Vietnam Pro', 'Noto Serif SC', var(--cjk-calligraphic-font);
 }

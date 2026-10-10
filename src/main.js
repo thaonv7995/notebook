@@ -76,6 +76,19 @@ import {
   closeChangePasswordModal
 } from './components/modal.js';
 
+import {
+  setupQuickCapture,
+  openQuickCapture,
+  closeQuickCapture,
+  isQuickCaptureOpen
+} from './components/quick-capture.js';
+
+import {
+  setupTaskInbox,
+  openTaskInbox,
+  isTaskInboxOpen
+} from './components/task-inbox.js';
+
 import './ai/floating-bar.js'; // Mounts tiny corner FAB
 
 import { setupSelectionListener as setupAiSelectionListener } from './ai/selection-bubble.js';
@@ -101,6 +114,14 @@ import {
  * Setup Cross-Component Callback Contracts
  */
 function setupComponentCallbacks() {
+  setupTaskInbox({
+    onOpenCapture: () => openQuickCapture(),
+    onOpenSource: (task) => {
+      if (!task?.notebookId) return;
+      openNotebook(task.notebookId);
+    }
+  });
+
   setLibraryCallbacks({
     onOpenNotebook: (id) => openNotebook(id),
     onCopyLink: () => copyCurrentBookUrl()
@@ -109,6 +130,10 @@ function setupComponentCallbacks() {
   setReaderCallbacks({
     onUrlUpdate: (route, replace) => updateUrl(route, replace),
     onFullscreenUpdate: () => updateFullscreenRailControls()
+  });
+
+  window.addEventListener('task-created', () => {
+    showToast('Task đã được thêm vào Inbox');
   });
 }
 
@@ -150,6 +175,17 @@ function setupGlobalKeyAndWindowListeners() {
   // Global keydown listeners
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
+      if (isTaskInboxOpen()) {
+        e.preventDefault();
+        window.dispatchEvent(new CustomEvent('task-inbox:close'));
+        return;
+      }
+
+      if (isQuickCaptureOpen()) {
+        e.preventDefault();
+        closeQuickCapture();
+        return;
+      }
       // Close AI inline bar first
       if (document.getElementById('aiNotionInlineBar') && !document.getElementById('aiNotionInlineBar').hidden) {
         closeNotionAiBar();
@@ -189,6 +225,24 @@ function setupGlobalKeyAndWindowListeners() {
     }
 
     const isMod = e.ctrlKey || e.metaKey;
+
+    // Cmd/Ctrl + Alt + N — Universal Quick Capture.
+    // Avoid Cmd + Shift + Space because macOS may reserve it for system input.
+    // Use the physical key code because Option + N on macOS produces a
+    // dead-key/diacritic value instead of reporting e.key as "n".
+    if (isMod && e.altKey && e.code === 'KeyN') {
+      e.preventDefault();
+      e.stopPropagation();
+      openQuickCapture();
+      return;
+    }
+
+    // Cmd/Ctrl + Shift + T => Task Inbox
+    if (isMod && e.shiftKey && e.code === 'KeyT') {
+      e.preventDefault();
+      openTaskInbox('inbox');
+      return;
+    }
 
     // Cmd/Ctrl + Shift + Z — Undo the most recent AI autofill safely.
     // This shortcut is intentionally separate from the browser/editor undo stack.
@@ -998,6 +1052,15 @@ async function init() {
 
   setupModalListeners({
     onNotebookCreated: (newId) => openNotebook(newId)
+  });
+
+  setupQuickCapture({
+    onTaskCreated: (task) => {
+      const dueText = task.dueDate
+        ? ` · hạn ${task.dueDate}${task.dueTime ? ` ${task.dueTime}` : ''}`
+        : '';
+      showToast(`Đã thêm vào Task Inbox: ${task.title}${dueText}`, 'success');
+    }
   });
 
   setupGlobalKeyAndWindowListeners();

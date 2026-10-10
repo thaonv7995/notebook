@@ -8,7 +8,7 @@
  * - Summary & Personal Reflection area
  */
 
-import { ROYAL_CORNERS_SVG, EDGE_NOTCHES_HTML, renderSignatureSeal } from './ornaments.js';
+import { ROYAL_CORNERS_SVG, renderEdgeNotches, EDGE_NOTCHES_HTML, renderSignatureSeal } from './ornaments.js';
 import { formatContentToHtml } from '../editor/sanitizer.js';
 import { getActiveNotebook } from '../state/store.js';
 
@@ -33,7 +33,7 @@ export function renderReadingLayout(sheetEl, page, pageNum, isLeft, attachListen
   sheetEl.innerHTML = `
     <div class="a4-template-sheet reading-template-sheet">
       <div class="punch-margin-line"></div>
-      ${EDGE_NOTCHES_HTML}
+      ${renderEdgeNotches(page.phase)}
       ${ROYAL_CORNERS_SVG}
 
       <div class="functional-header">

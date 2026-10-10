@@ -87,6 +87,8 @@ export function sanitizeRichHtml(html) {
         el.setAttribute('draggable', 'false');
       } else if ((name === 'data-align' || name === 'data-size') && el.tagName === 'FIGURE') {
         el.setAttribute(name, attr.value);
+      } else if (name === 'data-font-key' && el.tagName === 'SPAN') {
+        el.setAttribute(name, attr.value.slice(0, 50));
       } else if (name === 'contenteditable') {
         if (el.tagName === 'FIGCAPTION') {
           el.setAttribute('contenteditable', 'true');

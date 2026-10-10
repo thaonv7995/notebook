@@ -71,6 +71,7 @@ export function createNotebookPage(notebook, template = 'cornell', lang = 'VI') 
     date: new Date().toLocaleDateString('vi-VN'),
     no: String(pageNumber).padStart(2, '0'),
     template: VALID_TEMPLATES.includes(template) ? template : 'cornell',
+    phase: '',
     updatedAt: new Date().toISOString(),
     content: ''
   };

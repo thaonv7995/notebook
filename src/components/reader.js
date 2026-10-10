@@ -7,8 +7,9 @@
 
 import { getState, setState, persistState, getActiveNotebook, scheduleSave, cancelPendingSave, isSavePending, extractTemplateDataFromSheet } from '../state/store.js';
 import { getEls } from '../utils/dom.js';
+import { FONT_FAMILIES } from '../config/constants.js';
 import { renderSheetContent, renderEmptyRightPagePlaceholder, createNotebookPage } from '../templates/index.js';
-import { applyFontFamily, applyFontSize, applyLineHeight, setLastActiveEditable, setLastActiveTextarea } from '../editor/formatter.js';
+import { applyFontFamily, applyFontSize, applyLineHeight, setLastActiveEditable, setLastActiveTextarea, setLastActiveHeaderLabel } from '../editor/formatter.js';
 import { placeCaretAtStart } from '../editor/caret.js';
 import { wrapHanziInElement } from '../editor/hanzi-aligner.js';
 import { attachImageHandlersToSheet } from '../editor/image-manager.js';
@@ -187,15 +188,39 @@ export function attachTemplateInputListeners(sheetEl, page) {
   const els = getEls();
   const sheetSide = (sheetEl === els.rightPageSheet || sheetEl.id === 'rightPageSheet' || sheetEl.classList.contains('book-page-right')) ? 'right' : 'left';
 
+  // Apply custom persisted font for topic input and header label
+  if (page.topicFont) {
+    sheetEl.querySelectorAll('.topic-input, .project-input').forEach(input => {
+      input.style.fontFamily = FONT_FAMILIES[page.topicFont] || page.topicFont;
+      input.dataset.fontKey = page.topicFont;
+    });
+  }
+  if (page.labelFont) {
+    sheetEl.querySelectorAll('.field-label').forEach(label => {
+      label.style.fontFamily = FONT_FAMILIES[page.labelFont] || page.labelFont;
+      label.dataset.fontKey = page.labelFont;
+    });
+  }
+
   // Listen to all inputs (topic, date, deadline, no, etc.)
   sheetEl.querySelectorAll('input').forEach(input => {
     input.addEventListener('focus', () => {
       setLastActiveTextarea(input);
+      setLastActiveEditable(null);
+      setLastActiveHeaderLabel(null);
       setFocusedPageSide(sheetSide);
+      window.dispatchEvent(new CustomEvent('notebook:active-target-change', { detail: { target: input } }));
     });
     input.addEventListener('click', () => {
       setLastActiveTextarea(input);
+      setLastActiveEditable(null);
+      setLastActiveHeaderLabel(null);
       setFocusedPageSide(sheetSide);
+      window.dispatchEvent(new CustomEvent('notebook:active-target-change', { detail: { target: input } }));
+    });
+    input.addEventListener('select', () => {
+      setLastActiveTextarea(input);
+      window.dispatchEvent(new CustomEvent('notebook:active-target-change', { detail: { target: input } }));
     });
     input.addEventListener('keydown', () => {
       recordUserTyping();
@@ -208,14 +233,29 @@ export function attachTemplateInputListeners(sheetEl, page) {
     });
   });
 
+  // Listen to header field labels (SUBJECT / TOPIC:, PROJECT / OBJECTIVE:, etc.)
+  sheetEl.querySelectorAll('.field-label').forEach(label => {
+    label.addEventListener('click', () => {
+      setLastActiveHeaderLabel(label);
+      setLastActiveTextarea(null);
+      setLastActiveEditable(null);
+      setFocusedPageSide(sheetSide);
+      window.dispatchEvent(new CustomEvent('notebook:active-target-change', { detail: { target: label } }));
+    });
+  });
+
   // Listen to all contenteditable writing areas
   sheetEl.querySelectorAll('.template-writing-area[contenteditable="true"]').forEach(editable => {
     editable.addEventListener('focus', () => {
       setLastActiveEditable(editable);
+      setLastActiveTextarea(null);
+      setLastActiveHeaderLabel(null);
       setFocusedPageSide(sheetSide);
     });
     editable.addEventListener('click', () => {
       setLastActiveEditable(editable);
+      setLastActiveTextarea(null);
+      setLastActiveHeaderLabel(null);
       setFocusedPageSide(sheetSide);
     });
     editable.addEventListener('keydown', () => {
@@ -224,6 +264,8 @@ export function attachTemplateInputListeners(sheetEl, page) {
     editable.addEventListener('input', () => {
       recordUserTyping();
       setLastActiveEditable(editable);
+      setLastActiveTextarea(null);
+      setLastActiveHeaderLabel(null);
       wrapHanziInElement(editable);
       extractTemplateDataFromSheet(sheetEl, page);
       showStatus('Chưa lưu', 'dirty');
@@ -300,6 +342,46 @@ export function attachTemplateInputListeners(sheetEl, page) {
             showToast(`Đã cập nhật tác giả: ${formatted}`, 'success');
           }
         }
+      }
+    });
+  });
+
+  // Edge Index Markers - Click notch to highlight/toggle phase (I, II, III, IV, V, VI)
+  sheetEl.querySelectorAll('.index-notch').forEach(notch => {
+    notch.addEventListener('click', (e) => {
+      e.stopPropagation();
+      setFocusedPageSide(sheetSide);
+      const phaseVal = (notch.dataset.phase || notch.textContent || '').trim().toUpperCase();
+      const isAlreadyActive = notch.classList.contains('is-active');
+
+      // Clear is-active on all notches in this sheet
+      sheetEl.querySelectorAll('.index-notch').forEach(n => {
+        n.classList.remove('is-active');
+        n.setAttribute('aria-pressed', 'false');
+        const p = (n.dataset.phase || n.textContent || '').trim().toUpperCase();
+        n.setAttribute('title', `Giai đoạn ${p} (Bấm để đánh dấu)`);
+      });
+
+      if (isAlreadyActive) {
+        page.phase = '';
+        showToast('Đã bỏ đánh dấu giai đoạn', 'info');
+      } else {
+        notch.classList.add('is-active');
+        notch.setAttribute('aria-pressed', 'true');
+        notch.setAttribute('title', `Giai đoạn ${phaseVal} · Đang chọn (Bấm để bỏ đánh dấu)`);
+        page.phase = phaseVal;
+        showToast(`Đã đánh dấu trang: Giai đoạn ${phaseVal} (Phase ${phaseVal})`, 'info');
+      }
+
+      extractTemplateDataFromSheet(sheetEl, page);
+      showStatus('Chưa lưu', 'dirty');
+      scheduleSave(() => saveActivePages());
+    });
+
+    notch.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        notch.click();
       }
     });
   });
@@ -574,8 +656,10 @@ export function renderPageDrawerList(filter = '') {
       const topic = (page.topic || '').toLowerCase();
       const title = (page.title || '').toLowerCase();
       const content = (page.content || '').replace(/<[^>]+>/g, '').toLowerCase();
+      const phase = (page.phase || '').toLowerCase();
       const numStr = String(originalIndex + 1);
-      return topic.includes(query) || title.includes(query) || content.includes(query) || numStr.includes(query);
+      return topic.includes(query) || title.includes(query) || content.includes(query) ||
+             numStr.includes(query) || phase.includes(query) || `phase ${phase}`.includes(query);
     });
 
   if (filteredPages.length === 0) {
@@ -617,6 +701,7 @@ export function renderPageDrawerList(filter = '') {
         ${snippet ? `<div class="page-nav-item-snippet">${escapeHTML(snippet)}</div>` : ''}
         <div class="page-nav-item-meta">
           <span class="page-nav-badge ${tplClass}">${tplName}</span>
+          ${page.phase ? `<span class="page-nav-badge page-phase-badge" style="background:#0f172a; color:#ffffff; font-weight:700;">Phase ${escapeHTML(page.phase)}</span>` : ''}
           ${page.status ? `<span class="page-nav-badge">${escapeHTML(page.status)}</span>` : ''}
           <span>${escapeHTML(dateStr)}</span>
         </div>
@@ -757,6 +842,18 @@ export function applyPageMode(mode, persistPreference = true) {
   }
   if (persistPreference) persistState();
   renderBookPages();
+
+  // Re-calculate scaler dimensions and zoom/fit to prevent bottom overflow
+  const isFitPageActive = els.btnFitPage?.classList.contains('active') || els.btnFullscreenFitPage?.classList.contains('is-active');
+  const isFitWidthActive = els.btnFitWidth?.classList.contains('active') || els.btnFullscreenFitWidth?.classList.contains('is-active');
+  if (isFitPageActive) {
+    handleFitPage();
+  } else if (isFitWidthActive) {
+    handleFitWidth();
+  } else {
+    const state = getState();
+    applyZoom(state.zoomLevel || 1.0, false);
+  }
 }
 
 export function toggleStudyLayout() {
@@ -787,8 +884,16 @@ export function applyZoom(scale, persistPreference = true) {
 
   const casing = els.bookSpreadCasing;
   if (casing) {
-    const naturalW = casing.offsetWidth || (currentPageMode === '1-page' ? 688 : 1002);
-    const naturalH = casing.offsetHeight || (currentPageMode === '1-page' ? 844 : 704);
+    const is1Page = currentPageMode === '1-page';
+    const defaultW = is1Page ? 688 : 1002;
+    const defaultH = is1Page ? 844 : 704;
+
+    // Reset scaler size constraints before measuring unscaled casing geometry
+    els.bookDeskScaler.style.width = '';
+    els.bookDeskScaler.style.height = '';
+
+    const naturalW = Math.max(casing.offsetWidth || 0, defaultW);
+    const naturalH = Math.max(casing.offsetHeight || 0, defaultH);
     const scaledW = naturalW * clampedScale;
     const scaledH = naturalH * clampedScale;
 
@@ -1223,8 +1328,11 @@ export function handleFitPage() {
       + parseFloat(deskStyle.paddingBottom || '0');
     const availW = Math.max(1, desk.clientWidth - horizontalPadding - 8);
     const availH = Math.max(1, desk.clientHeight - verticalPadding - 8);
-    const casingW = casing.offsetWidth || (currentPageMode === '1-page' ? 688 : 1002);
-    const casingH = casing.offsetHeight || 710;
+    const is1Page = currentPageMode === '1-page';
+    const defaultW = is1Page ? 688 : 1002;
+    const defaultH = is1Page ? 844 : 704;
+    const casingW = Math.max(casing.offsetWidth || 0, defaultW);
+    const casingH = Math.max(casing.offsetHeight || 0, defaultH);
     const scale = Math.max(
       0.3,
       Math.min(3.0, availW / casingW, availH / casingH)
