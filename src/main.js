@@ -9,7 +9,6 @@
 import { getState, setState, persistState, replaceState, normalizeState, setOnPersist } from './state/store.js';
 import { INITIAL_LIBRARY_DATA } from './config/initial-data.js';
 import { getEls } from './utils/dom.js';
-import { checkAndRenderPdfExport } from './export/export-view.js';
 
 import {
   applyFontSize,
@@ -44,6 +43,7 @@ import {
   saveActivePages,
   getActivePageInfo,
   applyAiAutofillToCurrentPage,
+  undoLastAiAutofill,
   isUserActivelyEditing
 } from './components/reader.js';
 
@@ -71,6 +71,7 @@ import {
 import {
   setupModalListeners,
   showToast,
+  showStatus,
   closeNewNotebookModal,
   closeChangePasswordModal
 } from './components/modal.js';
@@ -189,6 +190,14 @@ function setupGlobalKeyAndWindowListeners() {
 
     const isMod = e.ctrlKey || e.metaKey;
 
+    // Cmd/Ctrl + Shift + Z — Undo the most recent AI autofill safely.
+    // This shortcut is intentionally separate from the browser/editor undo stack.
+    if (isMod && e.shiftKey && e.key.toLowerCase() === 'z') {
+      e.preventDefault();
+      undoLastAiAutofill();
+      return;
+    }
+
     // Cmd+K / Ctrl+K — Open AI Command Bar
     if (isMod && e.key === 'k') {
       e.preventDefault();
@@ -297,9 +306,35 @@ import { login, logout, checkSession, fetchNotebooks, syncNotebooks } from './ap
 
 let isAuthenticated = false;
 let syncTimer = null;
+let syncRetryTimer = null;
+let syncRetryAttempt = 0;
+let syncListenersStarted = false;
 let lastSyncedAt = null;      // Tracks server's last sync timestamp
 let serverLoadComplete = false; // Prevents push before first pull completes
 const SYNC_DEBOUNCE_MS = 800;
+const SYNC_RETRY_BASE_MS = 2_000;
+const SYNC_RETRY_MAX_MS = 60_000;
+
+function cancelSyncRetry() {
+  clearTimeout(syncRetryTimer);
+  syncRetryTimer = null;
+  syncRetryAttempt = 0;
+}
+
+function scheduleSyncRetry() {
+  if (!isAuthenticated || !serverLoadComplete || !navigator.onLine) return;
+
+  clearTimeout(syncRetryTimer);
+  const delay = Math.min(
+    SYNC_RETRY_BASE_MS * (2 ** syncRetryAttempt),
+    SYNC_RETRY_MAX_MS
+  );
+  syncRetryAttempt += 1;
+  syncRetryTimer = setTimeout(() => {
+    syncRetryTimer = null;
+    doSyncToServer();
+  }, delay);
+}
 
 // ─── Auth UI helpers ───
 
@@ -363,6 +398,9 @@ function setupLogoutButton() {
     } catch {}
     clearInterval(pullTimer);
     pullTimer = null;
+    clearTimeout(syncTimer);
+    syncTimer = null;
+    cancelSyncRetry();
     isAuthenticated = false;
     serverLoadComplete = false;
     lastSyncedAt = null;
@@ -686,9 +724,13 @@ async function doSyncToServer() {
 
   // Skip if data hasn't changed since last push
   const currentJson = JSON.stringify(state.notebooks);
-  if (currentJson === lastPushedJson) return;
+  if (currentJson === lastPushedJson) {
+    showStatus('Đã đồng bộ', 'saved');
+    return;
+  }
 
   isSyncing = true;
+  showStatus('Đang đồng bộ...', 'saving');
   try {
     const result = await syncNotebooks(state.notebooks, lastSyncedAt, state.deletedNotebookIds || []);
 
@@ -740,14 +782,37 @@ async function doSyncToServer() {
         }
       }
     }
+    cancelSyncRetry();
+    showStatus('Đã đồng bộ', 'saved');
   } catch (err) {
     // If server blocked empty sync, force reload from server
     if (err.message && err.message.includes('EMPTY_SYNC_BLOCKED')) {
       console.warn('Server blocked empty sync, reloading from server...');
       await loadFromServer();
       renderLibraryGrid();
+      showStatus('Đã tải lại dữ liệu an toàn', 'saved');
+    } else if (err.status === 429) {
+      const retryAfterSeconds = Math.max(1, Number(err.retryAfterSeconds) || 60);
+      clearTimeout(syncRetryTimer);
+      syncRetryAttempt = 0;
+      showStatus(
+        `Tạm dừng đồng bộ, thử lại sau ${retryAfterSeconds} giây`,
+        'error'
+      );
+      syncRetryTimer = setTimeout(() => {
+        syncRetryTimer = null;
+        if (isAuthenticated && serverLoadComplete && navigator.onLine) {
+          showStatus('Đang thử đồng bộ lại...', 'saving');
+          doSyncToServer();
+        }
+      }, retryAfterSeconds * 1000);
     } else {
       console.warn('Sync to server failed:', err.message);
+      showStatus(
+        navigator.onLine ? 'Chưa thể đồng bộ, sẽ thử lại' : 'Mất kết nối, dữ liệu đã lưu trên thiết bị',
+        'error'
+      );
+      scheduleSyncRetry();
     }
   } finally {
     isSyncing = false;
@@ -758,6 +823,10 @@ function scheduleSyncToServer() {
   if (!isAuthenticated || !serverLoadComplete) return;
 
   clearTimeout(syncTimer);
+  showStatus(
+    navigator.onLine ? 'Đang chờ đồng bộ...' : 'Mất kết nối, dữ liệu đã lưu trên thiết bị',
+    navigator.onLine ? 'saving' : 'error'
+  );
   syncTimer = setTimeout(() => doSyncToServer(), SYNC_DEBOUNCE_MS);
 }
 
@@ -782,6 +851,46 @@ function pushToServerNow() {
  *  - Every 15s    → pull if tab is visible and user is not actively typing
  */
 function startSyncListeners() {
+  if (syncListenersStarted) {
+    clearInterval(pullTimer);
+    pullTimer = setInterval(() => {
+      if (isAuthenticated && document.visibilityState === 'visible' && !isUserActivelyEditing()) {
+        pullFromServer();
+      }
+    }, PULL_INTERVAL_MS);
+    return;
+  }
+  syncListenersStarted = true;
+
+  window.addEventListener('api:rate-limited', event => {
+    const detail = event.detail || {};
+    const retryAfterSeconds = Math.max(1, Number(detail.retryAfterSeconds) || 60);
+    const message = detail.message
+      || `Bạn đang thao tác quá nhanh. Vui lòng thử lại sau ${retryAfterSeconds} giây.`;
+
+    showToast(message);
+
+    if (detail.path === '/notebooks/sync') {
+      showStatus(
+        `Tạm dừng đồng bộ, thử lại sau ${retryAfterSeconds} giây`,
+        'error'
+      );
+    }
+  });
+
+  window.addEventListener('offline', () => {
+    clearTimeout(syncRetryTimer);
+    syncRetryTimer = null;
+    showStatus('Mất kết nối, dữ liệu đã lưu trên thiết bị', 'error');
+  });
+
+  window.addEventListener('online', () => {
+    if (!isAuthenticated || !serverLoadComplete) return;
+    cancelSyncRetry();
+    showStatus('Đã kết nối lại, đang đồng bộ...', 'saving');
+    doSyncToServer();
+  });
+
   document.addEventListener('visibilitychange', () => {
     if (!isAuthenticated) return;
 
@@ -920,8 +1029,11 @@ async function init() {
     persistState();
     startSyncListeners();  // Enable cross-device sync (polling + visibility)
 
-    if (checkAndRenderPdfExport()) {
-      return;
+    if (new URLSearchParams(window.location.search).has('export-pdf')) {
+      const { checkAndRenderPdfExport } = await import('./export/export-view.js');
+      if (checkAndRenderPdfExport()) {
+        return;
+      }
     }
 
     renderLibraryGrid();

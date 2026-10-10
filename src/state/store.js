@@ -195,6 +195,7 @@ export function persistState() {
     }
     return true;
   } catch (e) {
+    let compactCacheSaved = false;
     const isQuota = e && (
       e.name === 'QuotaExceededError' ||
       e.name === 'NS_ERROR_DOM_QUOTA_REACHED' ||
@@ -217,6 +218,7 @@ export function persistState() {
           })
         };
         localStorage.setItem(STORAGE_KEY, JSON.stringify(compactState));
+        compactCacheSaved = true;
       } catch (compactErr) {
         console.warn('[Storage] Even compact cache failed:', compactErr);
       }
@@ -227,7 +229,7 @@ export function persistState() {
     if (onPersistCallback) {
       try { onPersistCallback(state); } catch {}
     }
-    return true;
+    return compactCacheSaved;
   }
 }
 

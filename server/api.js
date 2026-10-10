@@ -12,6 +12,7 @@
 
 import express from 'express';
 import { requireAuth } from './auth.js';
+import { createRateLimiter } from './rate-limiter.js';
 import { loadFullState, saveFullState, deleteNotebookById, mergeAndSaveState, getLastSyncedAt, getDeletedNotebookIds, updateNotebookProgress } from './db.js';
 
 const MAX_NOTEBOOKS_PER_SYNC = 1000;
@@ -20,6 +21,24 @@ const MAX_PAGES_PER_NOTEBOOK = 5000;
 const MAX_DELETED_PAGE_IDS = 5000;
 const MAX_TEXT_FIELD_LENGTH = 500000;
 const SYNC_BEACON_BODY_LIMIT = process.env.SYNC_BEACON_BODY_LIMIT || '10mb';
+const syncRateLimit = createRateLimiter({
+  name: 'notebook-sync',
+  windowMs: process.env.SYNC_RATE_WINDOW_MS || 60_000,
+  maxRequests: process.env.SYNC_RATE_MAX_REQUESTS || 120,
+  maxAllowedRequests: 2000,
+  message: ({ retryAfterSeconds }) =>
+    `Quá nhiều yêu cầu đồng bộ. Vui lòng thử lại sau ${retryAfterSeconds} giây.`
+});
+
+// sendBeacon cannot consume a JSON error response. Silently acknowledge a
+// throttled beacon so closing the tab is never delayed by an error payload.
+const syncBeaconRateLimit = createRateLimiter({
+  name: 'notebook-sync-beacon',
+  windowMs: process.env.SYNC_RATE_WINDOW_MS || 60_000,
+  maxRequests: process.env.SYNC_BEACON_RATE_MAX_REQUESTS || 120,
+  maxAllowedRequests: 2000,
+  silent: true
+});
 
 function isValidId(value) {
   return (typeof value === 'string' || typeof value === 'number')
@@ -156,7 +175,7 @@ export function apiRoutes(app) {
   });
 
   // ─── PUT /api/notebooks/sync — Smart merge sync ───
-  app.put('/api/notebooks/sync', requireAuth, (req, res) => {
+  app.put('/api/notebooks/sync', requireAuth, syncRateLimit, (req, res) => {
     try {
       const { notebooks, lastSyncedAt: clientLastSyncedAt, deletedNotebookIds = [] } = req.body;
       const validationError = validateSyncPayload(notebooks, deletedNotebookIds);
@@ -194,6 +213,7 @@ export function apiRoutes(app) {
   app.post(
     '/api/notebooks/sync-beacon',
     requireAuth,
+    syncBeaconRateLimit,
     express.text({ type: 'text/plain', limit: SYNC_BEACON_BODY_LIMIT }),
     (req, res) => {
       try {

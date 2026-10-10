@@ -98,6 +98,7 @@ Mở trình duyệt truy cập: `http://localhost:27972`
 | `Ctrl/Cmd + \` | Thu gọn / Mở rộng thanh công cụ định dạng |
 | `F11` hoặc `Alt + Enter` | Bật / Tắt chế độ toàn màn hình không xao nhãng |
 | `Ctrl/Cmd + B / I / U` | In đậm / In nghiêng / Gạch chân chữ đang chọn |
+| `Ctrl/Cmd + Shift + Z` | Hoàn tác lần tự động điền trang gần nhất của AI |
 | `Ctrl/Cmd + =` / `-` | Phóng to / Thu nhỏ bàn làm việc |
 | `Ctrl/Cmd + 0` | Trả về tỷ lệ thu phóng chuẩn 100% |
 | `Ctrl + Con lăn chuột` | Zoom tự do theo vị trí trỏ chuột |

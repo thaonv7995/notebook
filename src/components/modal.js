@@ -8,11 +8,104 @@ import { changePassword } from '../api/client.js';
 
 let toastTimer = null;
 let selectedCoverGradient = 'linear-gradient(135deg, #1e3a8a, #0f172a)';
+const modalFocusOrigins = new WeakMap();
+const FOCUSABLE_SELECTOR = [
+  'a[href]',
+  'button:not([disabled])',
+  'input:not([disabled]):not([type="hidden"])',
+  'select:not([disabled])',
+  'textarea:not([disabled])',
+  '[contenteditable="true"]',
+  '[tabindex]:not([tabindex="-1"])'
+].join(',');
+
+function getFocusableElements(modal) {
+  return [...modal.querySelectorAll(FOCUSABLE_SELECTOR)].filter(element => {
+    const style = window.getComputedStyle(element);
+    return !element.hidden
+      && style.display !== 'none'
+      && style.visibility !== 'hidden';
+  });
+}
+
+function handleModalKeydown(event) {
+  const modal = event.currentTarget;
+
+  if (event.key === 'Escape') {
+    const closeButton = modal.querySelector(
+      '.btn-close-modal, [data-modal-close]'
+    );
+    if (closeButton) {
+      event.preventDefault();
+      closeButton.click();
+    }
+    return;
+  }
+
+  if (event.key !== 'Tab') return;
+
+  const focusable = getFocusableElements(modal);
+  if (focusable.length === 0) {
+    event.preventDefault();
+    modal.focus();
+    return;
+  }
+
+  const first = focusable[0];
+  const last = focusable[focusable.length - 1];
+
+  if (event.shiftKey && document.activeElement === first) {
+    event.preventDefault();
+    last.focus();
+  } else if (!event.shiftKey && document.activeElement === last) {
+    event.preventDefault();
+    first.focus();
+  }
+}
+
+function activateModalAccessibility(modal, preferredFocus = null) {
+  if (!modal) return;
+
+  const activeElement = document.activeElement;
+  if (activeElement instanceof HTMLElement && !modal.contains(activeElement)) {
+    modalFocusOrigins.set(modal, activeElement);
+  }
+
+  modal.setAttribute('role', 'dialog');
+  modal.setAttribute('aria-modal', 'true');
+  modal.setAttribute('aria-hidden', 'false');
+  modal.setAttribute('tabindex', '-1');
+  modal.removeEventListener('keydown', handleModalKeydown);
+  modal.addEventListener('keydown', handleModalKeydown);
+
+  const focusTarget = preferredFocus || getFocusableElements(modal)[0] || modal;
+  requestAnimationFrame(() => focusTarget.focus());
+}
+
+function deactivateModalAccessibility(modal) {
+  if (!modal) return;
+
+  modal.setAttribute('aria-hidden', 'true');
+  modal.removeEventListener('keydown', handleModalKeydown);
+
+  const focusOrigin = modalFocusOrigins.get(modal);
+  modalFocusOrigins.delete(modal);
+  if (
+    focusOrigin instanceof HTMLElement
+    && focusOrigin.isConnected
+    && !focusOrigin.hasAttribute('disabled')
+  ) {
+    requestAnimationFrame(() => focusOrigin.focus());
+  }
+}
 
 export function showToast(message, actionLabel = '', action = null) {
   const els = getEls();
   if (!els.appToast || !els.appToastText) return;
   clearTimeout(toastTimer);
+  els.appToast.setAttribute('role', actionLabel ? 'status' : 'alert');
+  els.appToast.setAttribute('aria-live', actionLabel ? 'polite' : 'assertive');
+  els.appToast.setAttribute('aria-atomic', 'true');
   els.appToastText.textContent = message;
   els.appToast.hidden = false;
   els.appToast.classList.add('is-visible');
@@ -42,10 +135,8 @@ export function openNewNotebookModal(defaultCategory = 'Học tập') {
   const els = getEls();
   if (!els.newNotebookModal) return;
   els.newNotebookModal.classList.add('open');
-  els.newNotebookModal.setAttribute('aria-hidden', 'false');
   if (els.newNotebookTitle) {
     els.newNotebookTitle.value = '';
-    els.newNotebookTitle.focus();
   }
   if (els.newNotebookCategory) {
     els.newNotebookCategory.value = defaultCategory;
@@ -53,13 +144,14 @@ export function openNewNotebookModal(defaultCategory = 'Học tập') {
   if (els.newNotebookAuthor) {
     els.newNotebookAuthor.value = '@thaonv';
   }
+  activateModalAccessibility(els.newNotebookModal, els.newNotebookTitle);
 }
 
 export function closeNewNotebookModal() {
   const els = getEls();
   if (!els.newNotebookModal) return;
   els.newNotebookModal.classList.remove('open');
-  els.newNotebookModal.setAttribute('aria-hidden', 'true');
+  deactivateModalAccessibility(els.newNotebookModal);
 }
 
 let pendingDeleteAction = null;
@@ -75,17 +167,17 @@ export function openDeleteNotebookModal(notebook, onConfirm) {
     els.deleteModalPageCount.textContent = (notebook.pages && notebook.pages.length) || 1;
   }
   els.deleteNotebookModal.classList.add('open');
-  els.deleteNotebookModal.setAttribute('aria-hidden', 'false');
-  if (els.btnCancelDeleteModal) {
-    els.btnCancelDeleteModal.focus();
-  }
+  activateModalAccessibility(
+    els.deleteNotebookModal,
+    els.btnCancelDeleteModal
+  );
 }
 
 export function closeDeleteNotebookModal() {
   const els = getEls();
   if (!els.deleteNotebookModal) return;
   els.deleteNotebookModal.classList.remove('open');
-  els.deleteNotebookModal.setAttribute('aria-hidden', 'true');
+  deactivateModalAccessibility(els.deleteNotebookModal);
   pendingDeleteAction = null;
 }
 
@@ -114,14 +206,14 @@ export function openEditCoverModal(notebook, onConfirm) {
   }
 
   modal.classList.add('open');
-  modal.setAttribute('aria-hidden', 'false');
+  activateModalAccessibility(modal, options[0] || null);
 }
 
 export function closeEditCoverModal() {
   const modal = document.getElementById('editCoverModal');
   if (!modal) return;
   modal.classList.remove('open');
-  modal.setAttribute('aria-hidden', 'true');
+  deactivateModalAccessibility(modal);
   pendingEditCoverAction = null;
 }
 
@@ -136,17 +228,17 @@ export function openChangePasswordModal() {
     els.changePasswordError.textContent = '';
   }
   els.changePasswordModal.classList.add('open');
-  els.changePasswordModal.setAttribute('aria-hidden', 'false');
-  if (els.oldPasswordInput) {
-    setTimeout(() => els.oldPasswordInput.focus(), 60);
-  }
+  activateModalAccessibility(
+    els.changePasswordModal,
+    els.oldPasswordInput
+  );
 }
 
 export function closeChangePasswordModal() {
   const els = getEls();
   if (!els.changePasswordModal) return;
   els.changePasswordModal.classList.remove('open');
-  els.changePasswordModal.setAttribute('aria-hidden', 'true');
+  deactivateModalAccessibility(els.changePasswordModal);
 }
 
 export function showStatus(text, state) {
@@ -378,7 +470,7 @@ function closeGenericModal() {
   const m = getGenericModalEls();
   if (!m.overlay) return;
   m.overlay.classList.remove('open');
-  m.overlay.setAttribute('aria-hidden', 'true');
+  deactivateModalAccessibility(m.overlay);
 }
 
 /**
@@ -399,9 +491,8 @@ export function showPromptModal(title, message, defaultValue = '') {
     m.btnConfirm.textContent = 'Xác nhận';
     m.btnConfirm.className = 'btn-modal btn-modal--confirm';
     m.overlay.classList.add('open');
-    m.overlay.setAttribute('aria-hidden', 'false');
-
-    setTimeout(() => { m.input.focus(); m.input.select(); }, 60);
+    activateModalAccessibility(m.overlay, m.input);
+    setTimeout(() => m.input.select(), 60);
 
     function cleanup() {
       m.btnConfirm.removeEventListener('click', onConfirm);
@@ -441,9 +532,7 @@ export function showConfirmModal(title, message, { confirmText = 'Xác nhận', 
     m.btnConfirm.textContent = confirmText;
     m.btnConfirm.className = danger ? 'btn-modal btn-modal--danger' : 'btn-modal btn-modal--confirm';
     m.overlay.classList.add('open');
-    m.overlay.setAttribute('aria-hidden', 'false');
-
-    setTimeout(() => m.btnCancel.focus(), 60);
+    activateModalAccessibility(m.overlay, m.btnCancel);
 
     function cleanup() {
       m.btnConfirm.removeEventListener('click', onConfirm);
@@ -479,9 +568,7 @@ export function showAlertModal(title, message) {
     m.btnConfirm.textContent = 'Đã hiểu';
     m.btnConfirm.className = 'btn-modal btn-modal--confirm';
     m.overlay.classList.add('open');
-    m.overlay.setAttribute('aria-hidden', 'false');
-
-    setTimeout(() => m.btnConfirm.focus(), 60);
+    activateModalAccessibility(m.overlay, m.btnConfirm);
 
     function cleanup() {
       m.btnConfirm.removeEventListener('click', onDismiss);

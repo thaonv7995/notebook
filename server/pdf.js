@@ -14,12 +14,22 @@ import path from 'path';
 import os from 'os';
 import { randomUUID } from 'crypto';
 import { requireAuth } from './auth.js';
+import { createRateLimiter } from './rate-limiter.js';
 import { loadFullState } from './db.js';
 
 const PORT = parseInt(process.env.PORT, 10) || 27972;
 
 let activePdfExports = 0;
 const MAX_CONCURRENT_PDF = 1;
+const pdfRateLimit = createRateLimiter({
+  name: 'pdf-export',
+  windowMs: process.env.PDF_RATE_WINDOW_MS || 5 * 60_000,
+  minWindowMs: 60_000,
+  maxRequests: process.env.PDF_RATE_MAX_EXPORTS || 3,
+  maxAllowedRequests: 20,
+  message: ({ retryAfterSeconds }) =>
+    `Bạn đã xuất PDF quá nhiều lần. Vui lòng thử lại sau ${retryAfterSeconds} giây.`
+});
 
 /**
  * Detect system-installed Chrome/Chromium if available
@@ -56,7 +66,7 @@ function findChromeExecutable() {
  * Register the PDF export API route
  */
 export function pdfRoutes(app) {
-  app.get('/api/notebooks/:id/pdf', requireAuth, async (req, res) => {
+  app.get('/api/notebooks/:id/pdf', requireAuth, pdfRateLimit, async (req, res) => {
     const notebookId = req.params.id;
     if (
       typeof notebookId !== 'string'
@@ -68,6 +78,7 @@ export function pdfRoutes(app) {
     }
 
     if (activePdfExports >= MAX_CONCURRENT_PDF) {
+      res.setHeader('Retry-After', '5');
       return res.status(429).json({
         error: 'Server đang xử lý một tác vụ xuất PDF khác. Vui lòng đợi trong giây lát rồi thử lại.'
       });

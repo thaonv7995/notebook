@@ -7,6 +7,7 @@
  */
 
 import { requireAuth } from './auth.js';
+import { createRateLimiter } from './rate-limiter.js';
 
 const DEFAULT_BASE_URL = (process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1').replace(/\/+$/, '');
 const AI_REQUEST_TIMEOUT_MS = Math.max(
@@ -41,6 +42,15 @@ const ALLOWED_TEMPLATES = new Set([
   'charting',
   'quadrant'
 ]);
+
+const aiRateLimit = createRateLimiter({
+  name: 'ai',
+  windowMs: process.env.AI_RATE_WINDOW_MS || 60_000,
+  maxRequests: process.env.AI_RATE_MAX_REQUESTS || 30,
+  maxAllowedRequests: 1000,
+  message: ({ retryAfterSeconds }) =>
+    `Bạn đã gửi quá nhiều yêu cầu AI. Vui lòng thử lại sau ${retryAfterSeconds} giây.`
+});
 
 function normalizeModel(value) {
   if (typeof value !== 'string') return 'gpt-4o-mini';
@@ -472,7 +482,7 @@ GIỚI HẠN DÒNG: Viết tối đa khoảng ${Math.min(remainingLines, 16)} d�
 
 export function aiRoutes(app) {
   // ─── POST /api/ai/test-key — Test AI API Key & Base URL validity ───
-  app.post('/api/ai/test-key', requireAuth, async (req, res) => {
+  app.post('/api/ai/test-key', requireAuth, aiRateLimit, async (req, res) => {
     try {
       const { endpointUrl: chatUrl, isCustomBaseUrl, isLocal } = validateAndResolveEndpoint(req, '/chat/completions');
       const apiKey = resolveApiKey(req, isCustomBaseUrl);
@@ -528,7 +538,7 @@ export function aiRoutes(app) {
   });
 
   // ─── POST /api/ai/stream — Stream AI output via Server-Sent Events (SSE) ───
-  app.post('/api/ai/stream', requireAuth, async (req, res) => {
+  app.post('/api/ai/stream', requireAuth, aiRateLimit, async (req, res) => {
     try {
       const { endpointUrl: chatUrl, isCustomBaseUrl, isLocal } = validateAndResolveEndpoint(req, '/chat/completions');
       const apiKey = resolveApiKey(req, isCustomBaseUrl);
@@ -647,7 +657,7 @@ export function aiRoutes(app) {
   });
 
   // ─── POST /api/ai/process — Execute AI prompt / transform ───
-  app.post('/api/ai/process', requireAuth, async (req, res) => {
+  app.post('/api/ai/process', requireAuth, aiRateLimit, async (req, res) => {
     try {
       const { endpointUrl: chatUrl, isCustomBaseUrl, isLocal } = validateAndResolveEndpoint(req, '/chat/completions');
       const apiKey = resolveApiKey(req, isCustomBaseUrl);

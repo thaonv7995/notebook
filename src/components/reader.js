@@ -67,6 +67,54 @@ let isTurningPage = false;
 let wasCompactViewport = window.innerWidth <= 900;
 let onUrlUpdateCallback = null;
 let onFullscreenUpdateCallback = null;
+const aiPageSnapshots = [];
+const MAX_AI_SNAPSHOTS = 20;
+
+function createAiPageSnapshot(notebook, page, targetIdx) {
+  aiPageSnapshots.push({
+    notebookId: notebook.id,
+    pageId: page.id,
+    targetIdx,
+    notebookUpdatedAt: notebook.updatedAt,
+    page: JSON.parse(JSON.stringify(page))
+  });
+
+  if (aiPageSnapshots.length > MAX_AI_SNAPSHOTS) {
+    aiPageSnapshots.splice(0, aiPageSnapshots.length - MAX_AI_SNAPSHOTS);
+  }
+}
+
+export function undoLastAiAutofill() {
+  const snapshot = aiPageSnapshots.pop();
+  if (!snapshot) {
+    showToast('Không có thay đổi AI nào để hoàn tác.');
+    return false;
+  }
+
+  const state = getState();
+  const notebook = state.notebooks?.find(item => item.id === snapshot.notebookId);
+  if (!notebook) {
+    showToast('Không thể tìm thấy cuốn sổ của bản sao AI.');
+    return false;
+  }
+
+  const pageIndex = notebook.pages?.findIndex(item => item.id === snapshot.pageId);
+  if (pageIndex == null || pageIndex < 0) {
+    showToast('Không thể tìm thấy trang cần hoàn tác.');
+    return false;
+  }
+
+  notebook.pages[pageIndex] = snapshot.page;
+  notebook.updatedAt = new Date().toISOString();
+  setState({
+    activeNotebookId: notebook.id,
+    activePageIndex: snapshot.targetIdx
+  });
+  persistState();
+  renderBookPages();
+  showStatus('Đã hoàn tác nội dung AI', 'saved');
+  return true;
+}
 
 export function setReaderCallbacks({ onUrlUpdate, onFullscreenUpdate }) {
   if (onUrlUpdate) onUrlUpdateCallback = onUrlUpdate;
@@ -1015,13 +1063,16 @@ export function applyAiAutofillToCurrentPage(parsedJson) {
   const pageInfo = getActivePageInfo();
   if (!pageInfo || !pageInfo.page || !parsedJson) return false;
 
-  const { notebook: nb, page, targetSheet } = pageInfo;
+  const { notebook: nb, page, targetIdx, targetSheet } = pageInfo;
   const template = page.template || 'ruled';
 
   // Save any pre-existing input state first
   if (targetSheet) {
     extractTemplateDataFromSheet(targetSheet, page);
   }
+
+  // Preserve an in-memory snapshot before AI changes any page fields.
+  createAiPageSnapshot(nb, page, targetIdx);
 
   // Update Topic / Title
   if (parsedJson.topic) {

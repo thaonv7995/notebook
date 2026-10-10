@@ -55,3 +55,36 @@ input, select, textarea {
   font-family: inherit;
   color: inherit;
 }
+
+/* Consistent, high-contrast keyboard focus without affecting pointer users. */
+:where(
+  a,
+  button,
+  input,
+  select,
+  textarea,
+  [role="button"],
+  [tabindex]
+):focus-visible {
+  outline: 3px solid #60a5fa;
+  outline-offset: 3px;
+}
+
+/* Preserve usability when users request reduced animation or motion. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Improve interaction feedback for temporarily unavailable controls. */
+:where(button, input, select, textarea)[disabled],
+:where(button, [role="button"])[aria-disabled="true"] {
+  cursor: not-allowed;
+  opacity: 0.58;
+}

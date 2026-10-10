@@ -18,9 +18,37 @@ import {
 } from '../editor/formatter.js';
 import { showToast } from './modal.js';
 import { handleFitPage } from './reader.js';
-import { printFullNotebook, exportPdfFromServer } from '../export/pdf-exporter.js';
 import { compressAndProcessImageFile, insertImageCardIntoEditable } from '../editor/image-manager.js';
 import { renderEmojiPickerContent } from '../editor/emoji-picker.js';
+
+let pdfExporterPromise;
+
+async function runPdfExport(includeCover, triggerButton) {
+  if (triggerButton?.disabled) return;
+
+  const originalText = triggerButton?.textContent;
+  if (triggerButton) {
+    triggerButton.disabled = true;
+    triggerButton.setAttribute('aria-busy', 'true');
+    triggerButton.textContent = 'Đang chuẩn bị PDF...';
+  }
+
+  try {
+    pdfExporterPromise ||= import('../export/pdf-exporter.js');
+    const { exportPdfFromServer } = await pdfExporterPromise;
+    await exportPdfFromServer(includeCover);
+  } catch (error) {
+    pdfExporterPromise = undefined;
+    console.error('Không thể tải hoặc chạy công cụ xuất PDF:', error);
+    showToast('Không thể chuẩn bị công cụ xuất PDF. Vui lòng thử lại.');
+  } finally {
+    if (triggerButton) {
+      triggerButton.disabled = false;
+      triggerButton.removeAttribute('aria-busy');
+      triggerButton.textContent = originalText;
+    }
+  }
+}
 
 export function applyToolbarCollapse(collapsed, save = true) {
   const els = getEls();
@@ -246,15 +274,15 @@ export function setupToolbarListeners() {
       els.exportPrintBtn.setAttribute('aria-expanded', String(!els.pdfExportMenu.hidden));
     });
     if (els.exportPdfWithCoverBtn) {
-      els.exportPdfWithCoverBtn.addEventListener('click', () => {
+      els.exportPdfWithCoverBtn.addEventListener('click', async () => {
         closeAllPopoverMenus();
-        exportPdfFromServer(true);
+        await runPdfExport(true, els.exportPdfWithCoverBtn);
       });
     }
     if (els.exportPdfContentOnlyBtn) {
-      els.exportPdfContentOnlyBtn.addEventListener('click', () => {
+      els.exportPdfContentOnlyBtn.addEventListener('click', async () => {
         closeAllPopoverMenus();
-        exportPdfFromServer(false);
+        await runPdfExport(false, els.exportPdfContentOnlyBtn);
       });
     }
   }
