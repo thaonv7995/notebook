@@ -239,15 +239,10 @@ app.get(['/notebook-icon.svg', '/assets/notebook-icon.svg'], (req, res) => {
 
 // ─── Frontend Serving ───
 if (IS_DEV) {
-  // In dev mode, proxy to Vite dev server on a different port
-  const VITE_PORT = PORT + 1;  // 27973
-  const { createProxyMiddleware } = await import('http-proxy-middleware');
-  app.use('/', createProxyMiddleware({
-    target: `http://localhost:${VITE_PORT}`,
-    changeOrigin: true,
-    ws: true, // WebSocket for Vite HMR
-  }));
-  console.log(`  → Vite dev proxy → http://localhost:${VITE_PORT}`);
+  // In development, Vite serves the frontend on PORT + 1 and proxies /api
+  // requests back to this Express server. Keeping the proxy in Vite avoids
+  // an additional runtime dependency in the backend.
+  console.log(`  → Vite frontend → http://localhost:${PORT + 1}`);
 } else {
   // In production, serve static files from dist/
   if (existsSync(distPath)) {
