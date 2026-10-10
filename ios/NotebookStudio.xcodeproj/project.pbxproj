@@ -843,6 +843,7 @@
 				DEVELOPMENT_TEAM = MPB66BJ242;
 				INFOPLIST_FILE = NotebookStudio/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Notebook Studio";
+				INFOPLIST_KEY_NSFaceIDUsageDescription = "Sử dụng Face ID để xác thực và mở khóa bảo vệ sổ tay của bạn.";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -863,6 +864,7 @@
 				DEVELOPMENT_TEAM = MPB66BJ242;
 				INFOPLIST_FILE = NotebookStudio/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Notebook Studio";
+				INFOPLIST_KEY_NSFaceIDUsageDescription = "Sử dụng Face ID để xác thực và mở khóa bảo vệ sổ tay của bạn.";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
