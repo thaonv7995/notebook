@@ -3,6 +3,8 @@
    Mobile, Tablet, and Compact Viewport Adaptations
    ======================================================== */
 
+/* Tablet and compact desktop: keep the two-page reader available while
+   allowing navigation and formatting controls to wrap safely. */
 @media (max-width: 900px) {
   .lib-header {
     height: auto;
@@ -36,7 +38,7 @@
 
   .reader-header {
     height: auto;
-    min-height: 96px;
+    min-height: 92px;
     padding: 8px 10px;
     flex-wrap: wrap;
     overflow: visible;
@@ -48,44 +50,94 @@
   .reader-header-center {
     order: 3;
     width: 100%;
-    justify-content: space-between;
+    justify-content: flex-start;
     gap: 6px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding-bottom: 2px;
+    scrollbar-width: none;
   }
-  .reader-scale-box { display: none; }
-  #btnMode2Pages { display: none; }
+  .reader-header-center::-webkit-scrollbar { display: none; }
+  .reader-scale-box { flex-shrink: 0; }
   .reader-template-select { flex: 1; min-width: 0; }
 
   .editor-toolbar {
     justify-content: flex-start;
     overflow-x: auto !important;
     overflow-y: hidden !important;
-    padding: 0 8px;
+    padding: 0 10px;
     scrollbar-width: none;
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
   }
   .editor-toolbar::-webkit-scrollbar { display: none; }
-  .editor-toolbar > div[style] { display: none; }
   .toolbar-group,
   .toolbar-divider { flex-shrink: 0; }
 
   .open-book-workspace {
-    padding: 10px 8px 44px;
+    padding: 14px 12px 48px;
     overflow-x: auto;
     align-items: flex-start;
+    overscroll-behavior: contain;
+    scroll-padding: 12px;
   }
-  /* Let JS-based applyZoom handle scaling via transform.
-     Page dimensions stay FIXED to preserve A4 ratio and prevent text drift. */
+  .app-toast { bottom: 14px; }
+}
+
+/* Phone and narrow portrait tablet: switch to the one-page reader. This
+   breakpoint matches reader.js so CSS and JavaScript cannot disagree. */
+@media (max-width: 720px) {
+  .reader-header {
+    min-height: 100px;
+    gap: 6px;
+  }
+  .reader-header-left { max-width: calc(100% - 150px); }
+  .reader-header-right { gap: 3px; }
+  .reader-book-title { max-width: 42vw; }
+  .reader-scale-box { display: none; }
+  #btnMode2Pages { display: none; }
+
+  .btn-back-reader,
+  .btn-header-icon,
+  .btn-add-page-reader,
+  #save-status,
+  .tool-btn,
+  .tool-badge-btn {
+    min-width: 36px;
+    width: 36px;
+    min-height: 36px;
+    height: 36px;
+  }
+
+  .editor-toolbar {
+    height: 48px;
+    max-height: 48px;
+  }
+
+  .toolbar-font-select {
+    height: 36px;
+    font-size: 13px;
+  }
+
+  .open-book-workspace {
+    padding: 10px 8px max(44px, env(safe-area-inset-bottom));
+    justify-content: safe center;
+  }
+
   .book-spread-casing,
   .book-spread-casing.mode-1-page {
     display: block;
     padding: 5px;
     border-radius: 7px;
   }
-  /* Keep fixed page dimensions — scaling is handled by .book-desk-scaler transform */
+
   .book-page-right,
   .book-center-spine,
-  .book-center-ribbon { display: none !important; }
+  .book-center-ribbon {
+    display: none !important;
+  }
   .book-page-left::after { display: none; }
-  .app-toast { bottom: 14px; }
+  .page-lang-tag { font-size: 11px; }
 }
 
 @media (max-width: 480px) {
@@ -95,6 +147,6 @@
   .btn-new-book { width: 36px; padding: 0; justify-content: center; }
   .lib-books-grid { grid-template-columns: 1fr; }
   .book-cover { max-height: 520px; }
-  .reader-title-box { max-width: 58vw; }
-  .reader-book-title { max-width: 45vw; }
+  .reader-title-box { max-width: 48vw; }
+  .reader-book-title { max-width: 34vw; }
 }

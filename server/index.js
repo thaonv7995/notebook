@@ -108,6 +108,28 @@ app.use((req, res, next) => {
 app.use(cors((req, callback) => {
   const origin = req.header('Origin');
   const host = req.get('host');
+  let isTrustedDevOrigin = false;
+  if (IS_DEV && origin) {
+    try {
+      const originUrl = new URL(origin);
+      const requestHostname = String(host || '').split(':')[0];
+      isTrustedDevOrigin = (
+        originUrl.protocol === 'http:'
+        && (
+          originUrl.hostname === 'localhost'
+          || originUrl.hostname === '127.0.0.1'
+          || originUrl.hostname === '::1'
+          || originUrl.hostname === requestHostname
+          || /^10\./.test(originUrl.hostname)
+          || /^192\.168\./.test(originUrl.hostname)
+          || /^172\.(1[6-9]|2\d|3[01])\./.test(originUrl.hostname)
+        )
+        && [PORT, PORT + 1].includes(Number(originUrl.port))
+      );
+    } catch {
+      isTrustedDevOrigin = false;
+    }
+  }
   const isSameOrigin = Boolean(
     origin && host && (
       origin === `http://${host}` ||
@@ -117,7 +139,7 @@ app.use(cors((req, callback) => {
   );
 
   // Native apps, CLI clients, same-origin requests, or explicit allowedOrigins
-  if (!origin || isSameOrigin || allowedOrigins.has(origin)) {
+  if (!origin || isSameOrigin || isTrustedDevOrigin || allowedOrigins.has(origin)) {
     return callback(null, { origin: true, credentials: true });
   }
 

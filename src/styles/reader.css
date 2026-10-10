@@ -5,7 +5,9 @@
   display: flex;
   flex-direction: column;
   height: 100vh;
+  height: 100dvh;
   width: 100vw;
+  width: 100dvw;
   overflow: hidden;
   background: var(--reader-desk-bg);
 }
@@ -411,7 +413,16 @@
 }
 .sr-only,
 #save-status-text {
-  display: none;
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
 }
 .status-icon {
   width: 16px;
@@ -443,6 +454,8 @@
    ======================================================== */
 .open-book-workspace {
   flex: 1;
+  min-width: 0;
+  min-height: 0;
   background: radial-gradient(circle at 50% 30%, #151d2e 0%, #080c14 90%);
   overflow-y: auto;
   overflow-x: auto;
@@ -452,6 +465,8 @@
   padding: 24px 20px 60px;
   perspective: 2500px;
   scrollbar-width: thin;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
 }
 
 /* Scalable Desk Wrapper */
@@ -460,6 +475,9 @@
   transition: transform 0.25s cubic-bezier(0.2, 0, 0, 1);
   display: flex;
   justify-content: center;
+  flex: 0 0 auto;
+  min-width: 0;
+  min-height: 0;
 }
 
 /* The Book Spread Casing */

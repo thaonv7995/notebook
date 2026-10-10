@@ -16,6 +16,7 @@
   overflow: visible !important;
   position: relative;
   transition: max-height 0.22s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease, padding 0.2s ease, border-color 0.2s ease;
+  isolation: isolate;
 }
 
 .editor-toolbar.is-collapsed {
@@ -32,6 +33,7 @@
   display: flex;
   align-items: center;
   gap: 4px;
+  min-width: 0;
 }
 .toolbar-divider {
   width: 1px;
@@ -43,6 +45,8 @@
 .tool-btn {
   width: 30px;
   height: 30px;
+  min-width: 30px;
+  min-height: 30px;
   border-radius: 6px;
   border: 1px solid transparent;
   background: transparent;
@@ -70,7 +74,7 @@
   background-position: right 8px center;
   background-size: 12px 12px;
   color: #f1f5f9;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 500;
   cursor: pointer;
   outline: none;
@@ -101,7 +105,7 @@
 }
 .tool-btn--text {
   font-weight: 700;
-  font-size: 11px;
+  font-size: 12px;
   font-family: 'JetBrains Mono', monospace;
   letter-spacing: -0.5px;
 }
@@ -121,6 +125,42 @@
   stroke-linecap: round;
   stroke-linejoin: round;
   stroke-width: 1.8;
+}
+
+/* Keyboard focus must remain visible above adjacent toolbar controls. */
+.editor-toolbar :where(
+  button,
+  select,
+  input,
+  [role="button"],
+  [tabindex]
+):focus-visible {
+  position: relative;
+  z-index: 2;
+  outline-offset: 1px;
+}
+
+/* Keep popovers layered above the page while avoiding a toolbar-wide
+   stacking conflict with dialogs, drawers, and fullscreen controls. */
+.editor-toolbar [role="menu"],
+.editor-toolbar [role="listbox"],
+.editor-toolbar .export-menu,
+.editor-toolbar .toolbar-more-menu,
+.editor-toolbar .emoji-picker-popover {
+  z-index: 20;
+}
+
+@media (pointer: coarse) {
+  .tool-btn,
+  .tool-badge-btn,
+  .toolbar-font-select {
+    min-height: 36px;
+  }
+
+  .tool-btn,
+  .tool-badge-btn {
+    min-width: 36px;
+  }
 }
 
 .tool-btn--indicator {

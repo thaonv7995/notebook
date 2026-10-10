@@ -64,7 +64,9 @@ function getMainTextSelector(template) {
 let currentPageMode = '2-page';
 let focusedPageSide = 'left';
 let isTurningPage = false;
-let wasCompactViewport = window.innerWidth <= 900;
+const COMPACT_READER_BREAKPOINT = 720;
+let wasCompactViewport = window.innerWidth <= COMPACT_READER_BREAKPOINT;
+let resizeFrame = null;
 let onUrlUpdateCallback = null;
 let onFullscreenUpdateCallback = null;
 const aiPageSnapshots = [];
@@ -778,6 +780,8 @@ export function applyZoom(scale, persistPreference = true) {
   const els = getEls();
   const clampedScale = Math.max(0.3, Math.min(3.5, Math.round(scale * 100) / 100));
   if (persistPreference) setState({ zoomLevel: clampedScale });
+  if (!els.bookDeskScaler) return;
+
   els.bookDeskScaler.style.transform = `scale(${clampedScale})`;
   els.bookDeskScaler.style.transformOrigin = 'top center';
 
@@ -788,16 +792,13 @@ export function applyZoom(scale, persistPreference = true) {
     const scaledW = naturalW * clampedScale;
     const scaledH = naturalH * clampedScale;
 
-    if (clampedScale > 1) {
-      els.bookDeskScaler.style.marginBottom = `${Math.round(scaledH - naturalH + 40)}px`;
-      const extraSide = Math.max(0, Math.round((scaledW - naturalW) / 2));
-      els.bookDeskScaler.style.marginLeft = `${extraSide}px`;
-      els.bookDeskScaler.style.marginRight = `${extraSide}px`;
-    } else {
-      els.bookDeskScaler.style.marginBottom = '';
-      els.bookDeskScaler.style.marginLeft = '';
-      els.bookDeskScaler.style.marginRight = '';
-    }
+    // CSS transforms do not change layout dimensions. Compensate in both
+    // directions so the workspace reserves exactly the visible book size.
+    els.bookDeskScaler.style.width = `${Math.ceil(scaledW)}px`;
+    els.bookDeskScaler.style.height = `${Math.ceil(scaledH)}px`;
+    els.bookDeskScaler.style.marginBottom = '0';
+    els.bookDeskScaler.style.marginLeft = '0';
+    els.bookDeskScaler.style.marginRight = '0';
   }
 
   if (els.readerScaleValue) {
@@ -1213,9 +1214,21 @@ export function handleFitPage() {
   const desk = els.openBookWorkspace;
   const casing = els.bookSpreadCasing;
   if (desk && casing) {
-    const availH = desk.clientHeight - 40;
+    const deskStyle = getComputedStyle(desk);
+    const horizontalPadding =
+      parseFloat(deskStyle.paddingLeft || '0')
+      + parseFloat(deskStyle.paddingRight || '0');
+    const verticalPadding =
+      parseFloat(deskStyle.paddingTop || '0')
+      + parseFloat(deskStyle.paddingBottom || '0');
+    const availW = Math.max(1, desk.clientWidth - horizontalPadding - 8);
+    const availH = Math.max(1, desk.clientHeight - verticalPadding - 8);
+    const casingW = casing.offsetWidth || (currentPageMode === '1-page' ? 688 : 1002);
     const casingH = casing.offsetHeight || 710;
-    const scale = Math.max(0.3, Math.min(3.0, availH / casingH));
+    const scale = Math.max(
+      0.3,
+      Math.min(3.0, availW / casingW, availH / casingH)
+    );
     applyZoom(Math.round(scale * 100) / 100);
   } else {
     applyZoom(0.72);
@@ -1231,7 +1244,11 @@ export function handleFitWidth() {
   const desk = els.openBookWorkspace;
   const casing = els.bookSpreadCasing;
   if (desk && casing) {
-    const availW = desk.clientWidth - 40;
+    const deskStyle = getComputedStyle(desk);
+    const horizontalPadding =
+      parseFloat(deskStyle.paddingLeft || '0')
+      + parseFloat(deskStyle.paddingRight || '0');
+    const availW = Math.max(1, desk.clientWidth - horizontalPadding - 8);
     // Use the actual page sheet + casing padding for width calculation
     const casingPad = parseFloat(getComputedStyle(casing).paddingLeft || '14') * 2;
     const pageSheet = casing.querySelector('.book-page-sheet');
@@ -1281,7 +1298,7 @@ export function openNotebook(notebookId, targetPageIndex = null, skipUrlUpdate =
   els.libraryView.classList.add('hidden');
   els.notebookView.classList.remove('hidden');
 
-  const compact = window.innerWidth <= 900;
+  const compact = window.innerWidth <= COMPACT_READER_BREAKPOINT;
   wasCompactViewport = compact;
   applyPageMode(compact ? '1-page' : (state.pageMode || '2-page'), !compact);
 
@@ -1378,30 +1395,29 @@ export function setupReaderListeners({ onCopyBookLink } = {}) {
 
   // Window Resize
   window.addEventListener('resize', () => {
-    const isCompactViewport = window.innerWidth <= 900;
-    const state = getState();
-    if (!els.notebookView.classList.contains('hidden') && isCompactViewport !== wasCompactViewport) {
-      applyPageMode(isCompactViewport ? '1-page' : state.pageMode, false);
-      // On compact: auto fit-width so page scales to screen; on desktop: restore saved zoom
-      if (isCompactViewport) {
-        requestAnimationFrame(() => handleFitWidth());
-      } else {
-        applyZoom(state.zoomLevel || 1, false);
+    if (resizeFrame) cancelAnimationFrame(resizeFrame);
+    resizeFrame = requestAnimationFrame(() => {
+      resizeFrame = null;
+      const isCompactViewport = window.innerWidth <= COMPACT_READER_BREAKPOINT;
+      const state = getState();
+      if (!els.notebookView.classList.contains('hidden') && isCompactViewport !== wasCompactViewport) {
+        applyPageMode(isCompactViewport ? '1-page' : state.pageMode, false);
+        requestAnimationFrame(() => {
+          if (isCompactViewport) handleFitWidth();
+          else handleFitPage();
+        });
+        wasCompactViewport = isCompactViewport;
+        return;
       }
       wasCompactViewport = isCompactViewport;
-      return;
-    }
-    wasCompactViewport = isCompactViewport;
-    // On compact viewports, always re-fit width on resize
-    if (isCompactViewport) {
-      handleFitWidth();
-      return;
-    }
-    if (els.btnFitPage && els.btnFitPage.classList.contains('active')) {
-      handleFitPage();
-    } else if (els.btnFitWidth && els.btnFitWidth.classList.contains('active')) {
-      handleFitWidth();
-    }
+      if (isCompactViewport) {
+        handleFitWidth();
+      } else if (els.btnFitWidth && els.btnFitWidth.classList.contains('active')) {
+        handleFitWidth();
+      } else {
+        handleFitPage();
+      }
+    });
   });
 
   // Ribbon focus toggle

@@ -289,6 +289,7 @@ span.action-line-input {
   display: flex;
   gap: 4px;
   align-items: center;
+  min-height: 16px;
 }
 .status-pill-btn,
 span.status-pill-btn {
@@ -300,15 +301,17 @@ span.status-pill-btn {
   font-family: inherit;
   font-size: 8.5px;
   font-weight: 700;
-  line-height: 1;
+  line-height: 14px;
   height: 16px;
-  padding: 0 5px 2px 5px;
+  padding: 0 5px;
   border-radius: 3px;
   cursor: pointer;
   transition: all 0.15s ease;
   color: var(--ink-muted);
   box-sizing: border-box;
   vertical-align: middle;
+  white-space: nowrap;
+  transform: none;
 }
 .status-pill-btn:hover {
   border-color: #0f172a;

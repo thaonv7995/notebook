@@ -18,10 +18,14 @@ body {
   color: var(--lib-text);
   overflow: hidden;
   height: 100vh;
+  height: 100dvh;
   width: 100vw;
+  width: 100dvw;
   display: flex;
   flex-direction: column;
   -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overscroll-behavior: none;
 }
 
 /* Custom Scrollbars */
