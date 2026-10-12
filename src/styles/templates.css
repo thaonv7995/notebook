@@ -123,27 +123,41 @@
   outline-offset: 1px;
 }
 
-/* Highlighted / Inked Phase Notch (Bôi đen/đánh dấu Phase) */
+/* Highlighted / Inked Phase Notch — Diagonal pen-stroke hatching */
 .index-notch.is-active {
-  width: 18px;
-  background: #0f172a !important;
-  color: #ffffff !important;
-  border-color: #0f172a !important;
+  background:
+    repeating-linear-gradient(
+      -45deg,
+      transparent,
+      transparent 2px,
+      #94a3b8 2px,
+      #94a3b8 3.2px
+    ),
+    var(--paper-cream, #ffffff) !important;
+  color: #475569 !important;
+  border-color: #94a3b8 !important;
   font-weight: 800;
-  box-shadow: -1px 2px 5px rgba(15, 23, 42, 0.35);
+  box-shadow: -1px 2px 5px rgba(15, 23, 42, 0.1);
   -webkit-print-color-adjust: exact;
   print-color-adjust: exact;
 }
 .index-notch.is-active:hover {
-  background: #1e293b !important;
-  border-color: #1e293b !important;
-  width: 18px;
+  background:
+    repeating-linear-gradient(
+      -45deg,
+      transparent,
+      transparent 1.5px,
+      #64748b 1.5px,
+      #64748b 3px
+    ),
+    var(--paper-cream, #ffffff) !important;
+  border-color: #64748b !important;
 }
 .book-page-left .index-notch.is-active {
-  box-shadow: 1px 2px 5px rgba(15, 23, 42, 0.35);
+  box-shadow: 1px 2px 5px rgba(15, 23, 42, 0.18);
 }
 .book-spread-casing.mode-1-page .index-notch.is-active {
-  box-shadow: -1px 2px 5px rgba(15, 23, 42, 0.35);
+  box-shadow: -1px 2px 5px rgba(15, 23, 42, 0.18);
 }
 
 /* Ornate Royal Corner Frames */
