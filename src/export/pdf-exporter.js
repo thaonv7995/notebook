@@ -250,6 +250,39 @@ export async function exportPdfFromServer(includeCover = false) {
       tmpl.style.setProperty('background-color', paperBg, 'important');
     });
 
+    // html2canvas can omit inline SVG elements when cloning the hidden
+    // offscreen tree. Convert the four decorative corner SVGs into image
+    // data URIs before capture, while retaining their existing CSS classes
+    // so position and flip transforms remain identical to the web view.
+    offscreen.querySelectorAll('svg.content-corner-frame').forEach(svgNode => {
+      const svg = svgNode.cloneNode(true);
+      svg.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+      svg.setAttribute('width', '26');
+      svg.setAttribute('height', '26');
+
+      const serialized = new XMLSerializer().serializeToString(svg);
+      const image = document.createElement('img');
+      image.className = svgNode.getAttribute('class') || '';
+      image.alt = '';
+      image.setAttribute('aria-hidden', 'true');
+      image.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(serialized)}`;
+      image.style.width = '26px';
+      image.style.height = '26px';
+      image.style.display = 'block';
+
+      svgNode.replaceWith(image);
+    });
+
+    // Ensure all newly-created SVG data images are decoded before capture.
+    const cornerImages = [...offscreen.querySelectorAll('img.content-corner-frame')];
+    await Promise.all(cornerImages.map(image => {
+      if (image.complete) return image.decode?.().catch(() => undefined);
+      return new Promise(resolve => {
+        image.onload = resolve;
+        image.onerror = resolve;
+      });
+    }));
+
     // Fix ruled lines using SVG data URI (html2canvas supports SVG images)
     offscreen.querySelectorAll('.template-writing-area').forEach(area => {
       const lh = parseInt(getComputedStyle(area).lineHeight, 10) || lhPx;
@@ -271,23 +304,29 @@ export async function exportPdfFromServer(includeCover = false) {
     const PAGE_H = 820;
     const SCALE = 2; // 2x for retina quality
 
-    // Capture the CASING elements (includes paper tone/texture styling)
-    const casingElements = offscreen.querySelectorAll('.book-spread-casing');
+    // Capture the page sheets themselves. The surrounding casing adds
+    // 14px horizontal and 12px vertical padding, so capturing it with a
+    // forced 660x820 viewport shifts the page and clips its right/bottom
+    // edges. Capturing the exact web page element preserves the same
+    // coordinate system, including all four SVG corner ornaments.
+    const pageElements = sheetElements;
 
-    // Create PDF (page size = web dimensions in mm)
-    // 660px at 96dpi = 174.625mm, 820px at 96dpi = 216.958mm
-    const pdfWidthMm = (PAGE_W / 96) * 25.4;
-    const pdfHeightMm = (PAGE_H / 96) * 25.4;
+    // Keep the app's fixed 660x820px rendering canvas, but create the
+    // physical PDF page at the standard ISO A4 size. Converting the canvas
+    // pixels at 96dpi produced a custom 174.625x216.958mm PDF, which caused
+    // print dialogs to place a visibly smaller document on A4 paper.
+    const pdfWidthMm = 210;
+    const pdfHeightMm = 297;
     const pdf = new jsPDF({
-      orientation: pdfWidthMm > pdfHeightMm ? 'landscape' : 'portrait',
+      orientation: 'portrait',
       unit: 'mm',
-      format: [pdfWidthMm, pdfHeightMm],
+      format: 'a4',
     });
 
-    for (let i = 0; i < casingElements.length; i++) {
-      showToast(`📄 Đang xuất trang ${i + 1}/${casingElements.length}...`, 0);
+    for (let i = 0; i < pageElements.length; i++) {
+      showToast(`📄 Đang xuất trang ${i + 1}/${pageElements.length}...`, 0);
 
-      const canvas = await html2canvas(casingElements[i], {
+      const canvas = await html2canvas(pageElements[i], {
         scale: SCALE,
         width: PAGE_W,
         height: PAGE_H,
@@ -300,7 +339,7 @@ export async function exportPdfFromServer(includeCover = false) {
       const imgData = canvas.toDataURL('image/jpeg', 0.92);
 
       if (i > 0) {
-        pdf.addPage([pdfWidthMm, pdfHeightMm]);
+        pdf.addPage('a4', 'portrait');
       }
 
       pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidthMm, pdfHeightMm);
